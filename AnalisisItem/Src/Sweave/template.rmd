@@ -1,0 +1,57 @@
+## Análisis de confiabilidad y validez (TCT)
+El objetivo de este análisis es identificar si los ítems que hacen parte del constructo tienen propiedades, desde el punto de vista de la medición, que permiten ser una fuente de medición óptima para la estimación de un atributo determinado (escala). En particular, a partir de la TCT se establecen dos características importantes que deben ser observadas en los ítems:
+
+1.	Confiabilidad: esta hace referencia a la consistencia  a través de un conjunto de ítems que se espera que midan el mismo constructo o  dimensión teórica. 
+- La medida de la fiabilidad mediante el alfa de Cronbach asume que los ítems  (medidos en escala tipo Likert) miden un mismo constructo y que están altamente correlacionados.  La  fiabilidad de la  escala debe obtenerse siempre con los datos de cada muestra para garantizar la medida fiable del constructo en la muestra concreta de investigación. 
+
+2. De acuerdo a los análisis de pilotaje se establecieron los siguientes criterios:
+
+-	Confiabilidades menores a 0.6 son bajas y pueden sugerir dificultades para la estimación de la escala propuesta.
+-	Confiabilidades entre 0.6 y 0.75 son bajas pero aceptables.
+-	Confiabilidades entre 0.75 y 0.95 son las esperadas.
+-	Confiabilidades mayores a 0.95 sugieren redundancia de los ítems que conforman la escala.
+-	KR20. Kuder y Richardson desarrollaron un procedimiento basado en los resultados obtenidos con cada ítem. Básicamente, este procedimiento establece la confiabilidad sobre el constructo cuando se elimina cada ítem de manera particular.  **Es necesario identificar los ítems para los cuales aumenta la confiabilidad una vez se elimina el ítem (Comentario) **
+- Validez. Para aproximarnos a la validez de los ítems dentro del constructo (escala) se analiza la correlación punto biserial (ítems dicotómicos) y poliserial (politómicos). Estas medidas se utilizan para identificar la correlación existente entre dos variables, particularmente se estiman dos tipos de correlación ítem-índice e ítem-prueba.
+**De acuerdo a los análisis de pilotaje, se estableció el criterio mínimo de correlación de 0.2, tanto para índices polítomicos como dicotómicos. Esto debido a que los análisis de pilotaje mostraron que este es el valor del umbral mínimo tolerable a partir del cual los ítems comienzan a reducir la confiabilidad de las escalas. **
+
+```{r, echo = FALSE, message = F, results = "asis", comment = NA, warning = F}
+indPrueba <- names(outList)[grep("{{namePba}}", names(outList))]
+reportTCT(outList[[indPrueba]])
+```
+
+## Estadísticas por ítem.
+
+A continuación se presentan los  datos de identificación: código, posición, y  clave de los items de la prueba. Estadísticos relevantes para la toma de decisiones como cantidad de personas que contestaron, cantidad y porcentaje de respuestas correctas, dificultad estimada mediante el modelo de 3PL, correlación punto biserial excluyendo al ítem. Además, la gráfica de la curva característica del ítem (ICC) y la gráfica de opciones.
+
+Se definieron señales de aviso que indican mal funcionamiento del ítem en cuanto a dificultad, correlación, porcentaje, infit, outfit, pendiente de la clave y promedio de habilidad de la clave.
+
+Las señales generadas fueron las siguientes:
+
+<center>
+| Señal 	      | Descripción   |
+| :--		      |:------------------------------------------------------|
+| 1		          | La correlación ítem-prueba excluyendo al ítem es menor a $0.1$. |
+| 2		          | Las pendientes de las curvas empíricas de dos o más opciones son mayores a 0.05. |
+| 3		          | La pendiente de la curva empírica de la clave del ítem es negativa. |
+| 4		          | La pendiente de la curva empírica de la clave del ítem es negativa.El promedio de habilidad de la clave es inferior al promedio de habilidad de alguna de las otras opciones de respuesta. |
+| 5		          | El porcentaje de respuestas por opción es menor a $10\%$ o mayor a $90\%$. |
+| 6		          | El tamaño de la población es inferior a 200 y el valor de infit y/o outfit es menor a $0.7$ o mayor a $1.3$. |
+| 7		          | El tamaño de la población es superior a 200 e inferior a 500 y el valor de infit y/o outfit es menor a $0.75$ o mayor a $1.25$. |
+| 8		          | El tamaño de la población es superior 501 y el valor de infit y/o outfit es menor a $0.8$ o mayor a $1.2$. |
+| 9		          | La dificultad del ítem, bajo Rasch, es menor a -3 o mayor a 3.
+| 10	          | El porcentaje de respuestas correctas es menor a $10\%$ o mayor a $90\%$.
+</center>
+
+Los ítems que presentan alguna de estas señales aparecen con los nombres del estadístico en color rojo.
+
+```{r, out.width = 800, out.height = 120, fig.width=14, fig.height=7, echo = FALSE, message = F, comment = NA, warning = F}
+lay  <- rbind(c(1,1,1,1,1,2))
+pFin <- suppressWarnings(grid.arrange(grobs = list(resulMapa[["{{iipba}}"]][[1]], 
+                         resulMapa[["{{iipba}}"]][[2]]), layout_matrix = lay))
+suppressWarnings(grid::grid.draw(pFin))
+```
+
+
+```{r, echo = FALSE, message = F, results = "asis", comment = NA, warning = F}
+reporteItem(x = resulModel[["{{iipba}}"]], idPrueba = "{{namePba}}")
+```

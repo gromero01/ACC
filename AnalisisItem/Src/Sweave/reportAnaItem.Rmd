@@ -1,0 +1,57 @@
+---
+output:
+  knitrBootstrap::bootstrap_document:
+    title: "Analisis de ítem SABER"
+    theme: Simplex
+    highlight: Tomorrow
+    theme.chooser: TRUE
+    highlight.chooser: TRUE
+---
+
+<style type="text/css" class="init">
+td.details-control {
+    background: url("lib/SD7Dz.png") no-repeat center center;
+    cursor: pointer;
+}
+ tr.shown td.details-control {
+    background: url("lib/d4ICC.png") no-repeat center center;
+}
+</style>
+
+<BR>
+<TABLE bgcolor="#FFFFFF" BORDER="0" CELLPADDING="2" CELLSPACING="2" WIDTH="100%">
+<TR>
+<TD WIDTH="80%"><center><B><h1>Análisis de ítems de las prueba SABER T&T </h1></B></center></TD>
+<TD WIDTH="20%"><img src="logo.png" title="Logo Title Text 1" alt="alt text" /></TD>
+</TR>
+</TABLE>
+
+```{r, include=FALSE}
+intNam  <- names(resulModel)
+vecLen  <- length(intNam)
+# vecLen  <- c(length(names(tabResul2)), length(names(tabResul3)))
+# intNam  <- intersect(names(tabResul2), names(tabResul3))
+gradVec <- gsub("(.+)(pba)(.+)", "\\3", intNam)
+# gradVec <- gsub("(^\\d)::.+", "\\1", intNam); 
+names(gradVec) <- intNam
+gradVec[duplicated(gradVec)] <- ""
+gradVec <- ifelse(gradVec != "", paste0('<h1 id="Forma-', gradVec, '"> Prueba ', gradVec, '</h1>'), "")
+
+#for (i in names(grafList)) knit_child("template2.Rmd", label.suffix = i)
+
+# Leer los nombres de las formas
+
+
+src <- lapply(intNam, function(iipba) {
+              namePba <- mapvalues(gsub("(.+)(pba)(.+)", "\\3", iipba), 
+                                   from = c("PBAL", "PBAM", "PBAC", "PBAD", "PBAF"), 
+                                   to = c("Lenguaje", "Matemáticas", "Ciencias", "Competencias Ciudadanas", 
+                                   "Financiera"), warn_missing = FALSE)
+              # # Caso especial para Pensamiento Ciudadano (Cambiar Titulos)
+              titulAgreI  <- ifelse("{{iipba}}" %like% "PBAD", "Competencia", "Componente")
+              titulAgreII <- ifelse("{{iipba}}" %like% "PBAD", "Afirmación", "Competencia")
+
+              return(paste(gradVec[iipba], knit_expand(file = "template.Rmd"), sep = "\n"))
+              })
+```
+`r knit_child(text = iconv(unlist(src), "UTF-8", "latin1"))`
