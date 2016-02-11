@@ -39,4 +39,4 @@ for (prueba in names(lisCon)){
 }
 
 
-save(controlData, file = "controlData.Rdata")
+save(controlData, file = "../Input/controlData.Rdata")
