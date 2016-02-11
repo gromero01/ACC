@@ -1076,7 +1076,7 @@ ReadDataAI <- function (folderName, dict,
   cat("Rows after delete only omission character:", dim(read)[1],"\n")
 
   read <- data.frame(read)
-
+  names(read) <- c(nombres, "omission")
   # # comparision of the number if items in dictionary and in the input file
   areItems <- dict$variables[, 'id'] %in% items
   itemsBlock   <- dict$variables[areItems, "id"]
