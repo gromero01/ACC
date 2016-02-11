@@ -1,6 +1,6 @@
 library(plyr)
-source("../Src/Function/pruebaClass.R")
-inData <- "."
+source("Function/pruebaClass.R")
+inData <- "../Input"
 lisCon <- list.files(inData, ".con$", recursive = TRUE, full.names = TRUE)
 lisCon <- split(lisCon, f = gsub("(.+)\\/(PBA|sblq|pba|SBLQ).+\\.con$", "\\1", lisCon))
 
@@ -33,7 +33,7 @@ for (prueba in names(lisCon)){
 	 	           	'05Confirmatorio.R' = paso50), exam =
                         "SABERPRO",
 	  	        verEntrada = 1, verSalida = 1,
-	  	        nomPrueba = paste0("SABER_PRO (", auxConDir, ")"))
+	  	        nomPrueba = paste0("ACC (", auxConDir, ")"))
 	controlData[[prueba]] <- prueba0
 }
 
