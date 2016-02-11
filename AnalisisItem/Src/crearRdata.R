@@ -1,6 +1,7 @@
 library(plyr)
 source("Function/pruebaClass.R")
 inData <- "../Input"
+nomDic <- "diccionario_EstudianteCensal_SABER5_00CC_v00.xlsx"
 lisCon <- list.files(inData, ".con$", recursive = TRUE, full.names = TRUE)
 lisCon <- split(lisCon, f = gsub("(.+)\\/(PBA|sblq|pba|SBLQ).+\\.con$", "\\1", lisCon))
 
@@ -13,16 +14,16 @@ for (prueba in names(lisCon)){
         #                       "Financiera"), warn_missing = FALSE)
 
         # #Excluyendo SBLnull
-        lisCon[[prueba]] <- lisCon[[prueba]][!grepl("sblqnull", lisCon[[prueba]])]
+    lisCon[[prueba]] <- lisCon[[prueba]][!grepl("sblqnull|sblq0", lisCon[[prueba]])]
 	auxConDir <- gsub("(.+)\\/((PBA|sblq|pba|SBLQ).+\\.con$)",
 		              "\\2", lisCon[[prueba]])
 
 	paso00    <- new('Analisis', scripName = "00CrearRdata.R",
-	 	              param = list(kApli = c(2, 3, 4, 6), nameSheet = "Diccionario00"),),
-	   	              inputFile = list('Estructura' = NULL,
+	 	              param = list(kApli = c(2, 3, 4, 6), nameSheet = "Diccionario00"),
+	   	              inputFile = list('Estructura' = file.path(inData, nomDic),
 	   	              	               'conDirs'    = sort(auxConDir)))
 	paso40  <- new('Analisis', scripName = "04Exploratorio.R",
-	               param = list(
+	               param = list(),
 	               inputFile = list())
 	paso50  <- new('Analisis', scripName = "05Exploratorio.R",
 	 	             param = list('flagUni' = TRUE, 'flagMultiC' = TRUE, 'flagMultiNC' = TRUE, 'flagBiFac' = TRUE),
@@ -31,7 +32,7 @@ for (prueba in names(lisCon)){
 	prueba0 <- new('Prueba', path = prueba,
 	 	        Analisis = list('00CrearRdata.R' = paso00, '04Confirmatorio.R' = paso40,
 	 	           	'05Confirmatorio.R' = paso50), exam =
-                        "SABERPRO",
+                        "ACC",
 	  	        verEntrada = 1, verSalida = 1,
 	  	        nomPrueba = paste0("ACC (", auxConDir, ")"))
 	controlData[[prueba]] <- prueba0
