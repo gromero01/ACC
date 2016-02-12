@@ -1,7 +1,8 @@
 AnalisisItem/Input/
-Src/bin
 AnalisisItem/Doc/
 AnalisisItem/Output/
 AnalisisItem/Src/bin/
 AnalisisItem/Src/.Rhistory
 *.log*
+*.DAT*
+*.dat*
