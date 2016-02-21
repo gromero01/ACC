@@ -837,19 +837,19 @@ function(object){
 		ld1 <- abs(loadingsI) < kThresholdLoadNC
 	      ld2 <- abs(loadingsI) > kThresholdLoadInf & abs(loadingsI) < kThresholdLoadMid
 		ld3 <- abs(loadingsI) > kThresholdLoadMid & abs(loadingsI) < kThresholdLoadSup
-	      ld4 <- abs(loadingsI) >  kThresholdLoadSup
+	    ld4 <- abs(loadingsI) >  kThresholdLoadSup
 
-	      pcl0 <- posiciones[ld0]
+	    pcl0 <- posiciones[ld0]
 		pcl1 <- posiciones[ld1]
-	      pcl2 <- posiciones[ld2]
+	    pcl2 <- posiciones[ld2]
 		pcl3 <- posiciones[ld3]
 		pcl4 <- posiciones[ld4]
 
-	      lapply(pcl0, function(x) setCellStyle(cells[[x]], csL0) )
+	    lapply(pcl0, function(x) setCellStyle(cells[[x]], csL0) )
 		lapply(pcl1, function(x) setCellStyle(cells[[x]], csL1) )
 		lapply(pcl2, function(x) setCellStyle(cells[[x]], csL2) )
 		lapply(pcl3, function(x) setCellStyle(cells[[x]], csL3) )
-	      lapply(pcl4, function(x) setCellStyle(cells[[x]], csL4) )
+	    lapply(pcl4, function(x) setCellStyle(cells[[x]], csL4) )
 
 
 	  # # Comunalidades
@@ -872,7 +872,7 @@ function(object){
 
 	    # # Agregar color a las comunalidades
 
-	      communalitiesI <- subset(communalities, select = -Item)
+	    communalitiesI <- subset(communalities, select = -Item)
 		colRetain      <- nColOutCom + 1
 		rowRetain      <- seq(10, 10 + nrow(communalities) - 1)
 		rows           <- getRows(sheet = get(namesSheet),
@@ -1103,32 +1103,32 @@ function(object){
 	              (loadingsTotI < -kThresholdLoadMid & loadingsTotI >
 	                -kThresholdLoadSup)
 	 	ld4  <-  loadingsTotI < -kThresholdLoadSup | loadingsTotI > kThresholdLoadSup
-	      ld5  <-  loadingsTotI == ''
+	    ld5  <-  loadingsTotI == ''
 
 		pcl0 <- posiciones[ld0]
 		pcl1 <- posiciones[ld1]
-	      pcl2 <- posiciones[ld2]
+	    pcl2 <- posiciones[ld2]
 		pcl3 <- posiciones[ld3]
 		pcl4 <- posiciones[ld4]
-	      pcl5 <- posiciones[ld5]
+	    pcl5 <- posiciones[ld5]
 
-	     try(lapply(pcl0, function(x) setCellStyle(cells[[x]], csL0) ), TRUE)
-	     try(lapply(pcl1, function(x) setCellStyle(cells[[x]], csL1) ), TRUE)
-	     try(lapply(pcl2, function(x) setCellStyle(cells[[x]], csL2) ), TRUE)
-	     try(lapply(pcl3, function(x) setCellStyle(cells[[x]], csL3) ), TRUE)
-	     try(lapply(pcl4, function(x) setCellStyle(cells[[x]], csL4) ), TRUE)
-	     try(lapply(pcl5, function(x) setCellStyle(cells[[x]], csL1) ), TRUE)
+	    try(lapply(pcl0, function(x) setCellStyle(cells[[x]], csL0) ), TRUE)
+	    try(lapply(pcl1, function(x) setCellStyle(cells[[x]], csL1) ), TRUE)
+	    try(lapply(pcl2, function(x) setCellStyle(cells[[x]], csL2) ), TRUE)
+	    try(lapply(pcl3, function(x) setCellStyle(cells[[x]], csL3) ), TRUE)
+	    try(lapply(pcl4, function(x) setCellStyle(cells[[x]], csL4) ), TRUE)
+	    try(lapply(pcl5, function(x) setCellStyle(cells[[x]], csL1) ), TRUE)
 
 
 
-	      for(ll in 1:(max(nColOutLoad, 6)) ){
-	          width[[ll]]    <- paste("setColumnWidth(get(nameSheet),", ll, ",18)", sep='')
-	          eval(parse(text = width[[ll]]))
-	      }
+	    for(ll in 1:(max(nColOutLoad, 6)) ){
+	      width[[ll]]    <- paste("setColumnWidth(get(nameSheet),", ll, ",18)", sep='')
+	      eval(parse(text = width[[ll]]))
+	    }
 
 	  outFile <- file.path(outPath,
-	                     paste("04Exploratorio_", kk,"_V", versionOutput,
-	                           ".xlsx", sep = ''))
+	                       paste("04Exploratorio_", kk,"_V", versionOutput,
+	                             ".xlsx", sep = ''))
 
 	  saveWorkbook(wb, file = outFile)
 	}

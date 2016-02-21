@@ -325,12 +325,12 @@ setMethod("analIRT", "Prueba",
 	    	}
         } else {
             if (object@exam %in% c("SABERPRO", "SABER359")) {
-            	datBlockControl[[nameNode]] <- plyr::rename(datBlockControl[[nameNode]] ,
-      			                                c("SNP" = "noHoja"))
-      	    # # porcentaje of omisions
-	    if (isOmissDel) {
-	        misRow  <- rowMeans(dataBlo == "")
-	    }
+              datBlockControl[[nameNode]] <- plyr::rename(datBlockControl[[nameNode]] ,
+      		                                 c("SNP" = "noHoja"))
+      	      # # porcentaje of omisions
+	          if (isOmissDel) {
+	            misRow  <- rowMeans(dataBlo == "")
+	          }
         	}
 	  }
 

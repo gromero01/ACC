@@ -29,65 +29,57 @@
 
 options(encoding = "UTF-8")
 
-################################################################################
-# # Libraries
-################################################################################
-library(XLConnect)
-require(LaF)  # # 0.5, Fast access to large ASCII files
-require(plyr)
-require(data.table)  # # 1.8.10, fast indexing, ordered joint, ...
 
 ################################################################################
 # # Definition of input and output paths
 ################################################################################
-inPath  <- file.path("..", "Input")
-outPath <- file.path("..", "Output", "00Crear")
-logPath <- file.path("..", "Log")
-funPath <- file.path("Function")
-
 # #  create the outPath, if it exits don't
 dir.create(outPath, showWarnings = TRUE)
 
 ################################################################################
 # # source of scripts with functions
 ################################################################################
-source(file.path(funPath, "partirComas.R"))
-source(file.path(funPath, "pruebaClass.R"))   # # functions to read
-source(file.path(funPath, "readFilesAI02.R"))   # # class of parameters
 #source(file.path(funPath, "readTranslate.R"))  # # functions to make dictionaries
 
 ################################################################################
 # # Command line parameters
 ################################################################################
-# cat("-------------- Lectura de Archivos -----------------\n")
-# # # Lectura de parámetros
-# args <- commandArgs();
-
-# # #  check if --args used. This avoids a problem with earlier versions of R
-# argsPos  <- match("--args", args)
-# codeName <- gsub("--file=Src(\\\\)?", "", args[grep("--file", args)])
-
-# # #  Parameters extraction
-# if(!is.na(argsPos) && length(args) > argsPos){
-#   controlFile <- args[argsPos + 1];  # Class with parameters
-  controlFile <- "controlData.Rdata"; codeName = "00CrearRdata.R"
-# } else {
-#   cat("Parametros de la función:\n")
-#   cat("----> controlData: [Rdata] Class with parameters\n")
-#   stop("**ERROR**  en los parametros")
-# }
-
-#controlFile <- "controlData.Rdata"; codeName = "00CrearRdata.R"
 
 # # Cargando parametros de las pruebas
 load(file.path(inPath, controlFile))
 #object <- controlData[[1]]
-setGeneric(name = "leer", def = function(object){standardGeneric("leer")})
+setGeneric(name = "leerInsumos", def = function(object){standardGeneric("leerInsumos")})
 
-setMethod("leer", "Prueba",
+setMethod("leerInsumos", "Prueba",
 function(object){
+  ################################################################################
+  # # Libraries
+  ################################################################################
+  require(XLConnect)
+  require(LaF)  # # 0.5, Fast access to large ASCII files
+  require(plyr)
+  require(data.table)  # # 1.8.10, fast indexing, ordered joint, ...
+  
+  ################################################################################
+  # # Definition of input and output paths
+  ################################################################################
+  inPath  <- file.path("..", "Input")
+  outPath <- file.path("..", "Output", "00Crear")
+  logPath <- file.path("..", "Log")
+  funPath <- file.path("Function")
+  
+  ################################################################################
+  # # Source of scripts with functions
+  ################################################################################
+  source(file.path(funPath, "partirComas.R"), local = TRUE)  
+  source(file.path(funPath, "readFilesAI02.R"), local = TRUE)   
+  
+  ################################################################################
+  # # Validation for reading a Test
+  ################################################################################
 	controlPrueba <- object
-	controlAnal   <- controlPrueba@Analisis[[codeName]]
+	controlAnal   <- object@paramLect
+
     # # Parameters validation
     if (controlPrueba@exam == "" | is.na(controlPrueba@exam))
 	    stop("**ERROR** No se espesifico el nombre de la prueba que se quiere procesar")
@@ -97,17 +89,17 @@ function(object){
 		  stop("**ERROR** El directorio de la prueba no existe")
     if (is.na(controlPrueba@verEntrada))
 	    stop("**ERROR** Se debe especificar la versión de entrada")
-    if (!"conDirs" %in% names(controlAnal@inputFile))
+    if (!"conDirs" %in% names(controlAnal))
 	    stop("**ERROR** Se debe especificar el vector de .con que se quieren Leer")
-    if (length(controlAnal@inputFile$conDirs) == 0)
+    if (length(controlAnal$conDirs) == 0)
 	    stop("**ERROR** Se debe especificar almenos un .con en los parametros de lectura")
     if (controlPrueba@exam == "ACC"){
-	    if (!"Estructura" %in% names(controlAnal@inputFile))
+	    if (!"Estructura" %in% names(controlAnal))
 		    stop("**ERROR** Para procesar una prueba NO cognitiva se debe asignar un diccionario")
-	    if (length(controlAnal@inputFile$Estructura) == 0)
+	    if (length(controlAnal$Estructura) == 0)
 		    stop("**ERROR** Se debe especificar almenos un .con en los parametros de lectura")
     } else {
-	    if (!"Estructura" %in% names(controlAnal@inputFile))
+	    if (!"Estructura" %in% names(controlAnal))
 		    warning("\n>>>O_O>>> No se especifico el archivo de Estructura\n",
 			        "          el diccionario se creara segun la descarga.\n")
     }
@@ -137,7 +129,7 @@ function(object){
                                      controlPrueba@verEntrada, ".RData", sep = ""))
     }
 
-    # # Save directions of Rdata and datDictionary
+    # # Save directions of Rdata and datDictionary    
     object@pathDic   <- datDictionary
     object@pathRdata <- datReadBlock
     ################################################################################
@@ -147,16 +139,16 @@ function(object){
 
     if (controlPrueba@exam == "ACC") {
     	if (!file.exists(datDictionary)){
-		    cat("Nombre del diccionario - ->", controlAnal@inputFile$Estructura, "\n")
+		    cat("Nombre del diccionario - ->", controlAnal$Estructura, "\n")
 		    # # Reading the project dictionary
-		    dictionaryList <- ReadDict(fileName = controlAnal@inputFile$Estructura,
-                                   variables = controlAnal@param$nameSheet, 
+		    dictionaryList <- ReadDict(fileName = controlAnal$Estructura,
+                                   variables = controlAnal$nameSheet, 
                                    categories = "OpcResp", model = "model",
 	            	                   index = "escalas", collapse = "colapsa",
 	                	               desElim = "elimina")
 		    save(dictionaryList, file = datDictionary)
 		  } else {
-			  cat("Cargando el diccionario - ->", controlAnal@inputFile$Estructura, "\n")
+			  cat("Cargando el diccionario - ->", controlAnal$Estructura, "\n")
 		   	load(datDictionary)
 		  } 
 
@@ -185,7 +177,8 @@ function(object){
 # # Apply the read function to each test in controlData
 ################################################################################
 for (prueba in names(controlData)) {
-	controlData[[prueba]] <- leer(controlData[[prueba]])
+	# prueba0 <- leerInsumos(prueba0)
+  controlData[[prueba]] <- leerInsumos(controlData[[prueba]])
 }
 
 save(controlData, file = file.path(inPath, controlFile))

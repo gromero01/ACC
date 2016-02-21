@@ -20,8 +20,8 @@
 # #
 # # File history:
 # #   Creation: 20111202
-# #     Update: 20140201
-# # 
+# #   Update: 20140201
+# #   Creation of S4 class: 20160220
 # # ToDo:
 ############################################################################
 
@@ -32,20 +32,10 @@ options(encoding = "UTF-8")
 ################################################################################
 # # docPath <- file.path("..","doc","latex")
 inPath  <- file.path("..", "input")
-# # srcPath <- file.path("..", "src")
 funPath <- file.path("Function")
 outPath <- file.path("..", "output", "01Omisiones")
 logPath <- file.path("..", "log")
-################################################################################
-# # Libraries
-################################################################################
-require(RODBC)  # # 1.3-10
-require(ggplot2)  # # 0.9.3.1
-require(scales)  # # 0.2.3 
-require(car)  # # 2.0-19
-require(LaF)  # # 0.5
-require(data.table)  # # 1.8.10
-require(xlsx) # # 0.5.5
+
 
 ################################################################################
 # # Sources
@@ -54,141 +44,69 @@ source(file.path(funPath, "univariateFunctions01.R"))
 source(file.path(funPath, "log.R"))  # # log
 
 ################################################################################
-# # Functions
+# # Definition of class and parameters
 ################################################################################
-  # # Table for NA's verification
-    
-  CalculateMissing  <- function(variables, datos, omissionThreshold)
-  {
-    # # Calculate some statistics of Missing information to the form
-    # #
-    # # Arg:
-    # # variables[character]: vector with the names of the variables to
-    # # compute the statistics
-    # # datos[data.frame]: data.frame to compute the statistics
-    # # omissionThreshold[numeric]: proportion of omission use as umbral
-    # #
-    # # Ret:
-    # #  a vector with the statistics of omission 
-    
-# #       variables <- names(x[, grep(indPrueba, names(x))])
-      
-      nTotIndiv   <- nrow(datos[, variables])
-      nOmit       <- rowMeans(is.na(datos[, variables]))
-      nTotCompl   <- sum(complete.cases(datos[, variables]))
-      pctnComp    <- nTotCompl/nTotIndiv
-      minMissi    <- min(colMeans(is.na(datos[, variables])))
-      maxMissi    <- max(colMeans(is.na(datos[, variables])))
-      isMiss80    <- nOmit <= omissionThreshold
-      nMiss80     <- sum(isMiss80)
-      pctnMiss    <- nMiss80 / nTotIndiv
-      minMissi80  <- min(colMeans(is.na(datos[isMiss80, variables])))
-      maxMissi80  <- max(colMeans(is.na(datos[isMiss80, variables])))
+outRdata     <- file.path("Outpu", "01Omisiones", "resulOmi.Rdata")
+defaultParam <- list(kApli = c(2, 3, 4, 6),                     
+                     kOmissionThreshold  =  0.8,                   
+                     catToNA = c('NR', 'Multimarca'),
+                     kCodNElim = '06')
 
+setClass("Omisiones", contains =  "Analisis",
+         prototype = list(prueba = NULL, param = defaultParam,  
+                          outFile   = list(pathRdata = outRdata)), 
+         validity  = function(object){               
+           if (object@param$kOmissionThreshold < 0)
+             return("Error en el parametro 'kOmissionThreshold' [0, 1]")
+           if (object@param$kOmissionThreshold > 1)
+             return("Error en el parametro 'kOmissionThreshold' [0, 1]")              
+           return(TRUE)  
+         })
 
-      return(data.frame(totalIndi = nTotIndiv, 
-                        minMiss = minMissi, maxMiss = maxMissi, 
-                        totalComp = nTotCompl, pctCompletos = pctnComp, 
-                        nMiss80 = nMiss80,  pctnStuKeep = pctnMiss,   
-                        minMissi80 = minMissi80, maxMissi80 = maxMissi80))
-  }
- 
-################################################################################
-# # global definitions
-################################################################################
-# # tipo de aplicacion 1 = Censal, 2 = Control, 3 = SobreMuestra, 
-# # 4 = Especial, 5 = Adicional Censal, 6 = Adicional Control
-kApli <- c(2, 3, 4, 6)
+setMethod("initialize", "Omisiones", function(.Object, ..., prueba) {
+    if(missing(prueba)){
+      stop("Se debe especificar un objeto 'prueba = '??? ")
+    }
+    .Object@prueba <- prueba
+    callNextMethod(.Object, ..., prueba)    
+  })
 
-# # deleted students with more than 80% of omission for the topic 
-# # in the items that are not eliminated, this analysis is with the
-# # complete data set
-kOmissionThreshold  <- 0.8 
+do.call(getIndex, c(list(tipo = "Ambos"), getParams(omi)))
 
-# # flagCensal if TRUE get univariate from censal data
-# # this analysis is do it only with sample data
-flagCensal <- FALSE
-
-# # Categories will consider as No Response
-catToNA <- c('NR', 'Multimarca')
-# # catToNA <- c('NR', 'Multimarca')
-
-# # version with dict V00 and data _2014_01_28_17_10_35
-versionOutput  <- "01"
-versionComment <- "Salida de omisiones con la version de datos
-2015_07_27 y diccionario version 01, corrida inicial"
-
-# # extension to make the plots
-kExt <- ".png"
-
-# # cod for 'no eliminated' items
-kCodNElim <- '06'
-
-# # name of log file
-logFile <- file.path(logPath, "log.txt")
-
-# # version of input information
-versionIn <- '01'
+getIndex(omi, tipo = "codigo_prueba", 
+         kOmissionThreshold  =  0.8, 
+         catToNA = c('NR', 'Multimarca'), kCodNElim = '06')
 
 ################################################################################
 # # load data
 ################################################################################
-# # output from 00CrearRdata.R
-datDictionary <- file.path(inPath, "00Crear", 
-                           paste("dictionaryList_V",
-                                 versionIn, ".RData", sep = ""))
-datReadBlock  <- file.path(inPath, "00Crear", 
-                           paste("datBlock_V",
-                                 versionOutput, ".RData", sep = ""))
 
-load(datDictionary)
-load(datReadBlock)
-
-# # pesos
-# inFile <- file.path(inPath, 'pesosNacional.txt')
-# pesos <- read.table(inFile, sep = "\t", header = TRUE,
-#                     colClasses = c(rep('character', 2),
-#                                    rep('numeric', 5)))
+setMethod("codeAnal", "Omisiones",
+function(object){
 
 ################################################################################
-# #  Starting With the Table 1 
+# # Libraries
 ################################################################################
-  
-# # conserved data from sample application
-if (!is.data.frame(datBlock) & is.list(datBlock) & length(datBlock) == 1) {
-  datBlockControl <- list(subset(datBlock[[1]], tipoApli %in% kApli))
-  names(datBlockControl) <- names(datBlock)
-} else {
-  datBlockControl <- lapply(datBlock, function(x) 
-                          subset(x, x$tipoApli %in% kApli))
-} 
+require(ggplot2)  # # 0.9.3.1
+require(scales)  # # 0.2.3 
+require(car)  # # 2.0-19
+require(data.table)  # # 1.8.10
+require(xlsx) # # 0.5.5
 
-# # variables that are not eliminated
-isNoElim    <- dictionaryList$variables[, 'elimina'] == kCodNElim
-
-varsKeep    <- c('codigo_prueba', 'codigo_forma', 'prueba') 
-pruebasDesc <- unique(dictionaryList$variables[isNoElim, varsKeep])
-
-exist <- pruebasDesc[, 'codigo_prueba'] %in% names(datBlock)
-pruebasRead <- pruebasDesc[exist, 'codigo_prueba']
-
-pruebasRead <- sort(pruebasRead)
 
 cat("Making the table with the NA analysis per block\n")
 
-
 # # create list to save results
 datBlockOmis <- list()
-
-
 # # save xlsx
 outFile <- file.path(outPath, 
-                     paste("01omisiones_V", versionOutput,
-                           ".xlsx", sep = ''))
-# # 
-wb <- createWorkbook()
+                    paste("01omisiones_V", object@prueba@verSalida,
+                     ".xlsx", sep = ''))
+  
+  # # Create excelworkBook
+  wb <- createWorkbook()
 
-# # cell style
+  # # cell style
   # # header style
   csEnc <- CellStyle(wb) + Font(wb, isBold = TRUE) +
             Border(pen = "BORDER_DOUBLE") + Alignment(h = "ALIGN_CENTER")
@@ -205,22 +123,23 @@ wb <- createWorkbook()
   # # borde
   csPC <- CellStyle(wb) + Border() +
           Alignment(v = "VERTICAL_CENTER", wrapText = TRUE)
-
   # # fuente en negrilla
   csNeg <- CellStyle(wb) + Font(wb, isBold = TRUE)
 
-
 for (kk in pruebasRead) {
+  
   # # keep items that aren't eliminated   
   dictVarPrueba <- subset(dictionaryList$variables, 
                           codigo_prueba == kk)
   dictVarPrueba <- dictVarPrueba[order(dictVarPrueba[, 'orden']), ]
   isNoElim <- dictVarPrueba[, 'elimina'] == kCodNElim
-  varId <- dictVarPrueba[isNoElim, 'id']
+  varId    <- dictVarPrueba[isNoElim, 'id']
 
   # # variables by index
   dictKk <- subset(dictVarPrueba, isNoElim & indice != "NI",
                    select = c(id, indice))
+
+
   if (any(!(dictKk[, 'id'] %in% names(datBlockControl[[kk]])))) {
     stop("No estan todas las variables de datBlock")
   } 
@@ -282,7 +201,7 @@ for (kk in pruebasRead) {
                                   'N', '%', 'Mín Omiss', 
                                       'Máx Omiss'))
 
-   addDataFrame(t(titulo), sheet = get(namesSheet), startRow = 4,
+    addDataFrame(t(titulo), sheet = get(namesSheet), startRow = 4,
                  startColumn = 1, row.names = FALSE,
                  col.names = FALSE,
                  colStyle = list('1' = csEnc,  '2' = csEnc, 
@@ -303,38 +222,35 @@ for (kk in pruebasRead) {
                    startRow = 4, endRow = 4,
                    startColumn = 7, endColumn = 10)
 
-  # # 
-  namesPrueba <- subset(pruebasDesc, codigo_prueba == kk, 
-                       select = c(codigo_prueba, prueba))
+   # # 
+   namesPrueba <- subset(pruebasDesc, codigo_prueba == kk, 
+                        select = c(codigo_prueba, prueba))
 
-  namesPrueba[, 'nItems'] <- ncol(datBlockControl[[kk]][, varId])
+   namesPrueba[, 'nItems'] <- ncol(datBlockControl[[kk]][, varId])
   
-  addDataFrame(t(namesPrueba), sheet = get(namesSheet), startRow = 1,
-               startColumn = 1, row.names = TRUE,
-               col.names = FALSE, rownamesStyle = csNeg)
-
-  titulo2 <- data.frame(descripcion = 'Corte Omisiones',
+   addDataFrame(t(namesPrueba), sheet = get(namesSheet), startRow = 1,
+                startColumn = 1, row.names = TRUE,
+                col.names = FALSE, rownamesStyle = csNeg)
+   titulo2 <- data.frame(descripcion = 'Corte Omisiones',
                         descripcio2 = 'Corte Omisiones',
                         valor = kOmissionThreshold)
-  
    addDataFrame(titulo2, sheet = get(namesSheet), startRow = 1,
-               startColumn = 4, row.names = FALSE,
-               col.names = FALSE, 
-               colStyle = list('1' = csNeg, '3' = csPor))
+                startColumn = 4, row.names = FALSE,
+                col.names = FALSE, 
+                colStyle = list('1' = csNeg, '3' = csPor))
 
    addMergedRegion(sheet = get(namesSheet), 
                    startRow = 1, endRow = 1,
                    startColumn = 4, endColumn =  5)
     
-
-  # # making 'images' plots to analyze NA data per item
-  nOmit   <- rowSums(is.na(datBlockOmis[[kk]][, varId]))
-  nOmisos <- colSums(is.na(datBlockOmis[[kk]][, varId]))
-  labY    <- sequence(length(varId)) 
+   # # making 'images' plots to analyze NA data per item
+   nOmit   <- rowSums(is.na(datBlockOmis[[kk]][, varId]))
+   nOmisos <- colSums(is.na(datBlockOmis[[kk]][, varId]))
+   labY    <- sequence(length(varId)) 
   
-  outGraph   <- file.path(outPath, "graph",
-                          paste("graImag_PBA", kk, "_", versionOutput, kExt,
-                                sep = '')) 
+   outGraph   <- file.path(outPath, "graph",
+                           paste("graImag_PBA", kk, "_", versionOutput, kExt,
+                                  sep = '')) 
 
 # #   outGraph80 <- file.path(outPath, 
 # #                           paste("graImag80_PBA", kk, "_", versionOutput, kExt,
@@ -369,13 +285,12 @@ for (kk in pruebasRead) {
   
   # # dotplots in the same order that in the questionnaire
   ptnItemOmiis <- colMeans(is.na(datBlockLOmiss))
-    ptnItem      <- data.frame(ptnItemOmiis = ptnItemOmiis, 
+  ptnItem    <- data.frame(ptnItemOmiis = ptnItemOmiis, 
                           id = names(ptnItemOmiis))
-    ptnItem      <- merge(dictVarPrueba[, c("id", "indice", 'orden',
-                                            'elimina')], 
-                          ptnItem)
-    ptnItem      <- subset(ptnItem, elimina == '06') 
-    ptnItem      <- ptnItem[order(ptnItem[, "orden"]), ]
+  ptnItem    <- merge(dictVarPrueba[, c("id", "indice", 'orden',
+                                        'elimina')], ptnItem)
+  ptnItem    <- subset(ptnItem, elimina == '06') 
+  ptnItem    <- ptnItem[order(ptnItem[, "orden"]), ]
     
     figHistItMOm <- ggplot(ptnItem, aes(x = ptnItemOmiis, y = id)) + 
                     geom_point(aes(colour = indice))  
@@ -449,14 +364,3 @@ for (kk in pruebasRead) {
 }
 
 saveWorkbook(wb, file = outFile)
-# # log
-RunLog()
-
-# # 
-# #   outFile <- file.path(outPath, 
-# #                         paste("omisiones_V", versionOutput,
-# #                            ".RData", sep = ''))
-# #   save(XXX, file = outFile) 
-
-
-

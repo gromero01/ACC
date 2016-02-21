@@ -91,16 +91,14 @@ function(object, desElim = NULL){
   ################################################################################
   # # verification of parameters
   ################################################################################
-  controlAnal <- object@Analisis[["00CrearRdata.R"]]
+  controlAnal <- object@paramLect
   if (is.null(object@exam))
     stop("**ERROR** El objeto prueba debe tener un examen asignado")
-  if (!"00CrearRdata.R" %in% names(object@Analisis))
-    stop("**ERROR** El objeto prueba debe tener '00CrearRdata' parametrizado")
   pathTest <- file.path(inPath, object@path)
   pathDesc <- list.files(pathTest, pattern = "(D|d)escripcion\\.txt", full.names = TRUE)
   if (length(pathDesc) == 0)
     stop("**ERROR** No se encontro descripcion.txt en pathTest")
-  pathCon <- file.path(inPath, object@path, controlAnal@inputFile[["conDirs"]])
+  pathCon <- file.path(inPath, object@path, controlAnal$conDirs)
 
   if(any(!sapply(pathCon, file.exists))){
     print(pathCon)
@@ -123,9 +121,9 @@ function(object, desElim = NULL){
   strCon  <- leerInfo(datDesc[1:(indDat - 2)])
 
   # # Reading aditional information of items
-  if ("indiceInfo" %in% names(controlAnal@inputFile)) {
-      fileInfo <- controlAnal@inputFile$indiceInfo["path"]
-      namSheet <- controlAnal@inputFile$indiceInfo["nameSheet"]
+  if ("indiceInfo" %in% names(controlAnal)) {
+      fileInfo <- controlAnal$indiceInfo["path"]
+      namSheet <- controlAnal$indiceInfo["nameSheet"]
       require(XLConnect)
       channel <- loadWorkbook(fileInfo)
       infoItem <- readWorksheet(channel, namSheet)
@@ -133,7 +131,7 @@ function(object, desElim = NULL){
 
   # # Reading info from .zip file
   finVariables <- NULL
-  for (nameCon in controlAnal@inputFile[["conDirs"]]){
+  for (nameCon in controlAnal$conDirs){
     conFile <- file.path(inPath, object@path, nameCon)
 
     # # Reading .con
@@ -196,10 +194,10 @@ function(object, desElim = NULL){
     }
 
     # # Fill info of items
-    if ("indiceInfo" %in% names(controlAnal@inputFile)) {
-      if (!"infoItem" %in% names(controlAnal@param))
-        stop("**ERROR** Se de especificar infoItem las columnas del archivo indiceInfo")
-      rnColum  <- controlAnal@param$infoItem
+    if ("indiceInfo" %in% names(controlAnal)) {
+      if (!"infoItem" %in% names(controlAnal))
+        stop("**ERROR** Se de especificar en 'infoItem' las columnas del archivo 'indiceInfo'")
+      rnColum  <- controlAnal$infoItem
       infoItem <- setnames(infoItem, rnColum, names(rnColum))
       nrowAnte <- nrow(infoCon)
 
@@ -215,7 +213,7 @@ function(object, desElim = NULL){
       infoCon  <- merge(infoCon, infoItem[, c(names(rnColum), 'etiqu' = 'etiqu')], by = "id")
       if (nrowAnte != nrow(infoCon))
         stop("**ERROR** Al cruzar con el archivo (eliminar duplicados): ",
-             controlAnal@inputFile$indiceInfo["path"], "base original --", nrowAnte,
+             controlAnal$indiceInfo["path"], "base original --", nrowAnte,
              "-- base final --", nrow(infoCon))
 
     }
@@ -341,7 +339,7 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
   filesInFolder <- list.files(folderName, recursive = TRUE,
                               pattern = "con|dat$", ignore.case = TRUE)
   # # Find .con files
-  listCon    <- object@Analisis[["00CrearRdata.R"]]@inputFile[["conDirs"]]
+  listCon    <- object@paramLect$conDirs
   resultRead <- list()
   for (conFile in listCon){
     fileCon <- grep(conFile, filesInFolder, value = TRUE, ignore.case = TRUE)
