@@ -90,7 +90,7 @@ function(object){
 	controlAnal   <- controlPrueba@Analisis[[codeName]]
     # # Parameters validation
     if (controlPrueba@exam == "" | is.na(controlPrueba@exam))
-	    stop("**ERROR** No se espesifico el nombre de la prueba que se quiere procesar")
+	    stop("**ERROR** No se especifico el nombre de la prueba que se quiere procesar")
     if (controlPrueba@path == "" | is.na(controlPrueba@path))
 	    stop("**ERROR** Se debe especificar una ruta para cada prueba")
 	  if (!file.exists(file.path(inPath, controlPrueba@path)))
@@ -160,11 +160,29 @@ function(object){
 		   	load(datDictionary)
 		  } 
 
+      if (!file.exists(datReadBlock)) {
+        datBlock1 <- ReadDataAI(folderName = inFolder, dict = dictionaryList,
+                               multiMarkOmiss = TRUE, verbose = TRUE,
+                               eliminatedVars = FALSE)
+        datBlock <- list()
+        datBlock[[inFolder]] <- datBlock1
+        save(datBlock, file = datReadBlock)
+      } else {
+        load(datReadBlock)
+        if (is.data.frame(datBlock)) {
+          datBlock <- list(datBlock)
+        }
+        datBlock[[inFolder]] <- ReadDataAI(folderName = inFolder, dict = dictionaryList,
+                                          multiMarkOmiss = TRUE, verbose = TRUE,
+                                          eliminatedVars = FALSE)
+        save(datBlock, file = datReadBlock)
+      }
 
-		  datBlock <- ReadDataAI(folderName = inFolder, dict = dictionaryList,
-	                           multiMarkOmiss = TRUE, verbose = TRUE,
-	                           eliminatedVars = FALSE)
-		  save(datBlock, file = datReadBlock)
+		 # datBlock <- ReadDataAI(folderName = inFolder, dict = dictionaryList,
+	   #                         multiMarkOmiss = TRUE, verbose = TRUE,
+	   #                         eliminatedVars = FALSE)
+		 # save(datBlock, file = datReadBlock)
+
     } else {
       # # Reading the project dictionary
       if (!file.exists(datDictionary)){
@@ -173,7 +191,6 @@ function(object){
       } else {
       	load(datDictionary)
       }
-
       # # Reading the DB using generic dictionary (only for dichotomous items)
 	    datBlock <- ReadGeneric(object, dict = dictionaryList, verbose =  FALSE)
 	    save(datBlock, file = datReadBlock)
