@@ -1,4 +1,3 @@
-AnalisisItem/Input/
 AnalisisItem/Doc/
 AnalisisItem/Output/
 AnalisisItem/Src/bin/
@@ -6,3 +5,13 @@ AnalisisItem/Src/.Rhistory
 *.log*
 *.DAT*
 *.dat*
+*.con*
+*FILE.txt*
+*AnalisisItem/Input/*Descripcion.txt*
+*AnalisisItem/Input/*evalexcluidos.txt*
+*AnalisisItem/Input/*items.txt*
+*.OUT*
+*.out*
+*-IFILE*
+*-PFILE*
+
