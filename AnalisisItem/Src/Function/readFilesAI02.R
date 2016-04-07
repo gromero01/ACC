@@ -125,8 +125,8 @@ function(object, desElim = NULL){
       fileInfo <- controlAnal$indiceInfo["path"]
       namSheet <- controlAnal$indiceInfo["nameSheet"]
       require(XLConnect)
-      channel <- loadWorkbook(fileInfo)
-      infoItem <- readWorksheet(channel, namSheet)
+      channel  <- loadWorkbook(fileInfo)     
+      infoItem <- readWorksheet(channel, namSheet)     
   }
 
   # # Reading info from .zip file
@@ -272,8 +272,10 @@ function(object, desElim = NULL){
   # # Print Results
   cat("# # Results:\n")
   str(dictionary, max.level = 1)
+
   structure(dictionary, call = list(desElim = desElim),
             class = "RD", parameters = match.call())
+  
 })
 
 ################################################################################
