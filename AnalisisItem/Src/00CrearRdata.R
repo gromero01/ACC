@@ -29,6 +29,7 @@
 
 options(encoding = "UTF-8")
 
+<<<<<<< HEAD
 
 ################################################################################
 # # Definition of input and output paths
@@ -41,13 +42,18 @@ options(encoding = "UTF-8")
 ################################################################################
 #source(file.path(funPath, "readTranslate.R"))  # # functions to make dictionaries
 
+=======
+>>>>>>> b5b75d22d56674f4ae2a66aef5cd611a65f5c6d5
 ################################################################################
 # # Command line parameters
 ################################################################################
 
+<<<<<<< HEAD
 # # Cargando parametros de las pruebas
 # load(file.path(inPath, controlFile))
 # object <- controlData[[1]]
+=======
+>>>>>>> b5b75d22d56674f4ae2a66aef5cd611a65f5c6d5
 setGeneric(name = "leerInsumos", def = function(object){standardGeneric("leerInsumos")})
 
 setMethod("leerInsumos", "Prueba",
@@ -173,9 +179,15 @@ function(object){
     return(object)
   })
 
+<<<<<<< HEAD
 # ################################################################################
 # # # Apply the read function to each test in controlData
 # ################################################################################
+=======
+################################################################################
+# # Apply the read function to each test in controlData
+################################################################################
+>>>>>>> b5b75d22d56674f4ae2a66aef5cd611a65f5c6d5
 # for (prueba in names(controlData)) {
 # 	# prueba0 <- leerInsumos(prueba0)
 #   controlData[[prueba]] <- leerInsumos(controlData[[prueba]])
