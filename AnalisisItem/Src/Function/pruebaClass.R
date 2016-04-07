@@ -24,16 +24,17 @@
 Prueba <- setClass("Prueba", 
  		# # Definir la estructura
  		slots = c(path      = 'character',
- 			      pathDic   = 'character',
- 			      pathRdata = 'character',  					  	
- 			      exam      = 'character',
+ 			        pathDic   = 'character',
+ 			        pathRdata = 'character',  					  	
+ 			        exam      = 'character',
 	              verEntrada = 'numeric',						
 	              verSalida  = 'numeric', 
 	              nomPrueba = 'character',
+                listAnal  = 'list',
 	              paramLect = 'list'),  					  
  		# # Definir los valores por defecto
  		prototype = list(varEntrada = 1, verSalida = 1,  					  	 
-					  	 nomPrueba = "", paramLect = list(conDirs = "")), 
+					  	      nomPrueba = "", paramLect = list(conDirs = "")), 
  		validity  = function(object){ 			
  			if(object@path == "" | object@exam == "")
  				stop("Se debe definir el directorio del examen")
@@ -59,7 +60,7 @@ setMethod("initialize", "Prueba", function(.Object, ...) {
 
 Analisis <- setClass("Analisis",  					  
  					 # # Definir la estructura 					  	                 
-	                 contains = 'Prueba', 
+	         #contains = 'Prueba', 
  					 slots = c(
  					  	prueba = 'Prueba', 					  	
  					  	param     = 'list', 
@@ -236,7 +237,7 @@ setMethod("getIndex", "Analisis",
       	dictionaryList <- c(split(dictionaryList, f = splitTest), 
       		                split(dictionaryList, f = splitId))
       } else {
-	    dictionaryList <- split(dictionaryList, f = splitId)
+	      dictionaryList <- split(dictionaryList, f = splitId)
       }
 
       newIndex <- lapply(dictionaryList, function(x){

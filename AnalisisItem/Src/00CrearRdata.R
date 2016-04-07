@@ -34,7 +34,7 @@ options(encoding = "UTF-8")
 # # Definition of input and output paths
 ################################################################################
 # #  create the outPath, if it exits don't
-dir.create(outPath, showWarnings = TRUE)
+#dir.create(outPath, showWarnings = TRUE)
 
 ################################################################################
 # # source of scripts with functions
@@ -46,8 +46,8 @@ dir.create(outPath, showWarnings = TRUE)
 ################################################################################
 
 # # Cargando parametros de las pruebas
-load(file.path(inPath, controlFile))
-#object <- controlData[[1]]
+# load(file.path(inPath, controlFile))
+# object <- controlData[[1]]
 setGeneric(name = "leerInsumos", def = function(object){standardGeneric("leerInsumos")})
 
 setMethod("leerInsumos", "Prueba",
@@ -173,35 +173,35 @@ function(object){
     return(object)
   })
 
-################################################################################
-# # Apply the read function to each test in controlData
-################################################################################
-for (prueba in names(controlData)) {
-	# prueba0 <- leerInsumos(prueba0)
-  controlData[[prueba]] <- leerInsumos(controlData[[prueba]])
-}
+# ################################################################################
+# # # Apply the read function to each test in controlData
+# ################################################################################
+# for (prueba in names(controlData)) {
+# 	# prueba0 <- leerInsumos(prueba0)
+#   controlData[[prueba]] <- leerInsumos(controlData[[prueba]])
+# }
 
-save(controlData, file = file.path(inPath, controlFile))
+# save(controlData, file = file.path(inPath, controlFile))
 
-################################################################################
-# # Save the Population description for eac h Test (SABER 3, 5, 9)
-################################################################################
-finalCount <- NULL
-for (prueba in names(controlData)) {
-   if (controlData[[prueba]]@exam == "SABER359"){
-     load(controlData[[prueba]]@pathRdata)
-     for (subPrueba in names(datBlock)) {
-       auxPrueba  <- subset(datBlock[[subPrueba]]$calBlock, select = c("SNP", "Grado", "Estado_Final"))
-       conteoP    <- auxPrueba[, as.data.frame(table(Grado, Estado_Final))]
-       conteoP    <- cbind(conteoP, 'subPrueba' = gsub("\\.con", "", subPrueba),
-                           'prueba' = prueba)
-       conteoP$Estado_Final  <- mapvalues(conteoP$Estado_Final, from = c("1", "2", "3", "4", "5", "6"),
-                               to = c("Censal", "Control", "SobreMuestra", "Espcial",
-                                      "Adicional Censal", "Adicional Control"))
-       finalCount <- rbind(finalCount, conteoP)
-     }
-   }
-}
-save(finalCount, file = "countTipoApli.Rdata")
+# ################################################################################
+# # # Save the Population description for eac h Test (SABER 3, 5, 9)
+# ################################################################################
+# finalCount <- NULL
+# for (prueba in names(controlData)) {
+#    if (controlData[[prueba]]@exam == "SABER359"){
+#      load(controlData[[prueba]]@pathRdata)
+#      for (subPrueba in names(datBlock)) {
+#        auxPrueba  <- subset(datBlock[[subPrueba]]$calBlock, select = c("SNP", "Grado", "Estado_Final"))
+#        conteoP    <- auxPrueba[, as.data.frame(table(Grado, Estado_Final))]
+#        conteoP    <- cbind(conteoP, 'subPrueba' = gsub("\\.con", "", subPrueba),
+#                            'prueba' = prueba)
+#        conteoP$Estado_Final  <- mapvalues(conteoP$Estado_Final, from = c("1", "2", "3", "4", "5", "6"),
+#                                to = c("Censal", "Control", "SobreMuestra", "Espcial",
+#                                       "Adicional Censal", "Adicional Control"))
+#        finalCount <- rbind(finalCount, conteoP)
+#      }
+#    }
+# }
+# save(finalCount, file = "countTipoApli.Rdata")
 
 

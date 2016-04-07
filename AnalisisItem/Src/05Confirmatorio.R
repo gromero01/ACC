@@ -74,13 +74,13 @@ setMethod("confirmatAnalysis", "Prueba",
             # # isCensal: Tipo de Análisis
             # # isTypeB: Tipo de Estudio  
             # # nReplicates: Number of iterations for parallel analysis
-            # # useCor, kThereLoadi: use parameter for correlations
+            # # useCor: use parameter for correlations
             # # useMatrixCorr: use type of matrix
             # # kApli: tipo de aplicacion 1 = Censal, 2 = Control, 3 = SobreMuestra,
             # #        4 = Especial, 5 = Adicional Censal, 6 = Adicional Control
             
-            isCensal = FALSE; isTypeB  = FALSE; nReplicates = 200; useCor = "pairwise.complete.obs"; 
-            kThereLoadi = 0.15; useMatrixCorr = 'policoricas' 
+            isCensal = FALSE; isTypeB  = FALSE; useCor = "pairwise.complete.obs"; 
+            useMatrixCorr = 'policoricas' 
             kApli = c(2, 3, 4, 6)
             
             # # deleted students with more than 80% of omission for the topic
