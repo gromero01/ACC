@@ -7,12 +7,12 @@ AnalisisItem/Src/.Rhistory
 *.dat*
 *.con*
 *FILE.txt*
-*AnalisisItem/Input/*Descripcion.txt*
-*AnalisisItem/Input/*evalexcluidos.txt*
-*AnalisisItem/Input/*items.txt*
+*Descripcion.txt*
+*evalexcluidos.txt*
+*items.txt*
 *.OUT*
 *.out*
 *-IFILE*
 *-PFILE*
 *.Rdata*
-
+*WinXP-RUNWINSTEPS.BAT*
