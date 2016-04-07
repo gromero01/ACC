@@ -14,4 +14,5 @@ AnalisisItem/Src/.Rhistory
 *.out*
 *-IFILE*
 *-PFILE*
+*.Rdata*
 
