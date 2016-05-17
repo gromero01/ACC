@@ -131,11 +131,19 @@ setMethod("analIRT", "Prueba",
 	# # isTypeB = TRUE, if CLASE or ESCUELA then isTypeB = FALSE
 	isTypeB <- FALSE
 
+	# # si Saber 5 = SB5, si saber 9 = SB9, si FA = FA
+	saber <- 'FA'
+
 	# # to run the program for specific indexes
 	isAllIndex <- TRUE
 
 	# # vector with indexes, only if isAllIndex == FALSE
 	indexWhich <- NULL
+
+	# # isReporte = TRUE si se va a sacar reporte en txt (tabla con pasos
+	# # verticalmente) / isReporte = FALSE si se va a sacar reporte en xls
+	# # (tabla con pasos horizontalmente)
+	isReporte <- FALSE
 
 	# # models
 	codesRasch           <- c("01", "02", "04")
@@ -161,13 +169,25 @@ setMethod("analIRT", "Prueba",
 	# # flagCensal if TRUE get univariate from censal data
 	# # this analysis is do it only with sample data
 	flagCensal <- FALSE
-	isCensal   <- is.null(flagCensal) | flagCensal
+	isCensal <- is.null(flagCensal) | flagCensal
 
 	# # categories will consider as No Response
 	catToNA <- c('No Presentado', 'NR', 'Multimarca')
 
+	# # version with dict V03
+	versionOutput  <- "01"
+	versionComment <- "Salida de Exploratorio con la version de datos
+	2015_07_17 y diccionario version 01 (categorias colapsadas),
+	corrida dimensionalidad (con paralelo)"
+
+	# # extension to make the plots
+	kExt <- ".png"
+
 	# # cod for 'no eliminated' items
 	kCodNElim <- '06'
+
+	# # see ?psych::alpha
+	isCheckKeys <- FALSE
 
 	# # name of log file
 	logFile <- file.path(logPath, "log.txt")

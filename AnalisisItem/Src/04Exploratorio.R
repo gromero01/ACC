@@ -2,9 +2,9 @@
 # # RunDimensionalityCC.R
 # # R Versions: 3.02
 # #
-# # Author(s): María Fernanda Zárate Jiménez
+# # Author(s): Maria Fernanda Zarate Jimenez
 # #
-# # SABER 5° y 9° Factores Asociados
+# # SABER 5Â° y 9Â° Factores Asociados
 # # Description: Creates Excel outputs of dimensionality exporatory analysis for each
 # #              block of items
 # #
@@ -26,12 +26,12 @@ options(encoding = "UTF-8")
 ################################################################################
 # # global paths
 ################################################################################
-inPath        <- file.path("Input")
-funPath       <- file.path("Src", "Function")
-outPath       <- file.path("Output", "04Exploratorio")
-logPath       <- file.path("Log")
-outPathSamp   <- file.path("Output", "Muestras")
-inPathSam     <- file.path("Input", "Muestras")
+# inPath        <- file.path("Input")
+# funPath       <- file.path("Src", "Function")
+# outPath       <- file.path("Output", "04Exploratorio")
+# logPath       <- file.path("Log")
+# outPathSamp   <- file.path("Output", "Muestras")
+# inPathSam     <- file.path("Input", "Muestras")
 
 ###############################################################################
 # # Load libraries
@@ -49,11 +49,14 @@ library(xlsx)
 library(pcaPA)
 library(reshape)
 library(RColorBrewer) # # 1.0-5
+library(kernlab)
+library(HistogramTools)
+library(cluster)
 
 ################################################################################
 # # Load sourcefiles
 ################################################################################
-setwd("\\\\192.168.200.228/academica$/SABER/SABER_2013/20132-EJERCICIO_ANALITEM359-JUNIO2")
+
 source(file.path(funPath, "MeasurementModelsWithLavaan.R"))
 source(file.path(funPath, "corItem.R"))
 source(file.path(funPath, "univariateFunctions01.R"))
@@ -62,26 +65,26 @@ source(file.path(funPath, "log.R"))  # # log
 ################################################################################
 # # Command line parameters
 ################################################################################
-cat("-------------- Lectura de Archivos -----------------\n")
-# # Lectura de parámetros
-args <- commandArgs();
+# cat("-------------- Lectura de Archivos -----------------\n")
+# # # Lectura de parÃ¡metros
+# args <- commandArgs();
 
-# #  check if --args used. This avoids a problem with earlier versions of R
-argsPos  <- match("--args", args)
-codeName <- gsub("--file=Src(\\\\)?", "", args[grep("--file", args)])
+# # #  check if --args used. This avoids a problem with earlier versions of R
+# argsPos  <- match("--args", args)
+# codeName <- gsub("--file=Src(\\\\)?", "", args[grep("--file", args)])
 
-# #  Parameters extraction
-if(!is.na(argsPos) && length(args) > argsPos){ 
-  controlFile <- args[argsPos + 1];  # Class with parameters
-  #controlFile <- "controlData.Rdata"; codeName = "04Exploratorio.R"
-} else {
-  cat("Parametros de la función:\n")
-  cat("----> controlData: [Rdata] Class with parameters\n")
-  stop("**ERROR**  en los parametros")
-}
+# # #  Parameters extraction
+# if(!is.na(argsPos) && length(args) > argsPos){ 
+#   controlFile <- args[argsPos + 1];  # Class with parameters
+#   #controlFile <- "controlData.Rdata"; codeName = "04Exploratorio.R"
+# } else {
+#   cat("Parametros de la funciÃ³n:\n")
+#   cat("----> controlData: [Rdata] Class with parameters\n")
+#   stop("**ERROR**  en los parametros")
+# }
 
-# # Cargando parametros de las pruebas
-load(file.path(inPath, controlFile))
+# # # Cargando parametros de las pruebas
+# load(file.path(inPath, controlFile))
 
 ################################################################################
 # # global definitions
@@ -90,14 +93,17 @@ setGeneric(name = "explorAnalysis", def = function(object){standardGeneric("expl
 
 setMethod("explorAnalysis", "Prueba", 
 function(object){
-	# # Tipo de Análisis
+    outPath  <- file.path(outPath, "04Exploratorio")
+    dir.create(outPath)
+
+	# # Tipo de AnÃ¡lisis
 	isCensal <- FALSE
 	
 	# #  Tipo de Estudio
 	isTypeB <- FALSE
 
 	# # use parameter for correlations
-	useCor      <- "pairwise.complete.obs"
+	useCor      <- "complete.obs"
 	kThereLoadi <- 0.15
 	nReplicates  <- 200
 
@@ -110,14 +116,14 @@ function(object){
 
 	# # deleted students with more than 80% of omission for the topic
 	# # in the items that are not eliminated
-	kOmissionThreshold  <- 0.8
+	kOmissionThreshold  <- 0.5
 
 	# # Categories will consider as No Response
 	catToNA <- c('No Presentado', 'NR', 'Multimarca')
 
 	# # version with dict V00 and data _2014_01_28_17_10_35
 	versionOutput <- object@verSalida
-	versionComment <- paste0("Corrida Análisis Exploratorio --",  object@nomPrueba, "--") 
+	versionComment <- paste0("Corrida AnÃ¡lisis Exploratorio --",  object@nomPrueba, "--") 
 
 	# # cod for 'no eliminated' items
 	kCodNElim <- '06'
@@ -169,13 +175,13 @@ function(object){
 
 	  namesPrueba[, 'nItems'] <- nrow(expItemIndex)
 
-	  criterios1 <- c('Código de Prueba', 'Datos de Análisis',
-	                  'Uso criterio Omisiones', 'Número de ítems',
-	                  'Tipo de Análisis')
+	  criterios1 <- c('CÃ³digo de Prueba', 'Datos de AnÃ¡lisis',
+	                  'Uso criterio Omisiones', 'NÃºmero de Ã­tems',
+	                  'Tipo de AnÃ¡lisis')
 
 	  valores1 <-  data.frame(valor = c(namesPrueba[, 'codigo_prueba'],
 	                    ifelse(isCensal, 'Censal', 'Muestra Nacional'),
-	                    ifelse(isOmissDel, 'Sí', 'No'),
+	                    ifelse(isOmissDel, 'SÃ­', 'No'),
 	                    namesPrueba[, 'nItems'], useMatrixCorr ))
 
 	  cabBlock1 <- data.frame(criterios1, valores1)
@@ -185,9 +191,9 @@ function(object){
 	               col.names = FALSE, colStyle = list('1' = csNeg))
 
 
-	  criterios2 <- c('Prueba','n Análisis',
+	  criterios2 <- c('Prueba','n AnÃ¡lisis',
 	                  'Criterio para tratamiento de omisiones',
-	                  'Comentario', 'Rotación')
+	                  'Comentario', 'RotaciÃ³n')
 
 	  valores2   <-  data.frame(valor = c(namesPrueba[, 'prueba'],
 	                            nObsExploratory, kOmissionThreshold,
@@ -199,7 +205,7 @@ function(object){
 	               startColumn = 3, row.names = FALSE,
 	               col.names = FALSE, colStyle = list('1' = csNeg) )
 
-	  criterios3 <- c('Selección de número de dimensiones',
+	  criterios3 <- c('SelecciÃ³n de nÃºmero de dimensiones',
 	                  'Tratamiento de valores ausentes')
 
 	  valores3   <- data.frame(valor = c(ifelse(flagUser, 'Usuario', 'Paralelo'),
@@ -222,17 +228,17 @@ function(object){
 
 	  colRetain  <- 5
 	  rowRetain  <- 3:5
-	  rows       <- getRows(sheet = get(nameSheet), rowIndex = rowRetain )
-	  cells      <- getCells(rows, colIndex = colRetain)
+	  rows       <- xlsx::getRows(sheet = get(nameSheet), rowIndex = rowRetain )
+	  cells      <- xlsx::getCells(rows, colIndex = colRetain)
 
 	  posiciones <- outer(rowRetain, colRetain, FUN = "paste", sep = '.')
 	  pcl1       <- posiciones[1]
 	  pcl2       <- posiciones[2]
 	  pcl3       <- posiciones[3]
 
-	  setCellStyle(cells[[pcl1]], csL4)
-	  setCellStyle(cells[[pcl2]], csL3)
-	  setCellStyle(cells[[pcl3]], csL2)
+	  xlsx::setCellStyle(cells[[pcl1]], csL4)
+	  xlsx::setCellStyle(cells[[pcl2]], csL3)
+	  xlsx::setCellStyle(cells[[pcl3]], csL2)
 
 
 	  criterios5 <- data.frame(commu = c(
@@ -248,17 +254,17 @@ function(object){
 
 	  colRetain  <- 6
 	  rowRetain  <- 3:5
-	  rows       <- getRows(sheet = get(nameSheet), rowIndex = rowRetain )
-	  cells      <- getCells(rows, colIndex = colRetain)
+	  rows       <- xlsx::getRows(sheet = get(nameSheet), rowIndex = rowRetain )
+	  cells      <- xlsx::getCells(rows, colIndex = colRetain)
 
 	  posiciones <- outer(rowRetain, colRetain, FUN = "paste", sep = '.')
 	  pcl1       <- posiciones[1]
 	  pcl2       <- posiciones[2]
 	  pcl3       <- posiciones[3]
 
-	  setCellStyle(cells[[pcl1]], csC4)
-	  setCellStyle(cells[[pcl2]], csC3)
-	  setCellStyle(cells[[pcl3]], csC2)
+	  xlsx::setCellStyle(cells[[pcl1]], csC4)
+	  xlsx::setCellStyle(cells[[pcl2]], csC3)
+	  xlsx::setCellStyle(cells[[pcl3]], csC2)
 
 	}
 
@@ -364,7 +370,7 @@ function(object){
   	}
 
 
-	# # obtener los códigos de las pruebas leídas que corresponden a las
+	# # obtener los cÃ³digos de las pruebas leÃ­das que corresponden a las
 	# # pruebas que se desean analizar
 	filtroDicc <- function(x, varsKeep) {
 	    isNoElim    <- x[, 'elimina' ] == kCodNElim
@@ -382,7 +388,7 @@ function(object){
   	exist       <- pruebasDesc[, 'codigo_prueba'] %in% gsub("\\.con", "", names(datBlock))
   	pruebasRead <- pruebasDesc[exist, 'codigo_prueba']
   	pruebasRead <- sort(pruebasRead)
-
+  	outPathSamp <- file.path(outPath, "../Muestras")
   	if(!file.exists(outPathSamp)){
     	dir.create(outPathSamp)
     	cat("Se creo la carpeta muestras en el output!!!!!\n")
@@ -471,12 +477,14 @@ function(object){
                            verDataIn, ".RData", sep = ""))
 
      if (!file.exists(confData) & !file.exists(expData)) {
-    	isExploratory    <- sample(x = rownames(kkBlock), size = nObsBlock %/% 2)
+    	#isExploratory    <- sample(x = rownames(kkBlock), size = nObsBlock %/% 2)
+    	isExploratory    <- rep(TRUE, nrow(kkBlock))
     	expkkBlock       <- subset(kkBlock[isExploratory, ], select = -consLect)
     	rownames(expkkBlock) <- datBlockOmis[[kk]][isExploratory, ]$consLect
     	nObsExploratory  <- nrow(expkkBlock)
 
-	    isConfirmatory        <- -as.numeric(isExploratory)
+	    #isConfirmatory        <- -as.numeric(isExploratory)
+	    isConfirmatory        <- rep(TRUE, nrow(kkBlock))
 	    confkkBlock           <- subset(kkBlock[isConfirmatory, ], select = -consLect)
 	    rownames(confkkBlock) <- kkBlock[isConfirmatory, ]$consLect
 	    nObsConfirmatory      <- nrow(confkkBlock)
@@ -512,7 +520,7 @@ function(object){
           save(corExpBlock,  file = corExpData)
           save(corConfBlock, file = corConfData)
       	} else {
-          cat("No se estimo la matriz policórica inicial\n\n")
+          cat("No se estimo la matriz policÃ³rica inicial\n\n")
           controlAnal@param$flagUni     <- FALSE
           controlAnal@param$flagMultiC  <- FALSE
           controlAnal@param$flagMultiNC <- FALSE
@@ -521,6 +529,28 @@ function(object){
     } else {
       load(corExpData)
     }
+
+    ###################################################
+    ### Obtain Histogram Distance
+    ###################################################
+    expkkNum <- sapply(expkkBlock, function(x) as.numeric(as.character(x)))
+    cobCol   <- combn(ncol (expkkNum), 2)
+    cobCol   <- apply(cobCol, 2, function(x){ histX <- hist(expkkNum[, x[1]], plot = FALSE)
+    	              histY <- hist(expkkNum[, x[2]], plot = FALSE)
+    	              intersect.dist(histX, histY)})
+    kerHD    <- diag(ncol(expkkNum))
+    kerHD[lower.tri(kerHD)] <- cobCol
+    kerHD[upper.tri(kerHD)] <- cobCol
+    rbf       <- rbfdot(sigma = 0.05)
+    kerHD     <- kernelMatrix(rbf, kerHD)
+    clustI     <- specc(kerHD, centers = 3)
+    msSCLUSI   <- silhouette(x = clustI@.Data, dmatrix = kerHD)
+    clustI     <- data.frame('Item' = names(expkkBlock), 'cluster.1' = clustI@.Data)
+
+    corExpBHD  <- kernelMatrix(rbf, corExpBlock$cor)
+    clustII    <- specc(corExpBHD, centers = 3)
+    msSCLUSII  <- silhouette(x = clustII@.Data, dmatrix = corExpBHD)
+    clustII    <- data.frame('Item' = names(expkkBlock), 'cluster.2' = clustII@.Data)
 
 	###################################################
 	### Obtain parallel analysis with exploratory data
@@ -549,7 +579,7 @@ function(object){
 	###################################################
 	# # Salidas por dimension
 
-	# Sugerido por los eigenvalues
+	# # Sugerido por los eigenvalues
 
 	  if(!flagUser){
 	     if(nFactors == 1){
@@ -565,6 +595,19 @@ function(object){
 
 	  }
 
+	# # Cluster con 3 Factores
+	# save(resultsExp, file = "ppp.Rdata")
+	# auxCargas <- resultsExp[[2]]$Loadings[, 2:4]
+	# cl        <- kmeans(auxCargas, 3)
+	auxCargas <- resultsExp[[2]]$Loadings[, 2:4]
+	cl        <- apply(abs(auxCargas), 1, function(x) (1:length(x))[x == max(x)])
+	auxNomb   <- as.character(resultsExp[[2]]$Loadings[, "Item"]) 
+	clustIII  <- data.frame('Item' = auxNomb, 'cluster.3' = cl)
+
+	allClust <- merge(clustI, clustII, by = "Item")
+	allClust <- merge(allClust, clustIII, by = "Item")
+	save(allClust, file = file.path(outPath, "allClust.Rdata"))
+	
 	# Lo que quiera explorar el usuario
 
 	  if(flagUser){
@@ -584,7 +627,7 @@ function(object){
 	colorCommunalities <- brewer.pal(3, "Greens")
 	colStyle           <- list()
 
-	 wb <- createWorkbook()
+	 wb <- xlsx::createWorkbook()
 
 	 # # cell style
 	  # # header style
@@ -595,7 +638,7 @@ function(object){
 	            Alignment(h = "ALIGN_CENTER")
 	  # # percentages style
 	  csPor <- CellStyle(wb) + DataFormat("0.00%")
-	  # # estilo de columnas que reportan la desviación estándar del por
+	  # # estilo de columnas que reportan la desviaciÃ³n estÃ¡ndar del por
 	  csDs  <- CellStyle(wb) + DataFormat("(0.0%)") +
 	            Alignment(v = "VERTICAL_CENTER") + Border()
 	  csDsE <- CellStyle(wb) + Alignment(v = "VERTICAL_CENTER", wrapText = TRUE) +
@@ -615,6 +658,7 @@ function(object){
 
 	  # # estilo de loadings rango 0
 	  csL0  <- CellStyle(wb) + DataFormat("0.000")
+	  
 	  # # estilo de loadings rango 1
 	  csL1  <- CellStyle(wb) + DataFormat("0.000") + Font(wb, color = 9)
 	 # # estilo de loadings rango 2
@@ -640,7 +684,7 @@ function(object){
 	            Fill(foregroundColor=colorCommunalities[3])
 
 
-	# # Salida de resúmen de los items
+	# # Salida de resÃºmen de los items
 
 	    varKeepDict   <- c('id', 'indice', 'etiqu')
 
@@ -653,29 +697,29 @@ function(object){
 	    }
 
 	   nameSheet     <- 'Items'
-	   assign(nameSheet, createSheet(wb, sheetName = nameSheet))
+	   assign(nameSheet, xlsx::createSheet(wb, sheetName = nameSheet))
 	   addDataFrame(expItemIndex, sheet = get(nameSheet), startRow = 7,
 	               startColumn = 1, row.names = FALSE,
 	               col.names = TRUE, colnamesStyle = csEnc)
 
-	    setColumnWidth(get(nameSheet), 1, 23)
-	    setColumnWidth(get(nameSheet), 2, 20)
-	    setColumnWidth(get(nameSheet), 3, 23)
-	    setColumnWidth(get(nameSheet), 4, 22)
-	    setColumnWidth(get(nameSheet), 5, 25)
-	    setColumnWidth(get(nameSheet), 6, 25)
+	    xlsx::setColumnWidth(get(nameSheet), 1, 23)
+	    xlsx::setColumnWidth(get(nameSheet), 2, 20)
+	    xlsx::setColumnWidth(get(nameSheet), 3, 23)
+	    xlsx::setColumnWidth(get(nameSheet), 4, 22)
+	    xlsx::setColumnWidth(get(nameSheet), 5, 25)
+	    xlsx::setColumnWidth(get(nameSheet), 6, 25)
 
 	    PutCabezote(nameSheet)
 
-	# # Grafica de sedimentación
+	# # Grafica de sedimentaciÃ³n
 
 	 if(!flagUser){
 	    nameSheet <- 'Paralelo'
 	 } else {
-	   nameSheet <- 'Sedimentación'
+	   nameSheet <- 'SedimentaciÃ³n'
 	 }
 
-	    assign(nameSheet , createSheet(wb, sheetName = nameSheet ))
+	    assign(nameSheet , xlsx::createSheet(wb, sheetName = nameSheet ))
 	    PutCabezote(nameSheet)
 
 	    titleEigenvalues <- data.frame(tve = 'Eigenvalues')
@@ -717,12 +761,12 @@ function(object){
 	               col.names = FALSE,   colStyle = list('1' = csEnc))
 
 	     for(ll in 1:6){
-	         width[[ll]]    <- paste("setColumnWidth(get(nameSheet),", ll, ",25)", sep='')
+	         width[[ll]]    <- paste("xlsx::setColumnWidth(get(nameSheet),", ll, ",25)", sep='')
 	         eval(parse(text = width[[ll]]))
 	     }
 
 	  ######################################################
-	  # # Salida de los análisis por cada dimension
+	  # # Salida de los anÃ¡lisis por cada dimension
 	  ######################################################
 
 	      loadingsList      <- list()
@@ -737,7 +781,7 @@ function(object){
 
 	      nDim           <- seqFactors[jj]
 	      namesSheet     <- paste(nDim, "Dim", sep = '')
-	      assign(namesSheet, createSheet(wb, sheetName = namesSheet))
+	      assign(namesSheet, xlsx::createSheet(wb, sheetName = namesSheet))
 	      PutCabezote(namesSheet)
 
 	      varExplained  <- resultsExp[[jj]]$VarExplained
@@ -799,9 +843,9 @@ function(object){
 	                  row.names = TRUE, col.names = TRUE ,
 	                  colStyle = eval(parse(text = colStyleDef)) )
 
-	      setColumnWidth(get(namesSheet), 1, 23)
+	      xlsx::setColumnWidth(get(namesSheet), 1, 23)
 	      for(ll in 1:max(nColOutVar, nColOutCor)+1){
-	         width[[ll]]    <- paste("setColumnWidth(get(namesSheet),", ll, ",23)", sep='')
+	         width[[ll]]    <- paste("xlsx::setColumnWidth(get(namesSheet),", ll, ",23)", sep='')
 	         eval(parse(text = width[[ll]]))
 	      }
 
@@ -827,9 +871,9 @@ function(object){
 	      loadingsI  <- subset(loadings, select = -Item)
 		colRetain  <- seq(nColOutLoa + 1, nColOutLoa + nDim )
 		rowRetain  <- seq(10, 10 + nrow(loadings) - 1)
-		rows       <- getRows(sheet = get(namesSheet),
+		rows       <- xlsx::getRows(sheet = get(namesSheet),
 	                           rowIndex = rowRetain )
-		cells      <- getCells(rows, colIndex = colRetain)
+		cells      <- xlsx::getCells(rows, colIndex = colRetain)
 
 		posiciones <- outer(rowRetain, colRetain, FUN = "paste", sep = '.')
 
@@ -845,11 +889,11 @@ function(object){
 		pcl3 <- posiciones[ld3]
 		pcl4 <- posiciones[ld4]
 
-	    lapply(pcl0, function(x) setCellStyle(cells[[x]], csL0) )
-		lapply(pcl1, function(x) setCellStyle(cells[[x]], csL1) )
-		lapply(pcl2, function(x) setCellStyle(cells[[x]], csL2) )
-		lapply(pcl3, function(x) setCellStyle(cells[[x]], csL3) )
-	    lapply(pcl4, function(x) setCellStyle(cells[[x]], csL4) )
+	    lapply(pcl0, function(x) xlsx::setCellStyle(cells[[x]], csL0) )
+		lapply(pcl1, function(x) xlsx::setCellStyle(cells[[x]], csL1) )
+		lapply(pcl2, function(x) xlsx::setCellStyle(cells[[x]], csL2) )
+		lapply(pcl3, function(x) xlsx::setCellStyle(cells[[x]], csL3) )
+	    lapply(pcl4, function(x) xlsx::setCellStyle(cells[[x]], csL4) )
 
 
 	  # # Comunalidades
@@ -875,9 +919,9 @@ function(object){
 	    communalitiesI <- subset(communalities, select = -Item)
 		colRetain      <- nColOutCom + 1
 		rowRetain      <- seq(10, 10 + nrow(communalities) - 1)
-		rows           <- getRows(sheet = get(namesSheet),
+		rows           <- xlsx::getRows(sheet = get(namesSheet),
 	                              rowIndex = rowRetain )
-		cells          <- getCells(rows, colIndex = colRetain)
+		cells          <- xlsx::getCells(rows, colIndex = colRetain)
 
 		posiciones     <- outer(rowRetain, colRetain, FUN = "paste", sep = '.')
 
@@ -893,10 +937,10 @@ function(object){
 		pcg3 <- posiciones[cg3]
 		pcg4 <- posiciones[cg4]
 
-		lapply(pcg1, function(x) setCellStyle(cells[[x]], csC1) )
-		lapply(pcg2, function(x) setCellStyle(cells[[x]], csC2) )
-		lapply(pcg3, function(x) setCellStyle(cells[[x]], csC3) )
-	      lapply(pcg4, function(x) setCellStyle(cells[[x]], csC4) )
+		lapply(pcg1, function(x) xlsx::setCellStyle(cells[[x]], csC1) )
+		lapply(pcg2, function(x) xlsx::setCellStyle(cells[[x]], csC2) )
+		lapply(pcg3, function(x) xlsx::setCellStyle(cells[[x]], csC3) )
+	      lapply(pcg4, function(x) xlsx::setCellStyle(cells[[x]], csC4) )
 
 	      loadingsList[[jj]]      <- resultsExp[[jj]]$Loadings
 	      communalitiesList[[jj]] <- resultsExp[[jj]]$Communalities
@@ -912,7 +956,7 @@ function(object){
 	  #################################################################
 
 	   nameSheet     <- 'Extracciones'
-	   assign(nameSheet, createSheet(wb, sheetName = nameSheet))
+	   assign(nameSheet, xlsx::createSheet(wb, sheetName = nameSheet))
 	   PutCabezote(nameSheet)
 
 	   # # Varianzas Explicadas
@@ -1011,9 +1055,9 @@ function(object){
 
 	    	colRetain <- seq(nColOutComStart + 1,  nColOutComEnd)
 		rowRetain <- seq(10, 10 + nrow(sumCommuD) - 1)
-		rows      <- getRows(sheet = get(nameSheet),
+		rows      <- xlsx::getRows(sheet = get(nameSheet),
 	                           rowIndex = rowRetain )
-		cells     <- getCells(rows, colIndex = colRetain)
+		cells     <- xlsx::getCells(rows, colIndex = colRetain)
 
 		posiciones <- outer(rowRetain, colRetain, FUN = "paste", sep = '.')
 
@@ -1027,25 +1071,25 @@ function(object){
 		pcg3 <- posiciones[cg3]
 		pcg4 <- posiciones[cg4]
 
-		try(lapply(pcg1, function(x) setCellStyle(cells[[x]], csC1) ), TRUE)
-		try(lapply(pcg2, function(x) setCellStyle(cells[[x]], csC2) ), TRUE)
-		try(lapply(pcg3, function(x) setCellStyle(cells[[x]], csC3) ), TRUE)
-	      try(lapply(pcg4, function(x) setCellStyle(cells[[x]], csC4) ), TRUE)
+		try(lapply(pcg1, function(x) xlsx::setCellStyle(cells[[x]], csC1) ), TRUE)
+		try(lapply(pcg2, function(x) xlsx::setCellStyle(cells[[x]], csC2) ), TRUE)
+		try(lapply(pcg3, function(x) xlsx::setCellStyle(cells[[x]], csC3) ), TRUE)
+	      try(lapply(pcg4, function(x) xlsx::setCellStyle(cells[[x]], csC4) ), TRUE)
 
 
 
 	  for(ll in 1:nColOutComEnd){
-	      width[[ll]]    <- paste("setColumnWidth(get(nameSheet),", ll, ",18)", sep='')
+	      width[[ll]]    <- paste("xlsx::setColumnWidth(get(nameSheet),", ll, ",18)", sep='')
 	      eval(parse(text = width[[ll]]))
 	  }
 
 
 	   #############################################################
-	   # # Ultima hoja: Resúmen de cargas factoriales
+	   # # Ultima hoja: ResÃºmen de cargas factoriales
 	   #############################################################
 
 	   nameSheet <- 'Loadings'
-	   assign(nameSheet, createSheet(wb, sheetName = nameSheet))
+	   assign(nameSheet, xlsx::createSheet(wb, sheetName = nameSheet))
 
 	 # #  Agregar el titulo
 
@@ -1054,9 +1098,16 @@ function(object){
 	   loadingsTot[, expression] <- ''
 	   names(loadingsTot) <- gsub("Item.[1-9]", ' ', names(loadingsTot))
 	   names(loadingsTot) <- gsub("Factor\\.(\\d)(\\.\\d)*", "Factor \\1", names(loadingsTot))
-
-
 	   names(loadingsTot) <- recode(names(loadingsTot), "NA = '' ")
+	   
+	      
+	   loadingsTot <- merge(clustIII, loadingsTot, by = "Item")
+	   loadingsTot <- merge(clustII, loadingsTot, by = "Item")
+	   loadingsTot <- merge(clustI, loadingsTot, by = "Item")
+	   auxTable    <- expItemIndex[, c("id", "indice")]
+	   names(auxTable) <- gsub("^id$", 'Item', names(auxTable))
+	   loadingsTot <- merge(auxTable, loadingsTot, by = "Item")
+
 
 	   nColOutLoad   <- ncol(loadingsTot) + 1
 	   titleLoadings <- data.frame(tlm = 'Rotate Loadings')
@@ -1082,9 +1133,9 @@ function(object){
 
 		colRetain <- seq(3, ncol(loadingsTot) + 1)
 		rowRetain <- seq(10, 10 + nrow(loadings) - 1)
-		rows      <- getRows(sheet = get(nameSheet),
+		rows      <- xlsx::getRows(sheet = get(nameSheet),
 	                      rowIndex = rowRetain )
-		cells     <- getCells(rows, colIndex = colRetain)
+		cells     <- xlsx::getCells(rows, colIndex = colRetain)
 
 		posiciones <- outer(rowRetain, colRetain, FUN = "paste", sep = '.')
 
@@ -1112,17 +1163,18 @@ function(object){
 		pcl4 <- posiciones[ld4]
 	    pcl5 <- posiciones[ld5]
 
-	    try(lapply(pcl0, function(x) setCellStyle(cells[[x]], csL0) ), TRUE)
-	    try(lapply(pcl1, function(x) setCellStyle(cells[[x]], csL1) ), TRUE)
-	    try(lapply(pcl2, function(x) setCellStyle(cells[[x]], csL2) ), TRUE)
-	    try(lapply(pcl3, function(x) setCellStyle(cells[[x]], csL3) ), TRUE)
-	    try(lapply(pcl4, function(x) setCellStyle(cells[[x]], csL4) ), TRUE)
-	    try(lapply(pcl5, function(x) setCellStyle(cells[[x]], csL1) ), TRUE)
+	    try(lapply(pcl0, function(x) xlsx::setCellStyle(cells[[x]], csL0) ), TRUE)
+	    
+	    try(lapply(pcl1, function(x) xlsx::setCellStyle(cells[[x]], csL1) ), TRUE)
+	    try(lapply(pcl2, function(x) xlsx::setCellStyle(cells[[x]], csL2) ), TRUE)
+	    try(lapply(pcl3, function(x) xlsx::setCellStyle(cells[[x]], csL3) ), TRUE)
+	    try(lapply(pcl4, function(x) xlsx::setCellStyle(cells[[x]], csL4) ), TRUE)
+	    try(lapply(pcl5, function(x) xlsx::setCellStyle(cells[[x]], csL1) ), TRUE)
 
 
 
 	    for(ll in 1:(max(nColOutLoad, 6)) ){
-	      width[[ll]]    <- paste("setColumnWidth(get(nameSheet),", ll, ",18)", sep='')
+	      width[[ll]]    <- paste("xlsx::setColumnWidth(get(nameSheet),", ll, ",18)", sep='')
 	      eval(parse(text = width[[ll]]))
 	    }
 
@@ -1130,7 +1182,7 @@ function(object){
 	                       paste("04Exploratorio_", kk,"_V", versionOutput,
 	                             ".xlsx", sep = ''))
 
-	  saveWorkbook(wb, file = outFile)
+	  xlsx::saveWorkbook(wb, file = outFile)
 	}
 })
 
@@ -1138,8 +1190,8 @@ function(object){
 # # Apply the exploratory function to each test in controlData
 ################################################################################
 
-for (prueba in names(controlData)) {
-  print(prueba)
-  explorAnalysis(controlData[[prueba]])
-}
+# for (prueba in names(controlData)) {
+#   print(prueba)
+#   explorAnalysis(controlData[[prueba]])
+# }
 

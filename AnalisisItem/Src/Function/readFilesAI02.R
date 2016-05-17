@@ -125,8 +125,8 @@ function(object, desElim = NULL){
       fileInfo <- controlAnal$indiceInfo["path"]
       namSheet <- controlAnal$indiceInfo["nameSheet"]
       require(XLConnect)
-      channel  <- loadWorkbook(fileInfo)     
-      infoItem <- readWorksheet(channel, namSheet)     
+      channel <- XLConnect::loadWorkbook(fileInfo)
+      infoItem <- XLConnect::readWorksheet(channel, namSheet)
   }
 
   # # Reading info from .zip file
@@ -198,39 +198,37 @@ function(object, desElim = NULL){
       if (!"infoItem" %in% names(controlAnal))
         stop("**ERROR** Se de especificar en 'infoItem' las columnas del archivo 'indiceInfo'")
       rnColum  <- controlAnal$infoItem
-      infoItem <- setnames(infoItem, rnColum, names(rnColum))
-      nrowAnte <- nrow(infoCon)
+      infoItem <- setnames(infoItem, rnColum, names(rnColum))      
 
       if (object@exam == "SABERPRO") {
-        infoItem <- infoItem[toupper(infoItem[, "prueba"]) ==
-                             toupper(gsub("(\\.con|pba|PBA)", "", nameCon)), ]
+        #infoItem <- infoItem[toupper(infoItem[, "prueba"]) ==
+        #                     toupper(gsub("(\\.con|pba|PBA)", "", nameCon)), ]
         if ("indice" %in% names(rnColum)) {
           infoItem[, "etiqu"]   <- gsub("^\\s?(\\d{1}\\..+)", "\\1", infoItem[, "indice"])
           infoItem[, "indice"]  <- gsub("^\\s?((\\d|\\.)+)(\\s+)?(\\w.+)", "AFIRM\\1", infoItem[, "indice"])
         }
       }
 
-      infoCon  <- merge(infoCon, infoItem[, c(names(rnColum), 'etiqu' = 'etiqu')], by = "id")
-      if (nrowAnte != nrow(infoCon))
-        stop("**ERROR** Al cruzar con el archivo (eliminar duplicados): ",
+      infoCon  <- merge(infoCon, infoItem[, c(names(rnColum), 'etiqu' = 'etiqu')], by = "id", all.x = TRUE)
+      if (any(is.na(infoCon$indice)))
+        warning("**WARNING** Al cruzar con el archivo (eliminar duplicados o hay faltantes): ",
              controlAnal$indiceInfo["path"], "base original --", nrowAnte,
              "-- base final --", nrow(infoCon))
-
     }
 
     # # Fill column Indices
     if ('indice' %in% names(infoCon)) {
       indNA <- nrow(infoCon) - sum(is.na(infoCon[, "indice"]))
       if (indNA < nrow(infoCon) & indNA != 0) { # Any Indice is NA
-        infoCon[is.na(infoCon[, "indice"]), "Indice"] = "NOFIND"
+        infoCon[is.na(infoCon[, "indice"]), "indice"] = "NOFIND"
       }
     } else {
-      infoCon[, "Indice"] = infoCon[, "codigo_prueba"]
+      infoCon[, "indice"] = infoCon[, "codigo_prueba"]
       indNA <- nrow(infoCon)
     }
 
     if (indNA < nrow(infoCon) & indNA != 0) { # Any Indice is NA
-      infoCon[is.na(infoCon[, "indice"]), "Indice"] = "NOFIND"
+      infoCon[is.na(infoCon[, "indice"]), "indice"] = "NOFIND"
     }
 
     # # Prueba y Codigo_Prueba Column
@@ -243,10 +241,11 @@ function(object, desElim = NULL){
     }
 
     # # conMod (Identifier of IRT model)
-    if (object@exam == "ACC") infoCon[, "codMod"] = "03"
-    if (object@exam == "SABER359") infoCon[, "codMod"] = "05"
-    if (object@exam == "SABER11") infoCon[, "codMod"] = "06"
-    if (object@exam == "SABERPRO") infoCon[, "codMod"] = "07"
+    infoCon[, "codMod"] <- object@codMod
+    #if (object@exam == "ACC") infoCon[, "codMod"] = "03"
+    #if (object@exam == "SABER359") infoCon[, "codMod"] = "05"
+    #if (object@exam == "SABER11") infoCon[, "codMod"] = "06"
+    #if (object@exam == "SABERPRO") infoCon[, "codMod"] = "07"
 
     # # Finall filter
     infoCon <- subset(infoCon, id %in% filtItem)
@@ -268,14 +267,11 @@ function(object, desElim = NULL){
                                       function (x) gsub("\n", "", x))
 
   attr(dictionary, "call") <- list(desElim = desElim)
-  class(dictionary) <- "RD"
-  # # Print Results
+  # Print Results
   cat("# # Results:\n")
   str(dictionary, max.level = 1)
-
   structure(dictionary, call = list(desElim = desElim),
-            class = "RD", parameters = match.call())
-  
+            parameters = match.call())
 })
 
 ################################################################################
@@ -285,7 +281,7 @@ setGeneric(name = "ReadGeneric", def = function(object, ...){standardGeneric("Re
 
 setMethod("ReadGeneric", "Prueba",
 function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = TRUE,
-          valMUO = 9) {
+          valMUO = NA) {
   # # Function to read data files with lecture of B sheets from the input
   # #
   # # Arg:
@@ -318,14 +314,6 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
   ################################################################################
   # # validate parameters
   ################################################################################
-
-  if (class(dict) != "RD") {
-    stop("Object: ", dict, " isn't RD object")
-  }
-
-  if (class(dict) != "RD") {
-    stop("Dict parameter is expected to be a output of the ReadDict function")
-  }
 
   if (!all(is.logical(c(multiMarkOmiss, verbose, eliminatedVars)))) {
     stop("Any or some of the next parameter are not of type logical:
@@ -447,6 +435,7 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
                           column_types = rep("string", length(nombres)),
                           column_names = nombres)
 
+ 
     # # comparision of the number if items in dictionary and in the input file
     areItems   <- dict$variables[, 'id'] %in% items
     areItems   <- areItems & dict$variables[, 'codigo_prueba'] == prueba
@@ -454,8 +443,8 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
     items      <- filDict[, 'id']
     itemsBlock <- dict$variables[areItems, "id"]
     pruebas    <- dict$variables[areItems, c('id', 'prueba')]
-    auxColDict <- c(names(read)[!grepl("X\\d+", names(read))], paste0("X", items))
-    nombres    <- c(names(read)[!grepl("X\\d+", names(read))], items)
+    isItem     <- sapply(names(read), function(x) any(sapply(items, function(z) x %like% z)))
+    nombres    <- c(names(read)[!isItem], items)
 
     cat("Number of items in dictionary: ", length(itemsBlock),
         ". Number of character in string: ", nItems, "\n", sep = "")
@@ -463,8 +452,9 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
        cat("\n\nADVERTENCIA: Number of items in the dictionary is not equal
             to the number of items in the .com file")
     }
-    read        <- read[ , auxColDict]
+    read        <- read[ , names(read)]
     names(read) <- nombres
+
     cat("#########################################################################",
     "\n# # The file is reading with the follow structure: \n")
     print(strDat)
@@ -684,7 +674,7 @@ ReadDict <- function (fileName, variables, categories, model, index,
   require(XLConnect)
 
   sheets  <- paste0(nameSheets)
-  channel <- loadWorkbook(fileName)
+  channel <- XLConnect::loadWorkbook(fileName)
   tables  <- getSheets(channel)
 
   # # verification that the tables ask for reading exist
@@ -694,18 +684,18 @@ ReadDict <- function (fileName, variables, categories, model, index,
   }
 
   dictionary <- list()
-  dictionary$variables  <- readWorksheet(channel, variables)
+  dictionary$variables  <- XLConnect::readWorksheet(channel, variables)
   cat("Number of items on the table of variables = \n     ",
      nrow(dictionary$variables), "\n", sep = "")
 
-  dictionary$categories <- readWorksheet(channel, categories)
-  dictionary$model      <- readWorksheet(channel, model)
-  dictionary$index      <- readWorksheet(channel, index)
+  dictionary$categories <- XLConnect::readWorksheet(channel, categories)
+  dictionary$model      <- XLConnect::readWorksheet(channel, model)
+  dictionary$index      <- XLConnect::readWorksheet(channel, index)
   if (!is.null(collapse)) {
-    dictionary$collapse   <- readWorksheet(channel, collapse)
+    dictionary$collapse   <- XLConnect::readWorksheet(channel, collapse)
   }
   if (!is.null(desElim)) {
-    dictionary$desElim    <- readWorksheet(channel, desElim)
+    dictionary$desElim    <- XLConnect::readWorksheet(channel, desElim)
   }
 
 
@@ -849,16 +839,13 @@ ReadDict <- function (fileName, variables, categories, model, index,
 
 
   attr(dictionary, "call") <- list(collapse = collapse, desElim = desElim)
-
-  class(dictionary) <- "RD"
-
   cat("# # Results:\n")
   str(dictionary, max.level = 1)
 
 
   # #   return(dictionary)
   structure(dictionary, call = list(collapse = collapse, desElim = desElim),
-            class = "RD", parameters = match.call(),
+            parameters = match.call(),
             features = c(fileName = fileName, variables = variables) )
 }
 
@@ -909,11 +896,6 @@ ReadDataAI <- function (folderName, dict,
   if (!exists(as.character(substitute(dict)))) {
     stop("Object: ", dict, " doesn't exist")
   }
-
-  if (class(dict) != "RD") {
-    stop("Dict parameter is expected to be a output of the ReadDict function")
-  }
-
 
   if (!file.exists(folderName)) {
     stop("Folder: ", folderName, " doesn't exist")

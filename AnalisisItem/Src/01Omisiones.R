@@ -169,7 +169,7 @@ for (kk in pruebasRead) {
                       datos = datBlockOmis[[kk]], 
                       omissionThreshold = kOmissionThreshold)
   tabMissBl <- MakeListData(tabMissBl, nvar = "vaAgrupacion")
-  save(tabMissBl, )
+  
   # # save table xls
     # # hoja 
     namesSheet <- paste('PBA', kk, sep = '')
