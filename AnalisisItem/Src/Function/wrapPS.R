@@ -21,8 +21,10 @@
 # #             function
 # #   20130503: Added parameters in RunParscale to fix item calibration
 # #             and to print comments in the output files
+# #   20140606: Rutina (testPH2FilePS) que revisa si el archivo PH2 tiene
+# #             un error por estimabilidad de los parámetros de
+# #             localización en PCM GRM (Fabio Tejedor)
 ################################################################################
-
 
 ################################################################################
 # # Function for reading Parscale output file
@@ -124,7 +126,7 @@ ReadPsParFile <- function (fileName, filePath = "./") {
 
         if (nStepsMissing > 0) {
           maxStepInTable <- nCat - nStepsMissing
-          missingSteps   <- matrix(0, nrow = nrow(iPar), ncol = nStepsMissing * 2)
+          missingSteps   <- matrix(NA, nrow = nrow(iPar), ncol = nStepsMissing * 2)
           colnames(missingSteps) <- paste(c("step", "seStep"), rep(maxStepInTable:(nCat - 1), each = 2), sep = ".")
 
           iPar <- data.frame(iPar, missingSteps)
@@ -133,8 +135,8 @@ ReadPsParFile <- function (fileName, filePath = "./") {
 
         stepsColumns   <- grep("se", stepsInTable, invert = TRUE, value = TRUE)
         seStepsColumns <- grep("se", stepsInTable, value = TRUE)
-        iPar[itemRange, stepsColumns]   <- commonSteps[1, ]
-        iPar[itemRange, seStepsColumns] <- commonSteps[2, ]
+        iPar[itemRange, stepsColumns[1:(nCat -1)]]   <- commonSteps[1, ]
+        iPar[itemRange, seStepsColumns[1:(nCat -1)]] <- commonSteps[2, ]
       }
 
       itemsRead <- itemsRead + nItemsBlock[jj]
@@ -591,7 +593,7 @@ RunParscale <- function (responseMatrix, runName,
   # #      to 1.702 if lofistic is TRUE and 1.0 if it is FALSE
   # #  kChiGroups: numbre of groups for chi-square item fit calculations
   # #  srcPath: path to working directory
-    # #  binPath: path where the Parscale executables may be found
+  # #  binPath: path where the Parscale executables may be found
   # #  verbose: logical indicating whether to show or not function progres
   # #  calibFile: file name with the Parameter Calibration
   # #  skipVector: logical vector indicating if PARSCALE should estimate
@@ -690,7 +692,7 @@ RunParscale <- function (responseMatrix, runName,
   # # defined paths
   ################################################################################
   binPath <- file.path(srcPath, binPath)
-  # #   outPath <- file.path(srcPath, outPath)
+# #   outPath <- file.path(srcPath, outPath)
   runPath <- file.path(srcPath, runPath)
   ################################################################################
   # # Files used by Parscale
@@ -918,7 +920,8 @@ RunParscale <- function (responseMatrix, runName,
       cat("COMMON = ('", file = commandFile, append = TRUE)
 
     }
-    
+
+
     # #       (isSeparateSlopes, isSeparateThresholds, isSeparateCategories, isSeparateGuessing)
     isSeparateSlopes     <- dif[1]
     isSeparateThresholds <- dif[2]
@@ -963,6 +966,9 @@ RunParscale <- function (responseMatrix, runName,
   cat("       FREE = (0, 1, COMBINED, POSTERIOR), \n", file = commandFile, append = TRUE)
 
   }
+# #   if (!is.null(calibFile)) {
+# #     cat("       NOCALIB, \n", file = commandFile, append = TRUE)
+# #   }
   cat("       FLOAT;\n", file = commandFile, append = TRUE)
 
   # # SCORE
@@ -1013,7 +1019,7 @@ RunParscale <- function (responseMatrix, runName,
 
 ################################################################################
 # # Rutina que revisa si el archivo PH2 tiene un error por estimabilidad
-# # de los par'ametros de localizaci'on en PCM GRM 
+# # de los par'ametros de localizaci'on en PCM GRM
 ################################################################################
 
 testPH2FilePS  <- function(fileName, filePath = "./", nItems ){
