@@ -63,35 +63,21 @@ source(file.path(funPath, "univariateFunctions01.R"))
 source(file.path(funPath, "log.R"))  # # log
 
 ################################################################################
-# # Command line parameters
-################################################################################
-# cat("-------------- Lectura de Archivos -----------------\n")
-# # # Lectura de parámetros
-# args <- commandArgs();
-
-# # #  check if --args used. This avoids a problem with earlier versions of R
-# argsPos  <- match("--args", args)
-# codeName <- gsub("--file=Src(\\\\)?", "", args[grep("--file", args)])
-
-# # #  Parameters extraction
-# if(!is.na(argsPos) && length(args) > argsPos){ 
-#   controlFile <- args[argsPos + 1];  # Class with parameters
-#   #controlFile <- "controlData.Rdata"; codeName = "04Exploratorio.R"
-# } else {
-#   cat("Parametros de la función:\n")
-#   cat("----> controlData: [Rdata] Class with parameters\n")
-#   stop("**ERROR**  en los parametros")
-# }
-
-# # # Cargando parametros de las pruebas
-# load(file.path(inPath, controlFile))
-
-################################################################################
 # # global definitions
 ################################################################################
-setGeneric(name = "explorAnalysis", def = function(object){standardGeneric("explorAnalysis")})
+Exploratory <- setClass("Exploratory",  					  
+ 					    # # herencia clase Analysis
+ 					    contains = "Analysis")
+setMethod("initialize", "Exploratory", function(.Object, ...) {
+	.Object@outFile$pathRdata <- "resulEXPO.Rdata"
+	.Object <- callNextMethod()    
+  })
 
-setMethod("explorAnalysis", "Prueba", 
+new("Exploratory", test = prueba0, verSa = 1)
+
+setGeneric(name = "codeAnalisis", def = function(object){standardGeneric("codeAnalisis")})
+
+setMethod("codeAnalisis", "Exploratory", 
 function(object){
     outPath  <- file.path(outPath, "04Exploratorio")
     dir.create(outPath)
