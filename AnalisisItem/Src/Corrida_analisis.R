@@ -31,15 +31,18 @@ logPath <- file.path("..", "Log")
 pathExpeci <- file.path(inPath, "Especificaciones1.xlsx")
 pathExam   <- "AC20152"
 source(file.path("Function", "pruebaClass.R"))
-source("04Exploratorio.R")
-source("05Confirmatorio.R")
 
-prueba0 <- new('Prueba', path = paste0(pathExam, "\\PBA116"), 
+source("04Exploratorio.R")
+
+prueba0 <- new('Test', path = paste0(pathExam, "\\PBA116"), 
                exam = "SABERPRO", codMod = "07",
-               verEntrada = 1, nomPrueba = "SABER 11(Sociales y Competencias)", 
-               paramLect = list(infoItem   = c('id' = "CODIGO_ITEM", 'indice' = "COMPETENCIA_NOMBRE", 'prueba' = "NOMBRE_PRUEBA"),
-                                conDirs    = "PBA116.con", valMUO = NA,
-                                indiceInfo = c('path' = pathExpeci, 'nameSheet' =  "FINAL"))) 
+               verInput = 1, nomTest = "SABER 11(Sociales y Competencias)", 
+               paramLect = list(infoItem   = c('id' = "CODIGO_ITEM", 'subCon' = "COMPETENCIA_NOMBRE", 
+               	                'prueba' = "NOMBRE_PRUEBA"), conDirs = "PBA116.con", valMUO = NA,
+                                subConInfo = c('path' = pathExpeci, 'nameSheet' =  "FINAL"))) 
+
+
+ana1 <- new("Analysis", test = prueba0, outFile = list(pathRdata = "prueba.Rdata"))
 
 paso50  <- new('Analisis', prueba = prueba0,
  	           param = list('flagUni' = TRUE, 'flagMultiC' = TRUE, 'flagMultiNC' = TRUE, 'flagBiFac' = TRUE), 
