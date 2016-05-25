@@ -6,38 +6,39 @@
 # #            Robert Romero
 # #
 # # SABER 359, SABER PRO, SABER 11 y ACC
-# # Description: Función creada para definar la clase prueba, la clase análisis y
-# #              reporte prueba para las definir las funciones de análisis de item.
+# # Description: Función creada para definar la clase test, la clase análisis y
+# #              reporte test para las definir las funciones de análisis de item.
 # #
 # # Outputs: Funciones para crear objetos y metodos
 # #
 # # File history:
 # #   20150914: Creation
-# #   20160516: Modificación de las clases prueba y Análisis
+# #   20160516: Modificación de las clases test y Análisis
 # # ToDo:
 # #       Inclusión de la definición de las clases y los metodos
 ################################################################################
 
 ################################################################################
-# # Definición clase Prueba
+# # Definición clase Test
 ################################################################################
-Prueba <- setClass("Prueba", 
+
+Test <- setClass("Test", 
  		# # Definir la estructura
- 		slots = c(path           = 'character', # Ruta de la carpeta 
- 			      dictionaryList = 'list',		# Diccionario de variables
- 			      datBlock       = 'list',  	# 
- 			      exam           = 'character',
-	              verEntrada     = 'numeric',
-	              nomPrueba      = 'character',
-	              paramLect      = 'list', 
-	              codMod         = 'character'),  
+ 		slots = c(path           = 'character',  # Ruta de la carpeta 
+ 			        dictionaryList = 'list',		   # Diccionario de variables
+ 			        datBlock       = 'list',  	   # Datos leidos
+ 			        exam           = 'character',  # (SABER359, SABER11, SABERPRO)
+	            verInput       = 'numeric',    # Version con el que se genera diccionarios
+	            nomTest        = 'character',  # Nombre para impresion en los reportes
+	            paramLect      = 'list',       # Parametros de lectura de la prueba
+	            codMod         = 'character'), # Codigos del modelo de la prueba
 
  		# # Definir los valores por defecto
- 		prototype = list(verEntrada = 1, path = "", exam = "", codMod = "02",
-					  	 nomPrueba = "", paramLect = list(conDirs = "")), 
+ 		prototype = list(verInput = 1, path = "", exam = "", codMod = "02",
+					  	       nomPrueba = "", paramLect = list(conDirs = "")), 
  		validity  = function(object){ 			 			
- 			auxModelos <- data.frame('codMod' = c("00", "01", "02", "03", "04", "05", "06", "07"),
-                                     'model' = c("noModel", "PCM", "RSM", "GRM", "MRD", "2PL", "1PL", "3PL"))				
+      auxModelos <- data.frame('codMod' = c("00", "01", "02", "03", "04", "05", "06", "07"),
+                               'model'  = c("noModel", "PCM", "RSM", "GRM", "MRD", "2PL", "1PL", "3PL"))		
  			if(!object@codMod %in% auxModelos[, "codMod"]){
  				cat("No existe el codigo del modelo: ", object@codMod)
  				print(auxModelos)
@@ -50,27 +51,18 @@ Prueba <- setClass("Prueba",
  			return(TRUE)
  		})
 
-# # Metodos de la clase Prueba
-setGeneric(name = "leerInsumos", def = function(object){standardGeneric("leerInsumos")})
+# # Methods's Test Class
+setGeneric(name = "readSupplies", def = function(object){standardGeneric("readSupplies")})
 
-setMethod("leerInsumos", "Prueba",
+setMethod("readSupplies", "Test",
 function(object){
-  ################################################################################
-  # # Libraries
-  ################################################################################
-  require(XLConnect)
-  require(LaF)  # # 0.5, Fast access to large ASCII files
-  require(plyr)
-  require(data.table)  # # 1.8.10, fast indexing, ordered joint, ...
-  
+ 
   ################################################################################
   # # Definition of input and output paths
   ################################################################################
   outPath <- file.path("..", "Output", "00Crear")
-  if (dir.exists(outPath)) {
-  	unlink(outPath, recursive = TRUE)
-  }
-  dir.create(outPath, showWarnings = TRUE)
+  dir.create(outPath, showWarnings = FALSE, recursive = TRUE)
+
   ################################################################################
   # # Source of scripts with functions
   ################################################################################
@@ -90,7 +82,7 @@ function(object){
 	    stop("**ERROR** Se debe especificar una ruta para cada prueba")
 	  if (!file.exists(file.path(inPath, controlPrueba@path)))
 		  stop("**ERROR** El directorio de la prueba no existe")
-    if (is.na(controlPrueba@verEntrada))
+    if (is.na(controlPrueba@verInput))
 	    stop("**ERROR** Se debe especificar la versión de entrada")
     if (!"conDirs" %in% names(controlAnal))
 	    stop("**ERROR** Se debe especificar el vector de .con que se quieren Leer")
@@ -116,19 +108,19 @@ function(object){
     if (controlPrueba@exam == "ACC"){
       datDictionary <- file.path(outPath, 
                            paste("dictionaryList_V",
-                                 controlPrueba@verEntrada, ".RData", sep = ""))
+                                 controlPrueba@verInput, ".RData", sep = ""))
       datReadBlock  <- file.path(outPath, 
                            paste("datBlock_V",
-                                 controlPrueba@verEntrada, ".RData", sep = ""))
+                                 controlPrueba@verInput, ".RData", sep = ""))
     } else {
       datDictionary <- file.path(outPath,
                                paste("dictionaryList_",
                                      gsub(".+(\\\\|\\/)(.+)$", "\\2", controlPrueba@path), "_V",
-                                     controlPrueba@verEntrada, ".RData", sep = ""))
+                                     controlPrueba@verInput, ".RData", sep = ""))
       datReadBlock  <- file.path(outPath,
                                paste("datBlock_",
                                      gsub(".+(\\\\|\\/)(.+)$", "\\2", controlPrueba@path),"_V",
-                                     controlPrueba@verEntrada, ".RData", sep = ""))
+                                     controlPrueba@verInput, ".RData", sep = ""))
     }
 
     ################################################################################
@@ -145,6 +137,7 @@ function(object){
                                    categories = "OpcResp", model = "model",
 	            	                   index = "escalas", collapse = "colapsa",
 	                	               desElim = "elimina")
+        attr(dictionaryList, "fileRdata") <- datDictionary
 		    save(dictionaryList, file = datDictionary)
 		  } else {
 			  cat("Cargando el diccionario - ->", controlAnal$Estructura, "\n")
@@ -158,6 +151,7 @@ function(object){
       # # Reading the project dictionary
       if (!file.exists(datDictionary)){
       	dictionaryList <- con2Dict(object)
+        attr(dictionaryList, "fileRdata") <- datDictionary
         save(dictionaryList, file = datDictionary)
 
       } else {
@@ -166,11 +160,10 @@ function(object){
       # # Reading the DB using generic dictionary (only for dichotomous items)
       if (is.null(object@paramLect$valMUO))
         object@paramLect$valMUO <- 9
-	  datBlock <- ReadGeneric(object, dict = dictionaryList, verbose =  FALSE, 
+	    datBlock <- ReadGeneric(object, dict = dictionaryList, verbose =  FALSE, 
                               valMUO = object@paramLect$valMUO)
-	  save(datBlock, file = datReadBlock)
-    }
-    
+	    save(datBlock, file = datReadBlock)
+    }    
     # # Save directions of Rdata and datDictionary    
     object@dictionaryList <- dictionaryList
     object@datBlock       <- datBlock
@@ -179,269 +172,250 @@ function(object){
   })
 
 
-setMethod("initialize", "Prueba", function(.Object, ..., prueba) {    
+setMethod("initialize", "Test", function(.Object, ..., test) {    
     .Object <- callNextMethod()
-    if(missing(prueba)){
+    if(missing(test)){
     	if (length(.Object@path) != 0){
     		if (length(.Object@dictionaryList) == 0 & length(.Object@datBlock) == 0){
-          		.Object <- leerInsumos(.Object)
+          		.Object <- readSupplies(.Object)
     		}    	
     	}
     }
     .Object
   })
 ################################################################################
-# # Definición Clase Analisis
+# # Definición Clase Analysis
 ################################################################################
 
-Analisis <- setClass("Analisis",  					  
- 					 # # Definir la estructura                
- 					 slots = c(
- 					  	prueba         = 'Prueba',
- 					  	datAnalisis = 'list',
- 					  	param       = 'list', 
- 					  	inputFile   = 'list',
- 					  	outFile     = 'list', 
- 					  	verSalida   = 'numeric'),  					  
- 					 # # Definir los valores por defecto
- 					 prototype = list(prueba = NULL, scripName = "", param = list(), 
- 					                 inputFile = list(), outFile = list(pathRdata = "")), 
- 					 validity  = function(object){ 					  	 					  	
- 					  	if (object@outFile$pathRdata == "")
- 					  		return("Se debe definir un directorio de salida de resultados (Rdata)")
- 					    return(TRUE)	
- 					  })
+Analysis <- setClass("Analysis",  					  
+ 					    # # Definir la estructura                
+ 					    slots = c(
+ 					  	   test        = 'Test',
+ 					  	   datAnalysis = 'list',
+ 					  	   param       = 'list', 
+ 					  	   inputFile   = 'list',
+ 					  	   outFile     = 'list', 
+ 					  	   verSalida   = 'numeric', 
+                 pathCor     = 'character'),  					  
+ 					    # # Definir los valores por defecto
+ 					    prototype = list(test = NULL, scripName = "", param = list(), 
+ 					                    inputFile = list(), outFile = list(pathRdata = "")), 
+ 					    validity  = function(object){ 					  	 					  	
+ 					  	   if (object@outFile$pathRdata == "")
+ 					  		  return("Se debe definir un directorio de salida de resultados (Rdata)")
+ 					      return(TRUE)})
 
-setMethod("initialize", "Analisis", function(.Object, ..., prueba) {
+setMethod("initialize", "Analysis", function(.Object, ..., test, verSalida) {
 	.Object <- callNextMethod()
-    if(missing(prueba)){
-      stop("Se debe especificar un objeto 'prueba = '??? ")
+    if(missing(test)){
+      stop("Se debe especificar un objeto 'test = '??? ")
     }
-    .Object@prueba <- prueba
+    if(missing(verSalida)){
+      .Object@verSalida <- 1
+    }
+    .Object@test <- test
     .Object
   })
 
 # # Metodos de la clase Análisis
 setGeneric(name = "getParams", def = function(object){standardGeneric("getParams")})
-setMethod("getParams", "Analisis", function(object){return(object@param)})
+setMethod("getParams", "Analysis", function(object){return(object@param)})
 
 setGeneric(name = "getInput", def = function(object){standardGeneric("getInput")})
-setMethod("getInput", "Analisis", function(object){return(object@inputFile)})
+setMethod("getInput", "Analysis", function(object){return(object@inputFile)})
 
 setGeneric(name = "getOutput", def = function(object){standardGeneric("getOutput")})
-setMethod("getOutput", "Analisis", function(object){return(object@outFile)})
+setMethod("getOutput", "Analysis", function(object){return(object@outFile)})
 
 setGeneric(name = "buildSubsets", def = function(object, ...){standardGeneric("buildSubsets")})
-setMethod("buildSubsets", "Analisis", 
-  function(object, fExtern = FALSE, fileExt = NULL, sheetExt = NULL, 
-  	       infoItem = list('id' = NULL, 'id_Subset' = NULL)){
-	if(fExtern){
-		if(is.null(fileExt))
-			stop("ERROR.... O_O Se debe definir un archivo de Excel (parametro 'fileExt')")
-		if(!gsub("(.+)\\.(.+)", "\\2", fileExt) %in% c("xlsx", "xls"))
-			stop("ERROR.... O_O Su archivo no es de Excel (parametro 'fileExt')")
-		if(is.null(sheetExt))
-			stop("ERROR.... O_O Se debe definir la hoja del archivo (parametro 'sheetExt')")
-		if(is.null(infoItem$id) | is.null(infoItem$id_Subset))
-			stop("ERROR.... O_O Se debe elegir las columnas a tomar (parametro 'infoItem')")
-		if(!file.exists(fileExt))	
-			stop("ERROR.... O_O No se encontro el archivo")
-		require(XLConnect)
-		channel   <- XLConnect::loadWorkbook(fileExt)
-      	auxSheets <- XLConnect::getSheets(channel)
-      	if (! sheetExt %in% auxSheets) {
-    		stop("ERROR.... O_O  Some tables are not found in the file: \n",
-         	     fileExt)
+setMethod("buildSubsets", "Analysis", 
+  function(object, flagTotal = TRUE, flagSubCon = FALSE, flagOri = FALSE, 
+           fileExt = NULL, infoItem = list('sheetExt' = NULL, 'id' = NULL, 'id_Subset' = NULL), ...){
+    auxDictionary  <- object@test@dictionaryList$variables
+    auxParGet      <- ifelse(flagOri,"oriBlock", "calBlock")
+	  if(!is.null(fileExt)){
+		  if(class(fileExt))
+			  stop("ERROR.... O_O Se debe definir la ruta de un archivo de Excel (parametro 'fileExt')")
+		  if(!gsub("(.+)\\.(.+)", "\\2", fileExt) %in% c("xlsx", "xls"))
+			  stop("ERROR.... O_O Su archivo no es de Excel (parametro 'fileExt')")
+		  if(is.null(infoItem$sheetExt))
+			  stop("ERROR.... O_O Se debe definir la hoja del archivo (parametro 'infoItem$sheetExt')")
+		  if(is.null(infoItem$id) | is.null(infoItem$id_Subset))
+			  stop("ERROR.... O_O Se debe elegir las columnas a tomar (parametro 'infoItem')")
+		  if(!file.exists(fileExt))	
+			  stop("ERROR.... O_O No se encontro el archivo")
+		  require(XLConnect)
+		  channel   <- XLConnect::loadWorkbook(fileExt)
+      auxSheets <- XLConnect::getSheets(channel)
+      if (!infoItem$sheetExt %in% auxSheets) {
+    	  stop("ERROR.... O_O  Some tables are not found in the file: \n",
+         	   fileExt)
   		}
-	} else {
-		object@datAnalisis   <- list()
-		auxDictionary <- object@prueba@dictionaryList$variables
-		for(prueba in names(object@prueba@datBlock)){
-			auxPrueba <- gsub("\\.con", "", prueba)
-			object@datAnalisis[auxPrueba] <- list(
-				'datos'      = object@prueba@datBlock[[prueba]]
-				'dictionary' = subset(auxDictionary, codigo_prueba == auxPrueba))
-		}		
-	}
-  })
 
-
-setGeneric(name = "loadDatB", def = function(object, ...){standardGeneric("loadDatB")})
-
-setGeneric(name = "loadDatB", def = function(object, ...){standardGeneric("loadDatB")})
-setMethod("loadDatB", "Analisis", 
-	function(object, recodeNA = TRUE, catToNA = NULL, kOmissionThreshold = 1, ...){
-      # # Load datBlock and dictionaryList	  
-      if (file.exists(object@prueba@pathRdata)){
-        load(object@prueba@pathRdata)	
-      } else {
-        stop("Error en la clase PRUEBA, no se encontro la ruta (pathRdata)")
-  	  }
-  	  
-	  # # conserved data from sample application
-	  if(object@exam == "ACC"){
-		  if(isTypeB){
-		    if (!is.data.frame(datBlock) & is.list(datBlock) & length(datBlock) == 1) {
-		      datBlockControl <- list(subset(datBlock[[1]], x$tipoApli %in% object@param$kApli))
-		      names(datBlockControl) <- names(datBlock)
-		    } else {
-		      datBlockControl <- lapply(datBlock, function(x)
-		                                subset(x, x$tipoApli %in% object@param$kApli))
-		    }
-		  } else{
-			  datBlockControl <- datBlock
-		  }
+      # # Find max number of columns
+      auxNcol <- apply(object@test@datBlock, ncol)
+      isMax   <- which(auxNcol == max(auxNcol))[1]
+      maxCon  <- names(object@test@datBlock)[isMax]
+      cat("--- Se construira los subConjuntos con: ", maxCon, "\n")
+      object@datAnalysis <- list()
+      if (!flagTotal){
+         warning("___Ojo___  No se correra el análisis con todos los ítems del:", maxCon,  
+               "\n           Se tendra solo encuenta el archivo", fileExt, "\n", 
+               "cambiar el parametro flagTotal")
+      }
+      filConP <- subset(auxDictionary, codigo_prueba == auxPrueba)
+      if (flagTotal){        
+        auxPrueba <- gsub("\\.con", "", test)
+        object@datAnalysis[[auxPrueba]] <- list(
+          'datos' = object@test@datBlock[maxCon][[1]][[auxParGet]],
+          'dictionary' = filConP)
+      }
+      if (flagSubCon){
+        warning("___Ojo___ No se tendra encuenta el subCon del diccionario, 
+                se construye los bloques con el archivo", fileExt)
+      }
 	  } else {
-    	  datBlockControl <- lapply(datBlock, function(x) {
-        	                        aux <- data.frame(x$calBlock)
-            	                    names(aux) <- gsub("X(\\d+)", "\\1", names(aux))
-                	                return(aux)})
-  	  }
+		  object@datAnalysis <- list()
+		  for(iiTest in names(object@test@datBlock)){
+			  auxPrueba <- gsub("\\.con", "", iiTest)
+        if(!flagTotal & !flagSubCon){
+          stop("Se debe definir si se quiere hacer análisis con Todo 
+               los ítems o por SubConjunto")
+        }
+        filConP <- subset(auxDictionary, codigo_prueba == auxPrueba)
+        if(flagTotal) {          
+			    object@datAnalysis[[auxPrueba]] <- list(
+				    'datos'      = object@test@datBlock[iiTest][[1]][[auxParGet]],
+				    'dictionary' = filConP)
+        }
+        if(flagSubCon) {
+          for(jjSubCon in unique(filConP$subCon)){             
+             filterDict <- subset(filConP, subCon == jjSubCon)
+             colGet     <- names(object@test@datBlock[iiTest][[1]][[auxParGet]])
+             colGet     <- c(grep("^\\D+", colGet, value = TRUE), filterDict[, "id"])
+             auxKey     <- paste0(auxPrueba, "::", jjSubCon)
+             object@datAnalysis[[auxKey]] <- list(
+                'datos'      = object@test@datBlock[iiTest][[1]][[auxParGet]][, colGet, with = FALSE],
+                'dictionary' = filterDict)
 
-  	  # # Recode 'Multimarca' 'No aplica' 'NR' for NA
-  	  
-      recodeLA <- function(data){      	  
-      	varId  <- intersect(loadDictionary(object, ...)$id, names(data)) 
-      	if (length(varId) == 0){
-          return(NULL)
-      	}
-      	dataBlo <- data.table(data[, varId])
-      	if (recodeNA) {
-      	   if (object@prueba@exam == "ACC") {
-      	     if (is.null(catToNA)){
-      	  	   stop("Se debe especificar las categorias que no son opciones de respuesta")
-      	     }
-             dataBlo[, ] <- lapply(dataBlo, RecodeToNA, catToNA)	
-      	   } else {
-             dataBlo[, ] <- lapply(dataBlo[, ], function(x) ordered(x))
-             if (object@exam == "SABERPRO") {
-               dataBlo[, ] <- rename(dataBlo[, ], c(SNP = "consLect"))
-             }
-      	   }
-      	}
-      	return(dataBlo)
-      }
-      datBlockControl <- lapply(datBlockControl, recodeLA)
-      
-      # # conserve rows with less than kOmissionThreshold NR data
-      isOmissDel <- kOmissionThreshold < 1 & kOmissionThreshold > 0
-      if (isOmissDel) {
-        delOmiss <- function(data){
-        	if (is.null(data)){
-        	  return(NULL)
-        	} else {
-        	  if (nrow(data) == 0)
-        	  	return(NULL)
-        	}
-      	    if (object@prueba@exam == "ACC") {
-      	      misRow  <- rowMeans(data == "")
-      	    } else {
-      	      misRow  <- rowMeans(data == "")
-      	    }
-	  		isKeep  <- misRow <= kOmissionThreshold
-	  		data    <- data[isKeep, ]
-	  		return(data[isKeep , ])	  		
-	    }
-		datBlockControl <- lapply(datBlockControl, delOmiss)
-      }
-  	  return(datBlockControl)
-    })
+          }
+        }
+		  }
+	  }
+    return(object)
+    #filterSubsets(object, ...)
+})
 
-setGeneric(name = "loadDictionary", def = function(object, ...){standardGeneric("loadDictionary")})
-setMethod("loadDictionary", "Analisis", 
-	function(object, kCodNElim = "06", kCodPar = NULL, kCodMod = NULL,
-		       flagNI = FALSE, filPrueba = NULL , filIndex = NULL){
-      # # Load dictionaryList
-      if (file.exists(object@prueba@pathDic)){
-        load(object@prueba@pathDic)
-      } else {
-        stop("Error en la clase PRUEBA, no se encontro la ruta (pathDic)")
-  	  }
-
-	  if(!"paralelo" %in% names(dictionaryList$variables)){
-	    dictionaryList$variables$paralelo <- "01"
-	    save(dictionaryList, file = object@prueba@pathDic)
-      }
-	  
-	  if(!"indice" %in% names(dictionaryList$variables)){
-	    dictionaryList$variables$indice <- dictionaryList$variables$codigo_prueba
-	    save(dictionaryList, file = object@prueba@pathDic)
+setGeneric(name = "filterSubsets", def = function(object, ...){standardGeneric("filterSubsets")})
+setMethod("filterSubsets", "Analysis", 
+	function(object, recodeNA = TRUE, catToNA = NULL, kOmissionThreshold = 1, 
+           kCodNElim = "06", kCodPar = NULL, kCodMod = NULL, columnId = "SNP",
+           flagNI = FALSE, filPrueba = NULL , filIndex = NULL){
+    # # filtering dictionary
+    for(blockDat in names(object@datAnalysis)){
+      dictionaryList <- object@datAnalysis[[blockDat]]$dictionary
+      # # Default values of some fields
+      if(!"paralelo" %in% names(dictionaryList)){
+        dictionaryList$paralelo <- "01"        
       }
 
-	  # # Filtering items
-      isNoElim   <- dictionaryList$variables[, 'elimina' ] == kCodNElim
-      
+      if(!"subCon" %in% names(dictionaryList)){
+        dictionaryList$subCon <- dictionaryList$codigo_prueba        
+      } 
+
+      # # Filtering items
+      isNoElim   <- dictionaryList[, 'elimina' ] == kCodNElim      
       if (!is.null(kCodMod)){
-      	isCodMod <- dictionaryList$variables[, 'codMod'] == kCodMod	    
+        isCodMod <- dictionaryList[, 'codMod'] == kCodMod     
       } else {
-      	isCodMod <- rep(TRUE, nrow(dictionaryList$variables))
-      }     
-
+        isCodMod <- rep(TRUE, nrow(dictionaryList))
+      }      
       if (!is.null(kCodPar)){
-      	isCodPar <- dictionaryList$variables[, 'paralelo'] == kCodPar	    
+        isCodPar <- dictionaryList[, 'paralelo'] == kCodPar     
       } else {
-      	isCodPar <- rep(TRUE, nrow(dictionaryList$variables))
-      }     
+        isCodPar <- rep(TRUE, nrow(dictionaryList))
+      }   
 
-      if (object@prueba@exam == "ACC") {
+      if (object@test@exam == "ACC") {
         if (flagNI){
-          isNI     <- dictionaryList$variables[, 'indice'] != 'NI' 
-	      isPrueba <- isCodMod & isNoElim & isCodPar & isNI
+          isNI     <- dictionaryList[, 'subCon'] != 'NI' 
+          isPrueba <- isCodMod & isNoElim & isCodPar & isNI
         }
       } else {
         isPrueba   <- isCodMod & isNoElim & isCodPar
       }     
-      # # Filtering items by 'codigo_prueba' and 'indice'
+  
+      # # Filtering items by 'codigo_prueba' and 'subCon'
       if (!is.null(filPrueba)) {
-        flagPru  <- dictionaryList$variables[, 'codigo_prueba'] %in% filPrueba        
-      	isPrueba <- isPrueba & flagPru
+        flagPru  <- dictionaryList[, 'codigo_prueba'] %in% filPrueba        
+        isPrueba <- isPrueba & flagPru
       }
       if (!is.null(filIndex)) {
-        flagIndex <- dictionaryList$variables[, 'indice'] %in% filIndex
-      	isPrueba  <- isPrueba & flagIndex
+        flagIndex <- dictionaryList[, 'subCon'] %in% filIndex
+        isPrueba  <- isPrueba & flagIndex
       }
-	  return(dictionaryList$variables[isPrueba, ])
-    })
+      dictionaryList <- dictionaryList[isPrueba, ]
+      object@datAnalysis[[blockDat]]$dictionary <- dictionaryList
+    }
 
-setGeneric(name = "getIndex", def = function(object, ...){standardGeneric("getIndex")})
-setMethod("getIndex", "Analisis", 
-	function(object, tipo = c("codigo_prueba", "indice", "Ambos")[1], ...){     
-      # # Load datBlock and dictionaryList		
-	  dictionaryList  <- loadDictionary(object)
-	  if (tipo %in% c("Ambos", "indice")) {
-	  	splitId <- apply(dictionaryList[, c("codigo_prueba", "indice")], 
-	  		             1 , paste , collapse = "::")	
+    # # Conserved data from sample
+    if(object@test@exam %in% c("ACC", "SABER359")){
+	    object@datAnalysis <- lapply(object@datAnalysis, function(x){
+                                   x$datos <- subset(x$datos, x$datos$tipoApli %in% object@param$kApli)
+                                   x$datos <- data.frame(x$datos)
+                                   names(x$datos) <- gsub("X(\\d+)", "\\1", names(x$datos))
+                                   return(x)})
 	  } else {
-	  	splitId <- dictionaryList[, tipo]
-	  }
-      
-      if (tipo == "Ambos") {
-      	splitTest      <- dictionaryList[, "codigo_prueba"]
-      	dictionaryList <- c(split(dictionaryList, f = splitTest), 
-      		                split(dictionaryList, f = splitId))
-      } else {
-	    dictionaryList <- split(dictionaryList, f = splitId)
-      }
-
-      newIndex <- lapply(dictionaryList, function(x){
-      	datBlock <- loadDatB(object, filPrueba = unique(x$codigo_prueba), 
-      		                 filIndex = unique(x$indice), ...)
-      	datBlock <- data.table::rbindlist(datBlock)
-        return(list(dictKk = x, kkBlock = datBlock))
-      })
-      return(newIndex)
-    })
-
-#setGeneric(name = "correrAnal", def = function(object){standardGeneric("correrAnal")})
-
-setMethod("getIndex", "missing", function(x, ...) {
-  getIndex()
+      object@datAnalysis <- lapply(object@datAnalysis, function(x) {
+        	                         x$datos <- data.frame(x$datos)
+            	                     names(x$datos) <- gsub("X(\\d+)", "\\1", names(x$datos))
+                	                 return(x)})
+  	}
+  
+  	# # Recode 'Multimarca' 'No aplica' 'NR' for NA
+  	recodeLA <- function(subDat){ 
+      	varId  <- intersect(subDat$dict$id, names(subDat$datos))
+      	if (length(varId) == 0){
+         return(NULL)
+      	}
+      	dataBlo <- data.table(subDat$datos[, c(columnId, varId)])
+      	if (recodeNA) {
+      	 if (object@test@exam == "ACC") {
+      	   if (is.null(catToNA)){
+      	  	  stop("Se debe especificar las categorias que no son opciones de respuesta")
+      	   }
+           dataBlo[, ] <- lapply(dataBlo, RecodeToNA, catToNA)	
+      	 } else {
+           dataBlo[, ] <- lapply(dataBlo[, ], function(x) ordered(x))
+           if (!object@test@exam %in% c("ACC", "SABER359")) {
+             dataBlo[, ] <- rename(dataBlo[, ], c(SNP = "consLect"))
+           }
+      	 }
+      	}
+      	return(dataBlo)
+    }
+    object@datAnalysis <- lapply(object@datAnalysis, recodeLA)
+        
+    # # conserve rows with less than kOmissionThreshold NR data
+    isOmissDel <- kOmissionThreshold < 1 & kOmissionThreshold > 0
+    if (isOmissDel) {
+      delOmiss <- function(data){
+        if (is.null(data)){
+          return(NULL)
+        } else {
+          if (nrow(data) == 0)
+          	 return(NULL)
+        }
+      	if (object@test@exam == "ACC") {
+      	   misRow  <- rowMeans(data == "")
+      	} else {
+      	   misRow  <- rowMeans(data == "")
+      	}
+	  		isKeep  <- misRow <= kOmissionThreshold
+	  		data    <- data[isKeep, ]
+	  		return(data[isKeep , ])	  		
+	    }
+		    datBlockControl <- lapply(datBlockControl, delOmiss)
+    }
+      return(object)
 })
-################################################################################
-# # Definición Clase ReportePrueba
-################################################################################
-
-setGeneric(name = "analizarPru", def = function(object){standardGeneric("analizarPru")})
-setGeneric(name = "AA", def = function(object){standardGeneric("AA")})
-setGeneric(name = "recogerInfo", def = function(object){standardGeneric("recogerInfo")})
-
