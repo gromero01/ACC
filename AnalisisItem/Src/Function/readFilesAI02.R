@@ -35,6 +35,16 @@
 # #       Include the option that some categories aren't use
 # #       Include the use of orden of categories besides the natural
 # #         order of values
+
+  ################################################################################
+  # # required libraries
+  ################################################################################
+  require(LaF)  # # to read data.set
+  require(gtools)  # # for mixedorder
+  require(data.table)
+  require(XLConnect)
+  require(car)  # # to collapse categories
+  require(plyr) # for rename
 ################################################################################
 source(file.path(funPath, "partirComas.R"))
 ################################################################################
@@ -124,7 +134,6 @@ function(object, desElim = NULL){
   if ("subConInfo" %in% names(controlAnal)) {
       fileInfo <- controlAnal$subConInfo["path"]
       namSheet <- controlAnal$subConInfo["nameSheet"]
-      require(XLConnect)
       channel <- XLConnect::loadWorkbook(fileInfo)
       infoItem <- XLConnect::readWorksheet(channel, namSheet)
   }
@@ -175,7 +184,7 @@ function(object, desElim = NULL){
     ################################################################################
     # # Put default values in required variables
     ################################################################################
-    infoCon <- rename(infoCon, c("IDENTIFICADOR" = "id"))
+    infoCon <- plyr::rename(infoCon, c("IDENTIFICADOR" = "id"))
     # # keyItem Column
     infoCon[, "keyItem"] <- keyString
 
@@ -198,7 +207,7 @@ function(object, desElim = NULL){
       if (!"infoItem" %in% names(controlAnal))
         stop("**ERROR** Se de especificar en 'infoItem' las columnas del archivo 'subConInfo'")
       rnColum  <- controlAnal$infoItem
-      infoItem <- setnames(infoItem, rnColum, names(rnColum))      
+      infoItem <- data.table::setnames(infoItem, rnColum, names(rnColum)) 
 
       if (object@exam == "SABERPRO") {
         #infoItem <- infoItem[toupper(infoItem[, "prueba"]) ==
@@ -305,12 +314,6 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
   # #               apper in dict list and the variables for
   # #               identification of the number of sheet
 
-  ################################################################################
-  # # required libraries
-  ################################################################################
-  require(LaF)  # # to read data.set
-  require(gtools)  # # for mixedorder
-  require(data.table)
 
 
   ################################################################################
@@ -673,8 +676,7 @@ ReadDict <- function (fileName, variables, categories, model, subCon,
   ################################################################################
   # # lecture of the files from the excel file
   ################################################################################
-  require(XLConnect)
-
+  
   sheets  <- paste0(nameSheets)
   channel <- XLConnect::loadWorkbook(fileName)
   tables  <- getSheets(channel)
@@ -885,12 +887,6 @@ ReadDataAI <- function (folderName, dict,
   # #               apper in dict list and the variables for
   # #               identification of the number of sheet
 
-  ################################################################################
-  # # required libraries
-  ################################################################################
-  require(car)  # # to collapse categories
-  require(LaF)  # # to read data.set
-  require(gtools)  # # for mixedorder
 
   ################################################################################
   # # validate parameters
