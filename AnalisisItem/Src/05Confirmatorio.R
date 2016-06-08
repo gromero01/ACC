@@ -66,7 +66,7 @@ setGeneric(name = "confirmatAnalysis", def = function(object, ...){standardGener
 
 # object <- controlData[[prueba]]
 # object <- controlData[['./SABER9/SA20131/JP_M10_M11_M15_M16_M17_M19_M20_M21_M22_M23_M24_M3/PBAM10']]
-setMethod("confirmatAnalysis", "Prueba",
+setMethod("confirmatAnalysis", "Test",
           function(object, auxAnalisis){
             outPath  <- file.path(outPath, "05Confirmatorio")
             dir.create(outPath)

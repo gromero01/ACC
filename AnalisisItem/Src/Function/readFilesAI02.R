@@ -35,16 +35,6 @@
 # #       Include the option that some categories aren't use
 # #       Include the use of orden of categories besides the natural
 # #         order of values
-
-  ################################################################################
-  # # required libraries
-  ################################################################################
-  require(LaF)  # # to read data.set
-  require(gtools)  # # for mixedorder
-  require(data.table)
-  require(XLConnect)
-  require(car)  # # to collapse categories
-  require(plyr) # for rename
 ################################################################################
 source(file.path(funPath, "partirComas.R"))
 ################################################################################
@@ -83,6 +73,8 @@ setGeneric(name = "con2Dict", def = function(object, ...){standardGeneric("con2D
 
 setMethod("con2Dict", "Test",
 function(object, desElim = NULL){
+  require(plyr)
+  require(data.table)
   # # This function read .con file with general information about the
   # # items and the characteristics to take account are extracted from
   # # description file (descripcion.txt)
@@ -134,6 +126,7 @@ function(object, desElim = NULL){
   if ("subConInfo" %in% names(controlAnal)) {
       fileInfo <- controlAnal$subConInfo["path"]
       namSheet <- controlAnal$subConInfo["nameSheet"]
+      require(XLConnect)
       channel <- XLConnect::loadWorkbook(fileInfo)
       infoItem <- XLConnect::readWorksheet(channel, namSheet)
   }
@@ -184,7 +177,7 @@ function(object, desElim = NULL){
     ################################################################################
     # # Put default values in required variables
     ################################################################################
-    infoCon <- plyr::rename(infoCon, c("IDENTIFICADOR" = "id"))
+    infoCon <- rename(infoCon, c("IDENTIFICADOR" = "id"))
     # # keyItem Column
     infoCon[, "keyItem"] <- keyString
 
@@ -207,7 +200,7 @@ function(object, desElim = NULL){
       if (!"infoItem" %in% names(controlAnal))
         stop("**ERROR** Se de especificar en 'infoItem' las columnas del archivo 'subConInfo'")
       rnColum  <- controlAnal$infoItem
-      infoItem <- data.table::setnames(infoItem, rnColum, names(rnColum)) 
+      infoItem <- setnames(infoItem, rnColum, names(rnColum))      
 
       if (object@exam == "SABERPRO") {
         #infoItem <- infoItem[toupper(infoItem[, "prueba"]) ==
@@ -314,6 +307,12 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
   # #               apper in dict list and the variables for
   # #               identification of the number of sheet
 
+  ################################################################################
+  # # required libraries
+  ################################################################################
+  require(LaF)  # # to read data.set
+  require(gtools)  # # for mixedorder
+  require(data.table)
 
 
   ################################################################################
@@ -416,9 +415,9 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
     # # Read description file
     pathTest <- file.path(inPath, object@path)
     pathDesc <- list.files(pathTest, pattern = "(D|d)escripcion\\.txt", full.names = TRUE)
-    options(encoding = "latin1")
-    datDesc <- readLines(pathDesc, warn = FALSE)
+    #options(encoding = "latin1")
     options(encoding = "utf-8")
+    datDesc <- readLines(pathDesc, warn = FALSE)
     indDat  <- grep("Archivo de Datos", datDesc)
     strDat  <- leerInfo(datDesc[(indDat + 2):length(datDesc)])
 
@@ -457,8 +456,9 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
        cat("\n\nADVERTENCIA: Number of items in the dictionary is not equal
             to the number of items in the .com file")
     }
+
     read        <- read[ , names(read)]
-    names(read) <- nombres
+    names(read) <- gsub("^(X)(.*)", "\\2", names(read))
 
     cat("#########################################################################",
     "\n# # The file is reading with the follow structure: \n")
@@ -676,7 +676,8 @@ ReadDict <- function (fileName, variables, categories, model, subCon,
   ################################################################################
   # # lecture of the files from the excel file
   ################################################################################
-  
+  require(XLConnect)
+
   sheets  <- paste0(nameSheets)
   channel <- XLConnect::loadWorkbook(fileName)
   tables  <- getSheets(channel)
@@ -834,8 +835,6 @@ ReadDict <- function (fileName, variables, categories, model, subCon,
           CheckMiss(varOpRes, catOpRes), "\n")
     }
   }
-
-
   # # delete line break
   dictionary$variables[, ]  <- lapply(dictionary$variables,
                                       function (x) gsub("\n", "", x))
@@ -887,6 +886,12 @@ ReadDataAI <- function (folderName, dict,
   # #               apper in dict list and the variables for
   # #               identification of the number of sheet
 
+  ################################################################################
+  # # required libraries
+  ################################################################################
+  require(car)  # # to collapse categories
+  require(LaF)  # # to read data.set
+  require(gtools)  # # for mixedorder
 
   ################################################################################
   # # validate parameters

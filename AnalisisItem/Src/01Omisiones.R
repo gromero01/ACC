@@ -46,7 +46,7 @@ source(file.path(funPath, "log.R"))  # # log
 ################################################################################
 # # Definition of class and parameters
 ################################################################################
-outRdata     <- file.path("Output", "01Omisiones", "resulOmi.Rdata")
+outRdata     <- file.path("Outpu", "01Omisiones", "resulOmi.Rdata")
 defaultParam <- list(kApli = c(2, 3, 4, 6),                     
                      kOmissionThreshold  =  0.8,                   
                      catToNA = c('NR', 'Multimarca'),
@@ -68,20 +68,14 @@ setMethod("initialize", "Omisiones", function(.Object, ..., prueba) {
       stop("Se debe especificar un objeto 'prueba = '??? ")
     }
     .Object@prueba <- prueba
-    auxPath <- gsub(".+(\\\\|/)(pba|PBA)(.+)$", "\\3", .Object@prueba@path)
-    print(auxPath)
-    .Object@outFile$pathRdata <- gsub("\\.", paste0(auxPath, "."), .Object@outFile$pathRdata)
     callNextMethod(.Object, ..., prueba)    
   })
 
-omi <- new("Omisiones", prueba = prueba0)
-
 do.call(getIndex, c(list(tipo = "Ambos"), getParams(omi)))
 
-getIndex(omi, tipo = "Ambos", 
+getIndex(omi, tipo = "codigo_prueba", 
          kOmissionThreshold  =  0.8, 
-         catToNA = c('NR', 'Multimarca'), 
-         kCodNElim = '06')
+         catToNA = c('NR', 'Multimarca'), kCodNElim = '06')
 
 ################################################################################
 # # load data
@@ -115,16 +109,16 @@ outFile <- file.path(outPath,
   # # cell style
   # # header style
   csEnc <- CellStyle(wb) + Font(wb, isBold = TRUE) +
-           Border(pen = "BORDER_DOUBLE") + Alignment(h = "ALIGN_CENTER")
+            Border(pen = "BORDER_DOUBLE") + Alignment(h = "ALIGN_CENTER")
   # # percentages style
   csPor <- CellStyle(wb) + DataFormat("0.0%")
   # # estilo de columnas que reportan la desviación estándar del por
-  csDs  <- CellStyle(wb) + DataFormat("(0.0%)") +
-           Alignment(v = "VERTICAL_CENTER") + Border()
+  csDs <- CellStyle(wb) + DataFormat("(0.0%)") +
+          Alignment(v = "VERTICAL_CENTER") + Border()
   csDsE <- CellStyle(wb) + Alignment(v = "VERTICAL_CENTER", wrapText = TRUE) +
-           Border()
+         Border()
   # # estilo de columnas que reportan n
-  csN  <- CellStyle(wb) + DataFormat("#,##0") + Font(wb, isItalic = TRUE)
+  csN <- CellStyle(wb) + DataFormat("#,##0") + Font(wb, isItalic = TRUE)
   csNE <- CellStyle(wb) + Font(wb, isItalic = TRUE)
   # # borde
   csPC <- CellStyle(wb) + Border() +

@@ -161,7 +161,7 @@ function(object){
       if (is.null(object@paramLect$valMUO))
         object@paramLect$valMUO <- 9
 	    datBlock <- ReadGeneric(object, dict = dictionaryList, verbose =  FALSE, 
-                              valMUO = object@paramLect$valMUO)
+                              valMUO = object@paramLect$valMUO, eliminatedVars = FALSE)
 	    save(datBlock, file = datReadBlock)
     }    
     # # Save directions of Rdata and datDictionary    
@@ -183,6 +183,7 @@ setMethod("initialize", "Test", function(.Object, ..., test) {
     }
     .Object
   })
+
 ################################################################################
 # # Definición Clase Analysis
 ################################################################################
@@ -205,15 +206,28 @@ Analysis <- setClass("Analysis",
  					  		  return("Se debe definir un directorio de salida de resultados (Rdata)")
  					      return(TRUE)})
 
-setMethod("initialize", "Analysis", function(.Object, ..., test, verSalida) {
+setMethod("initialize", "Analysis", function(.Object, ..., test, param, verSalida) {
 	.Object <- callNextMethod()
     if(missing(test)){
       stop("Se debe especificar un objeto 'test = '??? ")
     }
+    if(missing(param)){
+      stop("Se debe definir los parametros de la clase --> ", class(.Object))
+    } else {
+      .Object@param <- param    
+    }
     if(missing(verSalida)){
       .Object@verSalida <- 1
     }
-    .Object@test <- test
+    .Object@test <- test    
+    auxClase        <- class(.Object)
+    methodAnalysis  <- attr(methods(class = auxClase), "info")[, "generic"]
+    if (!"codeAnalysis" %in% methodAnalysis)
+      stop("-- Se debe definir el metodo 'codeAnalysis' para la clase --> ", auxClase)
+    if (!"outXLSX" %in% methodAnalysis)
+      stop("-- Se debe definir el metodo 'outXLSX' para la clase --> ", auxClase)
+    if (!"outHTML" %in% methodAnalysis)
+      stop("-- Se debe definir el metodo 'outHTML' para la clase --> ", auxClase)
     .Object
   })
 
@@ -227,12 +241,150 @@ setMethod("getInput", "Analysis", function(object){return(object@inputFile)})
 setGeneric(name = "getOutput", def = function(object){standardGeneric("getOutput")})
 setMethod("getOutput", "Analysis", function(object){return(object@outFile)})
 
-setGeneric(name = "buildSubsets", def = function(object, ...){standardGeneric("buildSubsets")})
+setGeneric(name = "filterSubsets", 
+           def = function(object, recodeNA = FALSE, catToNA = NULL, kOmissionThreshold = 1, 
+                          orderedDat = FALSE, kCodNElim = "06", kCodPar = NULL, kCodMod = NULL, 
+                          columnId = "SNP", flagNI = FALSE, filPrueba = NULL , 
+                          filIndex = NULL, ...){standardGeneric("filterSubsets")})
+setMethod("filterSubsets", "Analysis", 
+  function(object, ...){
+    # # Package in R
+    require(plyr)
+    require(data.table)
+
+    # # filtering dictionary
+    for(blockDat in names(object@datAnalysis)){
+      dictionaryList <- object@datAnalysis[[blockDat]]$dictionary
+      # # Default values of some fields
+      if(!"paralelo" %in% names(dictionaryList)){
+        dictionaryList$paralelo <- "01"        
+      }
+
+      if(!"subCon" %in% names(dictionaryList)){
+        dictionaryList$subCon <- dictionaryList$codigo_prueba        
+      } 
+
+      # # Filtering items
+      isNoElim   <- dictionaryList[, 'elimina' ] == kCodNElim  
+
+      if (!is.null(kCodMod)){
+        isCodMod <- dictionaryList[, 'codMod'] == kCodMod     
+      } else {
+        isCodMod <- rep(TRUE, nrow(dictionaryList))
+      }      
+      if (!is.null(kCodPar)){
+        isCodPar <- dictionaryList[, 'paralelo'] == kCodPar     
+      } else {
+        isCodPar <- rep(TRUE, nrow(dictionaryList))
+      }   
+
+      if (object@test@exam == "ACC") {
+        if (flagNI){
+          isNI     <- dictionaryList[, 'subCon'] != 'NI' 
+          isPrueba <- isCodMod & isNoElim & isCodPar & isNI
+        }
+      } else {
+        isPrueba   <- isCodMod & isNoElim & isCodPar
+      }     
+  
+      # # Filtering items by 'codigo_prueba' and 'subCon'
+      if (!is.null(filPrueba)) {
+        flagPru  <- dictionaryList[, 'codigo_prueba'] %in% filPrueba        
+        isPrueba <- isPrueba & flagPru
+      }
+      if (!is.null(filIndex)) {
+        flagIndex <- dictionaryList[, 'subCon'] %in% filIndex
+        isPrueba  <- isPrueba & flagIndex
+      }
+      dictionaryList <- dictionaryList[isPrueba, ]
+      object@datAnalysis[[blockDat]]$dictionary <- dictionaryList
+    }
+
+    # # Conserved data from sample
+    if(object@test@exam %in% c("ACC", "SABER359")){
+      object@datAnalysis <- lapply(object@datAnalysis, function(x){
+                                   x$datos <- subset(x$datos, x$datos$tipoApli %in% object@param$kApli)
+                                   x$datos <- data.frame(x$datos)
+                                   names(x$datos) <- gsub("X(\\d+)", "\\1", names(x$datos))
+                                   return(x)})
+    } else {
+      object@datAnalysis <- lapply(object@datAnalysis, function(x) {
+                                   x$datos <- data.frame(x$datos)
+                                   names(x$datos) <- gsub("X(\\d+)", "\\1", names(x$datos))
+                                   return(x)})
+    }
+
+    RecodeToNA <- function (variable, categories){
+     # # Recode the categories of variable to NA
+     # #
+     # # Arg:
+     # #  variable[character|factor]: variable to recode
+     # #  categories[character]: levels of variable recoding to NA
+     # #
+     # # Ret:
+     # #  the variable after recode
+     # # levels of variable
+         if (is.null(categories)) 
+           stop("... Se debe definir el parametro 'catToNA'")
+         levelsVar <- levels(variable)
+         levelsVar <- levelsVar[!(levelsVar %in% categories)]
+         isCat     <- variable %in% categories
+         if (any(isCat)) {
+           variable[isCat] <- NA
+         }
+         variable <- ordered(variable, levels = levelsVar)
+         return(variable)
+    } 
+
+    # # Recode 'Multimarca' 'No aplica' 'NR' for NA
+    recodeLA <- function(subDat){
+        varId  <- intersect(subDat$dict$id, names(subDat$datos))
+        if (length(varId) == 0){
+          return(NULL)
+        } 
+        dataBlo <- data.table(subDat$datos[, c(columnId, varId)])       
+        if (recodeNA) {          
+          if (object@test@exam == "ACC") {
+            dataBlo[, ] <- lapply(dataBlo, RecodeToNA, catToNA)  
+          }                
+        }  
+        if (orderedDat){
+          dataBlo[, ] <- lapply(dataBlo[, ], function(x) ordered(x))
+        }
+        subDat$datos <- dataBlo      
+        return(subDat)
+    }
+    object@datAnalysis <- lapply(object@datAnalysis, recodeLA)
+        
+    # # conserve rows with less than kOmissionThreshold NR data
+    isOmissDel <- kOmissionThreshold < 1 & kOmissionThreshold > 0
+    if (isOmissDel) {
+      delOmiss <- function(data){
+        if (is.null(data$datos)){
+          return(NULL)
+        } else {
+          if (nrow(data$datos) == 0)
+             return(NULL)
+        }
+        misRow  <- rowMeans(data$datos == "")
+        isKeep  <- misRow <= kOmissionThreshold
+        data$datos    <- data$datos[isKeep, ]
+        return(data)       
+      }
+      object@datAnalysis <- lapply(object@datAnalysis, delOmiss)
+    }
+    return(object)
+})
+
+setGeneric(name = "buildSubsets", 
+           def = function(object, flagTotal = TRUE, flagSubCon = FALSE, 
+                          flagOri = FALSE, fileExt = NULL, 
+                          infoItem = list('sheetExt' = NULL, 
+                          'id' = NULL, 'id_Subset' = NULL), ...){standardGeneric("buildSubsets")})
 setMethod("buildSubsets", "Analysis", 
-  function(object, flagTotal = TRUE, flagSubCon = FALSE, flagOri = FALSE, 
-           fileExt = NULL, infoItem = list('sheetExt' = NULL, 'id' = NULL, 'id_Subset' = NULL), ...){
+  function(object, ...){
     auxDictionary  <- object@test@dictionaryList$variables
-    auxParGet      <- ifelse(flagOri,"oriBlock", "calBlock")
+    auxParGet      <- ifelse(flagOri, "oriBlock", "calBlock")
 	  if(!is.null(fileExt)){
 		  if(class(fileExt))
 			  stop("ERROR.... O_O Se debe definir la ruta de un archivo de Excel (parametro 'fileExt')")
@@ -279,8 +431,8 @@ setMethod("buildSubsets", "Analysis",
 		  for(iiTest in names(object@test@datBlock)){
 			  auxPrueba <- gsub("\\.con", "", iiTest)
         if(!flagTotal & !flagSubCon){
-          stop("Se debe definir si se quiere hacer análisis con Todo 
-               los ítems o por SubConjunto")
+          stop("___Error___ Se debe definir si se quiere hacer análisis\n", 
+               "con Todo los ítems (flagTotal) o por SubConjunto (flagSubCon)")
         }
         filConP <- subset(auxDictionary, codigo_prueba == auxPrueba)
         if(flagTotal) {          
@@ -292,7 +444,7 @@ setMethod("buildSubsets", "Analysis",
           for(jjSubCon in unique(filConP$subCon)){             
              filterDict <- subset(filConP, subCon == jjSubCon)
              colGet     <- names(object@test@datBlock[iiTest][[1]][[auxParGet]])
-             colGet     <- c(grep("^\\D+", colGet, value = TRUE), filterDict[, "id"])
+             colGet     <- c(grep("^([A-Z]|[a-z]){3,}", colGet, value = TRUE), filterDict[, "id"])
              auxKey     <- paste0(auxPrueba, "::", jjSubCon)
              object@datAnalysis[[auxKey]] <- list(
                 'datos'      = object@test@datBlock[iiTest][[1]][[auxParGet]][, colGet, with = FALSE],
@@ -302,120 +454,25 @@ setMethod("buildSubsets", "Analysis",
         }
 		  }
 	  }
+    #return(object)
+    object <- filterSubsets(object, ...)
+    object@datAnalysis <- structure(object@datAnalysis, parameters = match.call(),
+                                    date = format(Sys.time(), "%m_%d_%Y %X"))
     return(object)
-    #filterSubsets(object, ...)
 })
 
-setGeneric(name = "filterSubsets", def = function(object, ...){standardGeneric("filterSubsets")})
-setMethod("filterSubsets", "Analysis", 
-	function(object, recodeNA = TRUE, catToNA = NULL, kOmissionThreshold = 1, 
-           kCodNElim = "06", kCodPar = NULL, kCodMod = NULL, columnId = "SNP",
-           flagNI = FALSE, filPrueba = NULL , filIndex = NULL){
-    # # filtering dictionary
-    for(blockDat in names(object@datAnalysis)){
-      dictionaryList <- object@datAnalysis[[blockDat]]$dictionary
-      # # Default values of some fields
-      if(!"paralelo" %in% names(dictionaryList)){
-        dictionaryList$paralelo <- "01"        
-      }
 
-      if(!"subCon" %in% names(dictionaryList)){
-        dictionaryList$subCon <- dictionaryList$codigo_prueba        
-      } 
+# # Definition of filters
+setGeneric(name = "filterAnalysis", def = function(object){standardGeneric("filterAnalysis")})
+setMethod("filterAnalysis", "Analysis", 
+          function(object){
+            auxParam  <- getParams(object)
+            allParams <- names(formals(buildSubsets))
+            allParams <- union(allParams, names(formals(filterSubsets)))
+            allParams <- intersect(allParams, names(auxParam))
+            do.call(buildSubsets, c(list(object), auxParam[allParams]))
+          })
 
-      # # Filtering items
-      isNoElim   <- dictionaryList[, 'elimina' ] == kCodNElim      
-      if (!is.null(kCodMod)){
-        isCodMod <- dictionaryList[, 'codMod'] == kCodMod     
-      } else {
-        isCodMod <- rep(TRUE, nrow(dictionaryList))
-      }      
-      if (!is.null(kCodPar)){
-        isCodPar <- dictionaryList[, 'paralelo'] == kCodPar     
-      } else {
-        isCodPar <- rep(TRUE, nrow(dictionaryList))
-      }   
-
-      if (object@test@exam == "ACC") {
-        if (flagNI){
-          isNI     <- dictionaryList[, 'subCon'] != 'NI' 
-          isPrueba <- isCodMod & isNoElim & isCodPar & isNI
-        }
-      } else {
-        isPrueba   <- isCodMod & isNoElim & isCodPar
-      }     
-  
-      # # Filtering items by 'codigo_prueba' and 'subCon'
-      if (!is.null(filPrueba)) {
-        flagPru  <- dictionaryList[, 'codigo_prueba'] %in% filPrueba        
-        isPrueba <- isPrueba & flagPru
-      }
-      if (!is.null(filIndex)) {
-        flagIndex <- dictionaryList[, 'subCon'] %in% filIndex
-        isPrueba  <- isPrueba & flagIndex
-      }
-      dictionaryList <- dictionaryList[isPrueba, ]
-      object@datAnalysis[[blockDat]]$dictionary <- dictionaryList
-    }
-
-    # # Conserved data from sample
-    if(object@test@exam %in% c("ACC", "SABER359")){
-	    object@datAnalysis <- lapply(object@datAnalysis, function(x){
-                                   x$datos <- subset(x$datos, x$datos$tipoApli %in% object@param$kApli)
-                                   x$datos <- data.frame(x$datos)
-                                   names(x$datos) <- gsub("X(\\d+)", "\\1", names(x$datos))
-                                   return(x)})
-	  } else {
-      object@datAnalysis <- lapply(object@datAnalysis, function(x) {
-        	                         x$datos <- data.frame(x$datos)
-            	                     names(x$datos) <- gsub("X(\\d+)", "\\1", names(x$datos))
-                	                 return(x)})
-  	}
-  
-  	# # Recode 'Multimarca' 'No aplica' 'NR' for NA
-  	recodeLA <- function(subDat){ 
-      	varId  <- intersect(subDat$dict$id, names(subDat$datos))
-      	if (length(varId) == 0){
-         return(NULL)
-      	}
-      	dataBlo <- data.table(subDat$datos[, c(columnId, varId)])
-      	if (recodeNA) {
-      	 if (object@test@exam == "ACC") {
-      	   if (is.null(catToNA)){
-      	  	  stop("Se debe especificar las categorias que no son opciones de respuesta")
-      	   }
-           dataBlo[, ] <- lapply(dataBlo, RecodeToNA, catToNA)	
-      	 } else {
-           dataBlo[, ] <- lapply(dataBlo[, ], function(x) ordered(x))
-           if (!object@test@exam %in% c("ACC", "SABER359")) {
-             dataBlo[, ] <- rename(dataBlo[, ], c(SNP = "consLect"))
-           }
-      	 }
-      	}
-      	return(dataBlo)
-    }
-    object@datAnalysis <- lapply(object@datAnalysis, recodeLA)
-        
-    # # conserve rows with less than kOmissionThreshold NR data
-    isOmissDel <- kOmissionThreshold < 1 & kOmissionThreshold > 0
-    if (isOmissDel) {
-      delOmiss <- function(data){
-        if (is.null(data)){
-          return(NULL)
-        } else {
-          if (nrow(data) == 0)
-          	 return(NULL)
-        }
-      	if (object@test@exam == "ACC") {
-      	   misRow  <- rowMeans(data == "")
-      	} else {
-      	   misRow  <- rowMeans(data == "")
-      	}
-	  		isKeep  <- misRow <= kOmissionThreshold
-	  		data    <- data[isKeep, ]
-	  		return(data[isKeep , ])	  		
-	    }
-		    datBlockControl <- lapply(datBlockControl, delOmiss)
-    }
-      return(object)
-})
+################################################################################
+# # Definición Clase FactorClass
+################################################################################

@@ -19,25 +19,22 @@
 
 RecodeToNA <- function (variable, categories)
 {
-  # # Recode the categories of variable to NA
-  # #
-  # # Arg:
-  # #  variable[character|factor]: variable to recode
-  # #  categories[character]: levels of variable recoding to NA
-  # #
-  # # Ret:
-  # #  the variable after recode
-
+    # # Recode the categories of variable to NA
+    # #
+    # # Arg:
+    # #  variable[character|factor]: variable to recode
+    # #  categories[character]: levels of variable recoding to NA
+    # #
+    # # Ret:
+    # #  the variable after recode
     # # levels of variable
     levelsVar <- levels(variable)
     levelsVar <- levelsVar[!(levelsVar %in% categories)]
-
-    isCat <- variable %in% categories
+    isCat     <- variable %in% categories
     if (any(isCat)) {
       variable[isCat] <- NA
 # #       variable <- variable[, drop = TRUE]
     }
-
     variable <- ordered(variable, levels = levelsVar)
     return(variable)
 }
