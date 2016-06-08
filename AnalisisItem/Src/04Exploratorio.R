@@ -82,7 +82,7 @@ Exploratory <- function(test, paramExp =
 						     seqFactors = NULL, rotation = 'oblimin',
 						     semilla = format(Sys.time(), "%d%m%Y"),
 						     tamSize = 0.5)){
-  cat("Se correra un analisis exploratorio con los siguientes parametros: \n")
+  cat("Se correra un analisis exploratorio con los siguientes parametros: \n \n")
   print(paramExp)
   cat("\n----->")
   object <- new("Exploratory", test = test, param = paramExp)
@@ -264,13 +264,13 @@ function(object){
 	#####################################################
 	flagUser <- !is.null(object@param$seqFactors)
 	PutCabezote <-  function(nameSheet, object, kk, isCensal = TRUE){
-	  codigo_prueba      <- gsub("(::|\\s)","_", kk)
+	  codigo_prueba      <- gsub("^(.*)(::)(.*)","\\1", kk)
 	  nItems <- nrow(object@datAnalysis[[kk]]$dictionary)
 	  kOmissionThreshold <- object@param$kOmissionThreshold	
-	  versionComment     <- object@verSalida
+	  versionComment 	 <- gsub("^(.*)(::)(.*)","\\3", kk)
 	  rotation           <- object@param$rotation	
 	  nObsExploratory    <- nrow(object@datAnalysis[[kk]]$datos)
-	  
+	  codigo_prueba2     <- object@test@nomTest
 
       # # Cabezote Exploratorio
 	  isOmissDel <- kOmissionThreshold < 1 & kOmissionThreshold > 0
@@ -293,7 +293,7 @@ function(object){
 	                  'Criterio para tratamiento de omisiones',
 	                  'Comentario', 'Rotación')
 
-	  valores2   <-  data.frame(valor = c(codigo_prueba,
+	  valores2   <-  data.frame(valor = c(codigo_prueba2,
 	                            nObsExploratory, kOmissionThreshold,
 	                            versionComment, rotation))
 
@@ -534,7 +534,7 @@ function(object){
         nDim           <- finseqFact[jj]
         namesSheet     <- paste(nDim, "Dim", sep = '')
         assign(namesSheet, xlsx::createSheet(wb, sheetName = namesSheet))
-        PutCabezote(nameSheet, object = object, kk = kk, isCensal = TRUE)
+        PutCabezote(namesSheet, object = object, kk = kk, isCensal = TRUE)
         varExplained  <- resultsExp[[jj]]$VarExplained
         correlation   <- resultsExp[[jj]]$Correlation
         loadings      <- resultsExp[[jj]]$Loadings
