@@ -29,48 +29,47 @@ options(encoding = "UTF-8")
 ################################################################################
 # # global paths
 ################################################################################
-inPath        <- file.path("Input")
-funPath       <- file.path("Src", "Function")
-outPath       <- file.path("Output", "05Confirmatorio")
-logPath       <- file.path("Log")
-outPathSamp   <- file.path("Output", "Muestras")
-inPathSam     <- file.path("Input", "Muestras")
+# inPath        <- file.path("Input")
+# funPath       <- file.path("Src", "Function")
+# logPath       <- file.path("Log")
 
 ################################################################################
 # # Command line parameters
 ################################################################################
-cat("-------------- Lectura de Archivos -----------------\n")
-# # Lectura de parámetros
-args <- commandArgs();
+# cat("-------------- Lectura de Archivos -----------------\n")
+# # # Lectura de parámetros
+# args <- commandArgs();
 
-# #  check if --args used. This avoids a problem with earlier versions of R
-argsPos  <- match("--args", args)
-codeName <- gsub("--file=Src(\\\\)?", "", args[grep("--file", args)])
+# # #  check if --args used. This avoids a problem with earlier versions of R
+# argsPos  <- match("--args", args)
+# codeName <- gsub("--file=Src(\\\\)?", "", args[grep("--file", args)])
 
-# #  Parameters extraction
-if(!is.na(argsPos) && length(args) > argsPos){ 
-  controlFile <- args[argsPos + 1];  # Class with parameters
-  # controlFile <- "controlData.Rdata"; codeName = "05Confirmatorio.R"
-} else {
-  cat("Parametros de la función:\n")
-  cat("----> controlData: [Rdata] Class with parameters\n")
-  stop("**ERROR**  en los parametros")
-}
+# # #  Parameters extraction
+# if(!is.na(argsPos) && length(args) > argsPos){ 
+#   controlFile <- args[argsPos + 1];  # Class with parameters
+#   # controlFile <- "controlData.Rdata"; codeName = "05Confirmatorio.R"
+# } else {
+#   cat("Parametros de la función:\n")
+#   cat("----> controlData: [Rdata] Class with parameters\n")
+#   stop("**ERROR**  en los parametros")
+# }
 
-# # Cargando parametros de las pruebas
-source(file.path(funPath, "pruebaClass.R"))
-load(file.path(inPath, controlFile))
+# # # Cargando parametros de las pruebas
+# source(file.path(funPath, "pruebaClass.R"))
+# load(file.path(inPath, controlFile))
 
 ################################################################################
 # # global definitions
 ################################################################################
 
-setGeneric(name = "confirmatAnalysis", def = function(object){standardGeneric("confirmatAnalysis")})
+setGeneric(name = "confirmatAnalysis", def = function(object, ...){standardGeneric("confirmatAnalysis")})
 
 # object <- controlData[[prueba]]
 # object <- controlData[['./SABER9/SA20131/JP_M10_M11_M15_M16_M17_M19_M20_M21_M22_M23_M24_M3/PBAM10']]
-setMethod("confirmatAnalysis", "Prueba",
-          function(object){
+setMethod("confirmatAnalysis", "Test",
+          function(object, auxAnalisis){
+            outPath  <- file.path(outPath, "05Confirmatorio")
+            dir.create(outPath)
             # # isCensal: Tipo de Análisis
             # # isTypeB: Tipo de Estudio  
             # # nReplicates: Number of iterations for parallel analysis
@@ -137,7 +136,7 @@ setMethod("confirmatAnalysis", "Prueba",
                                      outfit){
               
               # # nameSheet
-              assign(nameSheet, createSheet(wb, sheetName = nameSheet))
+              assign(nameSheet, xlsx::createSheet(wb, sheetName = nameSheet))
               
               # # salidas del modelo 
               if(model) {
@@ -151,15 +150,15 @@ setMethod("confirmatAnalysis", "Prueba",
                                              '8' = csN, '9' = csN)
                              )
                 # # Definición del ancho de las columnas
-                setColumnWidth(get(nameSheet), 1, 20)
-                setColumnWidth(get(nameSheet), 2, 15)
-                setColumnWidth(get(nameSheet), 3, 20)
-                setColumnWidth(get(nameSheet), 4, 20)
-                setColumnWidth(get(nameSheet), 5, 12)
-                setColumnWidth(get(nameSheet), 6, 12)
-                setColumnWidth(get(nameSheet), 7, 12)
-                setColumnWidth(get(nameSheet), 8, 12)
-                setColumnWidth(get(nameSheet), 9, 12)
+                xlsx::setColumnWidth(get(nameSheet), 1, 20)
+                xlsx::setColumnWidth(get(nameSheet), 2, 15)
+                xlsx::setColumnWidth(get(nameSheet), 3, 20)
+                xlsx::setColumnWidth(get(nameSheet), 4, 20)
+                xlsx::setColumnWidth(get(nameSheet), 5, 12)
+                xlsx::setColumnWidth(get(nameSheet), 6, 12)
+                xlsx::setColumnWidth(get(nameSheet), 7, 12)
+                xlsx::setColumnWidth(get(nameSheet), 8, 12)
+                xlsx::setColumnWidth(get(nameSheet), 9, 12)
                 
                 # # Adición de la gráfica
                 nRow <- nrow(summaryUni)
@@ -185,10 +184,10 @@ setMethod("confirmatAnalysis", "Prueba",
                              startColumn = 1, row.names = FALSE,
                              col.names = TRUE, colnamesStyle = csEnc)
                 
-                setColumnWidth(get(nameSheet), 1, 20)
-                setColumnWidth(get(nameSheet), 2, 15)
-                setColumnWidth(get(nameSheet), 3, 20)
-                setColumnWidth(get(nameSheet), 4, 20)
+                xlsx::setColumnWidth(get(nameSheet), 1, 20)
+                xlsx::setColumnWidth(get(nameSheet), 2, 15)
+                xlsx::setColumnWidth(get(nameSheet), 3, 20)
+                xlsx::setColumnWidth(get(nameSheet), 4, 20)
               }
               
               # # Salida de los ajustes
@@ -213,11 +212,11 @@ setMethod("confirmatAnalysis", "Prueba",
                                colStyle = list('1' = csN, '2' = csN, '3' = csN,
                                                '4' = csN, '5' = csN))
                   
-                  setColumnWidth(get(nameSheet), 1, 20)
-                  setColumnWidth(get(nameSheet), 2, 20)
-                  setColumnWidth(get(nameSheet), 3, 20)
-                  setColumnWidth(get(nameSheet), 4, 20)
-                  setColumnWidth(get(nameSheet), 5, 20)
+                  xlsx::setColumnWidth(get(nameSheet), 1, 20)
+                  xlsx::setColumnWidth(get(nameSheet), 2, 20)
+                  xlsx::setColumnWidth(get(nameSheet), 3, 20)
+                  xlsx::setColumnWidth(get(nameSheet), 4, 20)
+                  xlsx::setColumnWidth(get(nameSheet), 5, 20)
                 }
                 
                 if(ncol(tableAdjust) == 1) {
@@ -229,10 +228,10 @@ setMethod("confirmatAnalysis", "Prueba",
                                col.names = TRUE, colnamesStyle = csEnc,
                                colStyle = list('1' = csN))
                   
-                  setColumnWidth(get(nameSheet), 1, 20)
-                  setColumnWidth(get(nameSheet), 2, 15)
-                  setColumnWidth(get(nameSheet), 2, 20)
-                  setColumnWidth(get(nameSheet), 2, 20)
+                  xlsx::setColumnWidth(get(nameSheet), 1, 20)
+                  xlsx::setColumnWidth(get(nameSheet), 2, 15)
+                  xlsx::setColumnWidth(get(nameSheet), 2, 20)
+                  xlsx::setColumnWidth(get(nameSheet), 2, 20)
                 }
               }
               
@@ -308,7 +307,7 @@ setMethod("confirmatAnalysis", "Prueba",
             }
             
             controlPrueba <- object
-            controlAnal   <- controlPrueba@Analisis[[codeName]]
+            controlAnal   <- auxAnalisis
             
             # # version of input response strings information and sample
             versionOutput <- object@verSalida
@@ -369,7 +368,7 @@ setMethod("confirmatAnalysis", "Prueba",
             exist       <- pruebasDesc[, 'codigo_prueba'] %in% gsub("\\.con", "", names(datBlock))
             pruebasRead <- pruebasDesc[exist, 'codigo_prueba']
             pruebasRead <- sort(pruebasRead)
-            
+            outPathSamp <- file.path("..", "Output", "Muestras")
             if(!file.exists(outPathSamp)) {
               dir.create(outPathSamp)
               cat("Se creo la carpeta muestras en el output!!!!!\n")
@@ -381,17 +380,18 @@ setMethod("confirmatAnalysis", "Prueba",
           
             # # create list to save results
             datBlockOmis <- list()
-            pruebasRead <- pruebasRead[!grepl("(pba|PBA)", pruebasRead)]
+            #pruebasRead <- pruebasRead[!grepl("(pba|PBA)", pruebasRead)]
             resulConf   <- list()
+
             for (kk in pruebasRead) {
               
-              # #  carpetas por prueba
-              outPathPba <- file.path(outPath, paste0("pba", gradoPba, nomPba), paste(kk, sep = '_')) 
-              # #  carpetas de muestras por prueba
-              outPathSamPba <- file.path(outPathSamp, paste0("pba", gradoPba, nomPba), paste(kk, sep = '_'))
-              # #  carpetas de muestras completa
-              outPathtotal <- file.path(outPathSamPba, "total")
-              
+             # #  carpetas por prueba
+             outPathPba <- file.path(outPath, paste(kk, sep = '_')) 
+             # #  carpetas de muestras por prueba
+             outPathSamPba <- file.path(outPathSamp, paste(kk, sep = '_'))
+             # #  carpetas de muestras completa
+             outPathtotal <- file.path(outPathSamPba, "total")
+
               nomKK <- paste0(gradoPba, nomPba, "_", kk)
               if(!file.exists(outPathSamPba)) {
                 dir.create(outPathSamPba, recursive = TRUE)
@@ -457,19 +457,21 @@ setMethod("confirmatAnalysis", "Prueba",
               
               # # Obtain sample
               confData <- file.path(outPathSamPba, "total",
-                                    paste("confirmatorySample_", nomKK, "_V",
-                                          verDataIn, ".RData", sep = ""))
+                                    paste("confirmatorySample_", kk, "_V",
+                                    verDataIn, ".RData", sep = ""))
               expData  <- file.path(outPathSamPba, "total",
-                                    paste("exploratorytorySample_", nomKK, "_V",
-                                          verDataIn, ".RData", sep = ""))
+                                    paste("exploratorytorySample_", kk, "_V",
+                                    verDataIn, ".RData", sep = ""))
               
               if (!file.exists(confData) & !file.exists(expData)) {
                 isExploratory    <- sample(x = rownames(kkBlock), size = nObsBlock %/% 2)
+                #isExploratory    <- rep(TRUE, nrow(kkBlock))
                 expkkBlock       <- subset(kkBlock[isExploratory, ], select = -consLect)
                 rownames(expkkBlock) <- datBlockOmis[[kk]][isExploratory, ]$consLect
                 nObsExploratory  <- nrow(expkkBlock)
                 
                 isConfirmatory        <- -as.numeric(isExploratory)
+                #isConfirmatory    <- rep(TRUE, nrow(kkBlock))
                 confkkBlock           <- subset(kkBlock[isConfirmatory, ], select = -consLect)
                 rownames(confkkBlock) <- kkBlock[isConfirmatory, ]$consLect
                 nObsConfirmatory      <- nrow(confkkBlock)
@@ -486,13 +488,12 @@ setMethod("confirmatAnalysis", "Prueba",
               # # Obtain correlation matrix
               
               corExpData   <- file.path(outPathSamPba, "total",
-                                        paste("corExploratory_", nomKK, "_V",
-                                              verDataIn, ".RData", sep = ""))
-              
+                                        paste("corExploratory_", kk, "_V",
+                                        verDataIn, ".RData", sep = ""))
               corConfData  <- file.path(outPathSamPba, "total",
-                                        paste("corConfirmatory_", nomKK, "_V",
-                                              verDataIn, ".RData", sep = ""))
-              
+                                        paste("corConfirmatory_", kk, "_V",
+                                        verDataIn, ".RData", sep = ""))
+
               if (!file.exists(corExpData) & !file.exists(corConfData)) {
                 corExpBlock  <- hetcor(expkkBlock, pd = TRUE, use = useCor, std.err =
                                          FALSE, ML = FALSE)
@@ -541,11 +542,11 @@ setMethod("confirmatAnalysis", "Prueba",
               }
               
               codPrueba <- dictVarPruebaInd[, 'codigo_prueba']
-              jj        <- paste('P', codPrueba, 'x', sep = '')
+              jj        <- paste('P', codPrueba, sep = '')
               jj        <- unique(jj)
               
               dictVarPruebaInd[, 'codigo_pruebax'] <-
-                paste('P', dictVarPruebaInd[, 'codigo_prueba'], 'x',sep =  '')
+                paste('P', dictVarPruebaInd[, 'codigo_prueba'],sep =  '')
               
               dictVarPruebaInd[, 'idx'] <- paste('IT', dictVarPruebaInd[, 'id'], sep =  '')
               
@@ -588,14 +589,14 @@ setMethod("confirmatAnalysis", "Prueba",
                                                   )
               
               sumModUni <- parameterEstimates(modUnidimensionalBlock)
-              outPathPbaGraph <- file.path(outPathPba,  "GRAPHS")
+              outPathPbaGraph <- file.path(outPath, kk,  "GRAPHS")
               if (!file.exists(outPathPbaGraph)) {
-                dir.create(outPathPbaGraph)
+                 dir.create(outPathPbaGraph)
               }
               
-              outGraphUni <- file.path(outPathPbaGraph, paste("uniG_", nomKK, "_V",
-                                                              versionOutput, sep = ''))
-              
+              outGraphUni <- file.path(outPathPbaGraph, paste("uniG_", kk, "_V",
+                                      versionOutput, sep = ''))
+
               grUni <- semPaths(modUnidimensionalBlock, "std", style = "OpenMx", sizeMan = 7,
                        edge.label.cex=0.8, curvePivot = TRUE, layout = "circle",
                        edge.color = "black", nCharNodes = max(nchar(names(confkkBlockX))))
@@ -646,9 +647,9 @@ setMethod("confirmatAnalysis", "Prueba",
                                                 orthogonal = FALSE)
                 
                 sumModMult   <- parameterEstimates(modMultidimensionalBlock)
-                outGraphMult <- file.path(outPathPbaGraph, paste("MultG_", nomKK, "_",
-                                                                 versionOutput, sep = ''))
-                
+                outGraphMult <- file.path(outPathPbaGraph, paste("MultG_", kk, "_",
+                                              versionOutput, sep = ''))
+  
                 grMulti <- semPaths(modMultidimensionalBlock, "std", style = "OpenMx", sizeMan = 7,
                          edge.label.cex=0.8, curvePivot = TRUE, layout = "circle",
                          edge.color = "black", nCharNodes = max(nchar(names(confkkBlockX))))
@@ -708,11 +709,10 @@ setMethod("confirmatAnalysis", "Prueba",
                                                   std.lv = TRUE, estimator = "ML",
                                                   orthogonal = TRUE)
                 
-                sumModMultNR <- parameterEstimates(modMultidimensionalBlockNR)
-                
-                outGraphMultNR <- file.path(outPathPbaGraph, paste("MultNCG_", nomKK, "_",
-                                                                   versionOutput, sep = ''))
-                
+                sumModMultNR   <- parameterEstimates(modMultidimensionalBlockNR)
+                outGraphMultNR <- file.path(outPathPbaGraph, paste("MultNCG_", kk, "_",
+                                            versionOutput, sep = ''))
+               
                 grMultiNC <- semPaths(modMultidimensionalBlockNR, "std", style = "OpenMx", sizeMan = 7,
                              edge.label.cex=0.8, curvePivot = TRUE, layout = "circle",
                              edge.color = "black", nCharNodes = max(nchar(names(confkkBlockX))))
@@ -774,10 +774,10 @@ setMethod("confirmatAnalysis", "Prueba",
                                              std.lv = TRUE, estimator = "ML",
                                              orthogonal = TRUE)
                   
-                  sumModBifa <- parameterEstimates(modBifactorialBlock)
-                  outGraphBifa <- file.path(outPathPbaGraph, paste("bifaG_", nomKK, "_",
-                                                                   versionOutput, sep = ''))
-                  
+                  sumModBifa   <- parameterEstimates(modBifactorialBlock)
+                  outGraphBifa <- file.path(outPathPbaGraph, paste("bifaG_", kk, "_",
+                                  versionOutput, sep = ''))
+
                   grapBiFa <- try(semPaths(modBifactorialBlock, "std", edge.label.cex=0.5,
                                            curvePivot = FALSE, style = "lisrel", rotation = 4,
                                            layout = "tree2", edge.color = "black",
@@ -798,7 +798,7 @@ setMethod("confirmatAnalysis", "Prueba",
               resulConf[[kk]] <- list('grUni' = c('dir' = outGraphUni, 'gr' = grUni),
                                       'grMulti' = ifelse(controlAnal@param$flagMultiC, 
                                                          c('dir' = outGraphMult, 'gr' = grMulti), NA),
-                                      'grMultiNC' = ifelse(controlAnal@param$flagMultiNC, c('dir' = outGraphMultNC, 'gr' = grMultiNC), NA),
+                                      'grMultiNC' = ifelse(controlAnal@param$flagMultiNC, c('dir' = outGraphMult, 'gr' = grMulti), NA),
                                       'grBifa' = ifelse(controlAnal@param$flagBiFac, c('dir' = outGraphBifa, 'gr' = grapBiFa), NA))
               
               ########################################################################
@@ -881,17 +881,17 @@ setMethod("confirmatAnalysis", "Prueba",
               }
               
               outFile <- file.path(outPathPba,
-                                   paste("05Confirmatorio_", nomKK,"_V", versionOutput,
-                                         ".xlsx", sep = ''))
+                     paste("05Confirmatorio_", kk,"_V", versionOutput,
+                           ".xlsx", sep = ''))
               if (file.exists(outFile)) {
                 file.remove(outFile)
               }
               
-              saveWorkbook(wb, file = outFile)
+              xlsx::saveWorkbook(wb, file = outFile)
               cat("..... Salida en ", outFile, '\n')
               rm(wb, dictVarPruebaInd)
-              object@Analisis[[codeName]] <- controlAnal
-             # return(object)
+              auxAnalisis <- controlAnal
+              return(auxAnalisis)
             }
           }
          
@@ -902,9 +902,9 @@ setMethod("confirmatAnalysis", "Prueba",
 ################################################################################
 
 
-for (prueba in names(controlData)) {
-  print(prueba)
-  controlData[[prueba]] <- confirmatAnalysis(controlData[[prueba]])
-}
+# for (prueba in names(controlData)) {
+#   print(prueba)
+#   controlData[[prueba]] <- confirmatAnalysis(controlData[[prueba]])
+# }
 
-save(controlData, file = file.path(inPath, controlFile))
+# save(controlData, file = file.path(inPath, controlFile))

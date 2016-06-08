@@ -19,25 +19,22 @@
 
 RecodeToNA <- function (variable, categories)
 {
-  # # Recode the categories of variable to NA
-  # #
-  # # Arg:
-  # #  variable[character|factor]: variable to recode
-  # #  categories[character]: levels of variable recoding to NA
-  # #
-  # # Ret:
-  # #  the variable after recode
-
+    # # Recode the categories of variable to NA
+    # #
+    # # Arg:
+    # #  variable[character|factor]: variable to recode
+    # #  categories[character]: levels of variable recoding to NA
+    # #
+    # # Ret:
+    # #  the variable after recode
     # # levels of variable
     levelsVar <- levels(variable)
     levelsVar <- levelsVar[!(levelsVar %in% categories)]
-
-    isCat <- variable %in% categories
+    isCat     <- variable %in% categories
     if (any(isCat)) {
       variable[isCat] <- NA
 # #       variable <- variable[, drop = TRUE]
     }
-
     variable <- ordered(variable, levels = levelsVar)
     return(variable)
 }
@@ -213,7 +210,41 @@ MakeDistrData <- function (datBlock, cateNA, cateDrop,
     return(resultado)
   }
 
+# # Table for NA's verification
+    
+CalculateMissing  <- function(variables, datos, omissionThreshold) {
+    # # Calculate some statistics of Missing information to the form
+    # #
+    # # Arg:
+    # # variables[character]: vector with the names of the variables to
+    # # compute the statistics
+    # # datos[data.frame]: data.frame to compute the statistics
+    # # omissionThreshold[numeric]: proportion of omission use as umbral
+    # #
+    # # Ret:
+    # #  a vector with the statistics of omission 
+    # #       variables <- names(x[, grep(indPrueba, names(x))])
+      
+      nTotIndiv   <- nrow(datos[, variables])
+      nOmit       <- rowMeans(is.na(datos[, variables]))
+      nTotCompl   <- sum(complete.cases(datos[, variables]))
+      pctnComp    <- nTotCompl/nTotIndiv
+      minMissi    <- min(colMeans(is.na(datos[, variables])))
+      maxMissi    <- max(colMeans(is.na(datos[, variables])))
+      isMiss80    <- nOmit <= omissionThreshold
+      nMiss80     <- sum(isMiss80)
+      pctnMiss    <- nMiss80 / nTotIndiv
+      minMissi80  <- min(colMeans(is.na(datos[isMiss80, variables])))
+      maxMissi80  <- max(colMeans(is.na(datos[isMiss80, variables])))
 
+
+      return(data.frame(totalIndi = nTotIndiv, 
+                        minMiss = minMissi, maxMiss = maxMissi, 
+                        totalComp = nTotCompl, pctCompletos = pctnComp, 
+                        nMiss80 = nMiss80,  pctnStuKeep = pctnMiss,   
+                        minMissi80 = minMissi80, maxMissi80 = maxMissi80))
+}
+ 
 ComputeComparison <- function(data, item, frecCensal, frecControl, disCensal,
                              kHighDif, kHighDis){
 
