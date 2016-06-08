@@ -31,7 +31,8 @@ Test <- setClass("Test",
 	            verInput       = 'numeric',    # Version con el que se genera diccionarios
 	            nomTest        = 'character',  # Nombre para impresion en los reportes
 	            paramLect      = 'list',       # Parametros de lectura de la prueba
-	            codMod         = 'character'), # Codigos del modelo de la prueba
+	            codMod         = 'character',
+              listAnal       = 'list'), # Codigos del modelo de la prueba
 
  		# # Definir los valores por defecto
  		prototype = list(verInput = 1, path = "", exam = "", codMod = "02",
@@ -197,7 +198,8 @@ Analysis <- setClass("Analysis",
  					  	   inputFile   = 'list',
  					  	   outFile     = 'list', 
  					  	   verSalida   = 'numeric', 
-                 pathCor     = 'character'),  					  
+                 pathCor     = 'character', 
+                 funVirtual  = 'character'),  					  
  					    # # Definir los valores por defecto
  					    prototype = list(test = NULL, scripName = "", param = list(), 
  					                    inputFile = list(), outFile = list(pathRdata = "")), 

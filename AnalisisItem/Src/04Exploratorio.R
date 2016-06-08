@@ -74,14 +74,20 @@ setMethod("initialize", "Exploratory", function(.Object, ..., param) {
   })
 
 
-Exploratory <- function(test, paramExp = 
-	                    list(kOmissionThreshold = 0.5,
+Exploratory <- function(test, paramExp = NULL) { 
+  paramDefault <-  list(kOmissionThreshold = 0.5,
 						     flagOri = FALSE, flagTotal = TRUE,
 						     flagSubCon = TRUE, orderedDat = TRUE,
 						     catToNA = c('No Presentado', 'NR', 'Multimarca'),
 						     seqFactors = NULL, rotation = 'oblimin',
 						     semilla = format(Sys.time(), "%d%m%Y"),
-						     tamSize = 0.5)){
+						     tamSize = 0.5))
+  if (!is.null(paramExp)) {
+  	isCorrect <- names(paramExp) %in% names(paramDefault) 
+  	paramExp  <- c(paramExp[isCorrect], paramDefault[!isCorrect])
+  } else {
+  	paramExp <- paramDefault
+  }
   cat("Se correra un analisis exploratorio con los siguientes parametros: \n \n")
   print(paramExp)
   cat("\n----->")
@@ -914,5 +920,76 @@ function(object){
 setGeneric(name = "outHTML", def = function(object){standardGeneric("outHTML")})
 setMethod("outHTML", "Exploratory", 
 function(object){
-	print("Funcion en construcción")
+	
+	load(object@outFile$pathRdata) # load listResults
+	nomPrueba <- object@test@nomTest
+	
+	cat('<h2 id="Exploratory_Header">
+		Análisis exploratorio de la prueba:', nomPrueba, '
+		</h2>')
+
+	cat("A continuación se muestra(n) el(los) gráfico(s) de sedimentación
+      para las correlaciones (tetracóricas) de la prueba, así como los
+      percentiles 99 estimados mediante análisis paralelo.\n", sep = "")
+ 
+  	cat("El gráfico de sedimentación presenta los valores propios asociados a
+      la matriz de correlaciones estimada de los ítems de la prueba, y el
+      percentil 99 de los valores propios correspondientes a matrices de
+      correlación del mismo tipo de la prueba, pero en
+      donde los ítems no se relacionan entre sí.\n\n",
+      sep  = "")
+
+  	cat("El gráfico representa cuan fuertes son las asociaciones entre los ítems,
+      cuántas dimensiones pueden necesitarse para describir aproximadamente
+      estas asociaciones y cuán diferentes son los valores propios, de los que
+      se observarían en el caso de que los ítems no se asocien entre sí.\n",
+      sep  = "")
+  	
+  	cat("En este sentido, el gráfico permite identificar la cantidad de dimensiones
+      que se desean interpretar; en especial, permite observar si algún conjunto
+      de valores propios, a pesar de superar el percentil definido, son muy
+      similares a lo que se esperarían cuando los ítems no se asocian y así
+      explorar un menor número de dimensiones.\n", sep  = "")
+
+	cat('<table bgcolor="#FFFFFF" border="0" cellpadding="2" cellspacing="2" width="100%" class="table-bordered table-condensed">
+	<tbody>')
+
+     nomSubPru <- names(object@datAnalysis)
+     
+     for(ii in nomSubPru){
+     	
+	     nomAux <- gsub("::|\\s", "_", ii) 
+	     pathImg <- listResults[[nomAux]]$paPlotFile
+	     nomSub  <- gsub("^(.+)(::)(.+)", "\\3", ii)
+	     nFactors<- listResults[[nomAux]]$nFactors
+	     nFactAux <- paste(nFactors,"Factores")
+	     expVar1 <- listResults[[nomAux]]$resultsExp[[nFactAux]]$VarExplained[,2]
+    cat('<tr>
+	     <td width="80%">
+	     <center>
+		     <b>
+		     <h3 id="Exploratory_Header_tab">
+		     Análisis exploratorio de:', nomSub, '
+		     </h3>
+		     </b>
+		     </center>
+		     </td>
+		     </tr>')
+         cat('<tr>')    
+         cat('<td width="100%">')
+		 cat("Al realizar un análisis factorial exploratorio se encontró que los primeros ",
+             nFactors, " componentes recogen el ", round(100 * expVar1, 1), "% de la varianza. \n", sep = "")
+         
+         cat("Se realizo una rotación Varimax, la cual redistribuye la varianza explicada por cada dimensión
+             buscando que cada ítem pese fuertemente en una sola de las dimensiones
+             conservadas, con lo cual se facilita la interpretación de las mismas.\n", sep = "")
+
+		 cat('<center><img src="', pathImg,'" alt="alt text" style = "width:472px;height:450px">
+		     </center></td>')
+	     cat('</tr>\n')
+     
+     }
+     
+     cat('</tbody></table>')
+
 })
