@@ -1,5 +1,5 @@
 #################################################################################
-# # wrapPS.R
+# # wrapBL.R
 # # R Versions: 2.15.0
 # #
 # # Author(s): Jorge Mario Carrasco Ortiz

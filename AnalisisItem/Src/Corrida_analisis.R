@@ -36,33 +36,19 @@ paramLect <- list(infoItem = c('id' = "CODIGO_ITEM", 'subCon' = "COMPETENCIA_NOM
                	               'prueba' = "NOMBRE_PRUEBA"), 
                   conDirs = "PBA116.con", valMUO = NA,
                   subConInfo = c('path' = pathExpeci, 'nameSheet' =  "FINAL"))
-prueba0 <- new('Test', 
-	           path = paste0(pathExam, "/PBA116"), 
-               exam = "SABERPRO", 
-               codMod = "07",
-               verInput = 1, 
-               nomTest = "SABER 11(Sociales y Competencias)", 
+prueba0 <- new('Test', path = paste0(pathExam, "/PBA116"), 
+               exam = "SABERPRO", codMod = "07",
+               verInput = 1, nomTest = "SABER 11(Sociales y Competencias)", 
                paramLect = paramLect) 
 
-prueba0@listAnalysis$Exploratory <- Exploratory(test = prueba0,  )
-prueba0@listAnalysis$TCT         <- TCT(test = prueba0)
-
-for(analisis in prueba0@listAnalysis){
-	codeAnalysis(analisis)
-	outXLSX(analisis)
-	outHTML(analisis)
-
-}
 ana1 <- Exploratory(test = prueba0)
 codeana1 <- codeAnalysis(ana1)
-# xlsxana1 <- outXLSX(ana1)
- <- outHTML(ana1)
+xlsxana1 <- outXLSX(ana1)
 
 
-paso50  <- new('Analisis', prueba = prueba0,
- 	           param = list('flagUni' = TRUE, 'flagMultiC' = TRUE, 'flagMultiNC' = TRUE, 'flagBiFac' = TRUE), 
-   	           inputFile = list(), outFile = list(pathRdata = "../Output/05Confirmatorio/confirmatAnalysis.Rdata"))
+ana2 <- TCT(test = prueba0)
+codeana1 <- codeAnalysis(ana1)
+xlsxana1 <- outXLSX(ana1)
 
-#explorAnalysis(prueba0)
-resulExp <- explorAnalysis(prueba0)
-resul    <- confirmatAnalysis(prueba0, paso50)
+
+
