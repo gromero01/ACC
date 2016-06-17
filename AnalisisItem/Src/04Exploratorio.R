@@ -981,5 +981,4 @@ function(object){
      }
      
      cat('</tbody></table>')
-
 })
