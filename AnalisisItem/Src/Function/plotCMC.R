@@ -40,7 +40,8 @@
   CMCPloteps <- file.path(outPathGraph, paste("/CMC-", indexData, ".eps", sep = ""))
    # # Create dir if doesn't exist
   if(!file.exists("graficos")) { #!try(dir.exists(outPathGraph))
-    dir.create(file.path(outPathGraph), recursive = TRUE)
+    dir.create(file.path(outPathGraph), recursive = TRUE, 
+               showWarnings = FALSE)
   }
   if (!file.exists(CMCPlotpng)) {
     ggsave(CMCPloteps)

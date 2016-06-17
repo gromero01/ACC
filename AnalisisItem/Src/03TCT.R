@@ -18,14 +18,6 @@
 ################################################################################
 
 options(encoding = "UTF-8")
-################################################################################
-# # Definition of input and output paths
-################################################################################
-# inPath        <- file.path("Input")
-# funPath       <- file.path("Src", "Function")
-# outPath       <- file.path("Output", "03TCT")
-# logPath       <- file.path("Log")
-
 
 ###############################################################################
 # # Load wrapWS.R functions
@@ -34,6 +26,7 @@ source(file.path(funPath, "univariateFunctions01.R"))
 source(file.path(funPath, "log.R"))  # # log
 source(file.path(funPath, "plotCMC.R"))
 source(file.path(funPath, "pruebaClass.R"))
+source(file.path(funPath, "tablasHtml.R"))
 
 ################################################################################
 # # Definition of class and parameters
@@ -43,8 +36,7 @@ source(file.path(funPath, "pruebaClass.R"))
 TCT <- setClass("TCT", contains = "Analysis")
 
 setMethod("initialize", "TCT", function(.Object, ..., param) {
-  dir.create("../Output/03TCT/", showWarnings = FALSE, recursive = TRUE)
-  .Object@outFile$pathRdata <- "../Output/03TCT/RDATA/outList_TCT.Rdata"
+  .Object@outFile$pathRdata <- "../Output/03TCT/outList_TCT.Rdata"
   .Object <- callNextMethod()
 })
 
@@ -61,8 +53,6 @@ TCT <- function(test, paramExp =
   object <- filterAnalysis(object)
   return(object)
 }
-
-
 
 setGeneric(name = "codeAnalysis", def = function(object){standardGeneric("codeAnalysis")})
 setMethod("codeAnalysis", "TCT",
@@ -96,14 +86,11 @@ function(object){
     pruebasRead <- names(object@datAnalysis)
     
     # # Extrae info sobre grado and test
-
+    datSblq <- data.frame()
     for (kk in pruebasRead) {
       # # create folder and routes to save results
       # #  carpetas por prueba
-      auxPru   <- gsub("(::|\\s)","_", kk)
-      outPathPba <- file.path(outPath, auxPru)      
-
-      # # create folder and routes to save results
+      auxPru     <- gsub("(::|\\s)","_", kk)      
       outPathPba <- file.path(outPath, "03TCT")
 
       # # Create a directory in outPath
@@ -118,13 +105,17 @@ function(object){
       dataCor     <- dataBlo[, varId]
       dataCor[, ] <- lapply(dataCor, as.numeric)
       corBlock    <- psych::alpha(dataCor,
-                                  check.keys = isCheckKeys)$item.stats
-      corBlock <- data.frame('id' = row.names(corBlock),
-                             'corItBl' = corBlock[, "r.drop"])
+                                  check.keys = isCheckKeys)
+      auxAlpha <- corBlock$total[, 'raw_alpha']
+      corBlock <- data.frame('id' = row.names(corBlock$item.stats),
+                             'corIt' = corBlock$item.stats[, "r.drop"])
 
       # # Graph CM Curve from source plotCMC.R
       outPathGraph <- file.path(outPathPba, "graficos")
-      plotCMC(dataCor, outPathGraph, kk)
+      plotCMC(dataCor, outPathGraph, auxPru)
+      exGraphPath <- grep(paste0("(.+CMC-", auxPru, "\\.png)"),
+                          list.files(outPathGraph, full.names = TRUE),
+                          value=TRUE)
   
       # # compute correlations Item - Index
       varByIndex   <- split(varId, indexNoNI)
@@ -139,16 +130,17 @@ function(object){
                              varKeep <- c('id', 'r.drop', 'raw_alpha')#,
                                            #'G6.smc')
                              estIndItems <- estIndItems[, varKeep]
-                             names(estIndItems)[2] <- c('corItIn')
-                             estIndItems[, 'alphaTotal'] <-
-                                   estIndex$total[, 'raw_alpha']
+                             names(estIndItems)[2] <- c('corItSub')
+                             estIndItems[, 'alphaTotal'] <- auxAlpha                                
+                             estIndItems[, 'alphaSub'] <-
+                                estIndex$total[, 'raw_alpha']
                              estIndItems[, 'nItems'] <- length(x)
                              return(estIndItems)})
       corItemIndex <- MakeListData(corItemIndex, nvar = "indice")
       corItemIndex <- merge(corItemIndex, corBlock)
   
       # # variables to keep from dictionary in orderto complete the output
-      if (object@exam == "ACC") {
+      if (object@test@exam == "ACC") {
         varKeepDict <- c('id', 'instr', 'etiqu')
       } else {
         if (!"etiqu" %in% names(dictVarPrueba)) {
@@ -162,14 +154,16 @@ function(object){
       if (any(isVacio)) {
         corItemIndex[isVacio, 'etiqu'] <- corItemIndex[isVacio, 'instr']
       }
-      corItemIndex <- corItemIndex[, c("id", "indice", "etiqu", "alphaTotal", "raw_alpha",
-                                       "corItBl", "corItIn", "nItems")]
-        
-      }
-      datSblq <- rbind(datSblq, cbind(corItemIndex, 'pathCMC' = exGraphPath))
+      corItemIndex <- corItemIndex[, c("id", "indice", "etiqu", "alphaTotal", "alphaSub",
+                                       "raw_alpha", "corIt", "corItSub", "nItems")]
+      if (all(corItemIndex[, "indice"] == corItemIndex[, "etiqu"])){
+        corItemIndex[, "etiqu"] <- NULL
+      }        
+      listResults[[auxPru]][["resulTCT"]] <- cbind(corItemIndex, 'pathCMC' = exGraphPath)
+      listResults[[auxPru]][["nObs"]]     <- ncol(dataCor)
     }
-  outList[[paste0(grado, ":", test)]] <<- datSblq
-  saveWorkbook(wb, file = outFile)
+   # # Guardando
+   saveResult(object, listResults)
 })
 
 ################################################################################
@@ -179,10 +173,20 @@ function(object){
 setGeneric(name = "outXLSX", def = function(object, ...){standardGeneric("outXLSX")})
 setMethod("outXLSX", "TCT", 
 function(object){
+  outPathPba <- file.path(outPath, "03TCT")
+  load(object@outFile$pathRdata)
+  pruebasRead <- names(object@datAnalysis)
+  keyPba      <- gsub("(.+)::(.+)", "\\1", pruebasRead)
+  pruebasRead <- split(pruebasRead, f = keyPba)
+
+  for (prueba in names(pruebasRead)) {
+    # # version with dict V00 and data _2014_01_28_17_10_35
+    versionOutput  <- object@verSalida
+    versionComment <- paste0("Corrida Análisis TCT --",  object@test@nomTest, "--") 
+
     # # guardar xlsx
-    outFile <- file.path(outPathPba, 
-                         paste("TCT_V", versionOutput, "_", 
-                              test, grado, ".xlsx", sep = ''))
+    outFile <- file.path(outPathPba, paste("TCT_V", versionOutput, "_", 
+                         prueba, ".xlsx", sep = ''))
     wb      <- createWorkbook()
 
     # # estilo de las celdas
@@ -195,7 +199,7 @@ function(object){
     csDs <- CellStyle(wb) + DataFormat("(0.0%)") +
             Alignment(v = "VERTICAL_CENTER") + Border()
     csDsE <- CellStyle(wb) + Alignment(v = "VERTICAL_CENTER", wrapText = TRUE) +
-            Border()
+             Border()
     # # estilo de columnas que reportan n
     csN <- CellStyle(wb) + DataFormat("#,##0.00") + Font(wb, isItalic = TRUE)
     csNE <- CellStyle(wb) + Font(wb, isItalic = TRUE)
@@ -206,65 +210,89 @@ function(object){
     
     # # fuente en negrilla
     csNeg   <- CellStyle(wb) + Font(wb, isBold = TRUE)
-    datSblq <- data.frame()
-
-    # # creación de una hoja
-    namesSheet <- kk
-    assign(namesSheet, createSheet(wb, sheetName = namesSheet))
-  
-    # # poner el data.frame en la hoja
-    addDataFrame(corItemIndex, sheet = get(namesSheet), startRow = 5,
-                 startColumn = 1, row.names = FALSE,
-                 col.names = TRUE, colnamesStyle = csEnc,
-                 colStyle = list('4' = csN, '5' = csN, '6' = csN,
-                                 '7' = csN, '8' = csN))
-  
-    # # Agrega el grafico CMC al excel
-  
-    exGraphPath <- grep(paste0("(.+CMC-", kk, "\\.png)"),
-                        list.files(outPathGraph, full.names = TRUE),
-                        value=TRUE)
-    addPicture(exGraphPath, sheet = get(namesSheet), scale=1,
-      startRow=5, startColumn=10)
-  
-    # #
-    namesPrueba <- subset(pruebasDesc, codigo_prueba == kk,
-                         select = c(codigo_prueba, prueba))
-  
-    namesPrueba[, 'nItems'] <- ncol(dataCor)
-  
-    addDataFrame(t(namesPrueba), sheet = get(namesSheet), startRow = 1,
-                 startColumn = 1, row.names = TRUE,
-                 col.names = FALSE, rownamesStyle = csNeg)
-  
-    setColumnWidth(get(namesSheet), 1, 15)
-    setColumnWidth(get(namesSheet), 2, 15)
-    setColumnWidth(get(namesSheet), 3, 10)
-    setColumnWidth(get(namesSheet), 4, 10)
-    setColumnWidth(get(namesSheet), 5, 10)
-    setColumnWidth(get(namesSheet), 6, 10)
-    setColumnWidth(get(namesSheet), 7, 10)
-    setColumnWidth(get(namesSheet), 8, 10)
-    setColumnWidth(get(namesSheet), 9, 5)
+    for (kk in pruebasRead[[prueba]]) {
+       # # creación de una hoja
+       auxPru       <- gsub("(::|\\s)","_", kk)      
+       namesSheet   <- auxPru
+       corItemIndex <- listResults[[auxPru]][["resulTCT"]]
+       exGraphPath  <- unique(as.character(corItemIndex[, "pathCMC"]))
+       assign(namesSheet, xlsx::createSheet(wb, sheetName = auxPru))
+     
+       # # poner el data.frame en la hoja
+       colTomar <- names(corItemIndex)[names(corItemIndex) != "pathCMC"]
+       addDataFrame(corItemIndex[, colTomar], sheet = get(namesSheet), startRow = 5,
+                    startColumn = 1, row.names = FALSE,
+                    col.names = TRUE, colnamesStyle = csEnc,
+                    colStyle = list('4' = csN, '5' = csN, '6' = csN,
+                                    '7' = csN, '8' = csN))
+     
+       # # Agrega el grafico CMC al excel
+       addPicture(exGraphPath, sheet = get(namesSheet), scale=1,
+                  startRow=5, startColumn=10)
+     
+       # # Descripcion de los items
+       pruebasDesc <- object@datAnalysis[[kk]]$dictionary
+       namesPrueba <- data.frame('Codigo_prueba' = unique(pruebasDesc[, "codigo_prueba"]),
+                                 'Prueba' = versionComment, 
+                                 'Descripción' = gsub("^(.*)(::)(.*)","\\3", kk),
+                                 'nItems' = listResults[[auxPru]][["nObs"]])
+     
+       addDataFrame(t(namesPrueba), sheet = get(namesSheet), startRow = 1,
+                    startColumn = 1, row.names = TRUE,
+                    col.names = FALSE, rownamesStyle = csNeg)
+     
+       xlsx::setColumnWidth(get(namesSheet), 1, 15)
+       xlsx::setColumnWidth(get(namesSheet), 2, 15)
+       xlsx::setColumnWidth(get(namesSheet), 3, 10)
+       xlsx::setColumnWidth(get(namesSheet), 4, 10)
+       xlsx::setColumnWidth(get(namesSheet), 5, 10)
+       xlsx::setColumnWidth(get(namesSheet), 6, 10)
+       xlsx::setColumnWidth(get(namesSheet), 7, 10)
+       xlsx::setColumnWidth(get(namesSheet), 8, 10)
+       xlsx::setColumnWidth(get(namesSheet), 9, 5)
+    }
+    saveWorkbook(wb, file = outFile)
+  }
 
 })
 
 setGeneric(name = "outHTML", def = function(object){standardGeneric("outHTML")})
 setMethod("outHTML", "TCT", 
 function(object){
-  print("Funcion en construcción")
+  # # Identificando Pruebas
+  outPathPba <- file.path(outPath, "03TCT")
+  load(object@outFile$pathRdata)
+  pruebasRead <- names(object@datAnalysis)
+  pruebasRead <- split(pruebasRead, f = gsub("(.+)::(.+)", "\\1", pruebasRead))
+  auxPru      <- lapply(pruebasRead, function(x) gsub("(::|\\s)","_", x))
+  auxNombres  <- names(listResults)
+  
+  # # Juntando subConjunto de una prueba
+  listResults <- lapply(names(listResults), function(x){ 
+    return(cbind('pba_subCon' = x, listResults[[x]]$resulTCT))})
+  names(listResults) <- auxNombres
+  listResults <- lapply(auxPru, function(x) do.call(rbind, listResults[x]))
+  
+  cat('<p>El objetivo de este análisis es identificar si los ítems que hacen parte del constructo tienen propiedades, desde el punto de vista de la medición, que permiten ser una fuente de medición óptima para la estimación de un atributo determinado (escala). En particular, a partir de la TCT se establecen dos características importantes que deben ser observadas en los ítems:</p>
+  <ol style="list-style-type: decimal">
+  <li>Confiabilidad: esta hace referencia a la consistencia a través de un conjunto de ítems que se espera que midan el mismo constructo o dimensión teórica.</li>
+  <ul>
+  <li>La medida de la fiabilidad mediante el alfa de Cronbach asume que los ítems (medidos en escala tipo Likert) miden un mismo constructo y que están altamente correlacionados. La fiabilidad de la escala debe obtenerse siempre con los datos de cada muestra para garantizar la medida fiable del constructo en la muestra concreta de investigación.</li>
+  </ul>
+  </ol>
+  <ol start="2" style="list-style-type: decimal">
+  <li>De acuerdo a los análisis de pilotaje se establecieron los siguientes criterios:</li>
+  <ul>
+  <li>Confiabilidades menores a 0.6 son bajas y pueden sugerir dificultades para la estimación de la escala propuesta.</li>
+  <li>Confiabilidades entre 0.6 y 0.75 son bajas pero aceptables.</li>
+  <li>Confiabilidades entre 0.75 y 0.95 son las esperadas.</li>
+  <li>Confiabilidades mayores a 0.95 sugieren redundancia de los ítems que conforman la escala.</li>
+  <li>KR20. Kuder y Richardson desarrollaron un procedimiento basado en los resultados obtenidos con cada ítem. Básicamente, este procedimiento establece la confiabilidad sobre el constructo cuando se elimina cada ítem de manera particular. <strong>Es necesario identificar los ítems para los cuales aumenta la confiabilidad una vez se elimina el ítem (Comentario) </strong></li>
+  <li>Validez. Para aproximarnos a la validez de los ítems dentro del constructo (escala) se analiza la correlación punto biserial (ítems dicotómicos) y poliserial (politómicos). Estas medidas se utilizan para identificar la correlación existente entre dos variables, particularmente se estiman dos tipos de correlación ítem-índice e ítem-prueba. <strong>De acuerdo a los análisis de pilotaje, se estableció el criterio mínimo de correlación de 0.2, tanto para índices polítomicos como dicotómicos. Esto debido a que los análisis de pilotaje mostraron que este es el valor del umbral mínimo tolerable a partir del cual los ítems comienzan a reducir la confiabilidad de las escalas. </strong></li>
+  </ul>
+  </ol>')
+
+  for (result in names(listResults)){
+    reportTCT(listResults[[result]], codPrueba = result)
+  }
 })
-
-
-setGeneric(name = "outXLSX", def = function(object){standardGeneric("outXLSX")})
-setMethod("outXLSX", "TCT", 
-function(object){
-  print("Funcion en construcción")
-})
-
-setGeneric(name = "codeAnalysis", def = function(object){standardGeneric("codeAnalysis")})
-setMethod("codeAnalysis", "TCT", 
-function(object){
-  print("Funcion en construcción")
-})
-

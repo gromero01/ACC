@@ -475,6 +475,23 @@ setMethod("filterAnalysis", "Analysis",
             do.call(buildSubsets, c(list(object), auxParam[allParams]))
           })
 
+# # Save result of Analysis
+setGeneric(name = "saveResult", def = function(object, ...){standardGeneric("saveResult")})
+setMethod("saveResult", "Analysis", function(object, listResults){
+     outRdata <- object@outFile$pathRdata
+     if (!file.exists(outRdata)){
+       save(listResults, file = outRdata)
+     } else {
+       auxResult <- listResults
+       load(file = outRdata)
+       for (resul in names(auxResult)){
+         listResults[[resul]] <- auxResult[[resul]]
+       }     
+       save(listResults, file = outRdata)
+     }
+})
+
+
 ################################################################################
 # # Definición Clase FactorClass
 ################################################################################

@@ -1,49 +1,63 @@
-reportTCT <-  function(x, subPrueba = "Indice") {
+reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto") {
   require(DT)
-  # # Diagrama de opciones de respuesta
-  # x <- outList[[1]]
+  #  x <- listResults[[1]]
+  if (!"etiqu" %in% names(x)){
+    x[, "etiqu"] <- x[, "indice"]
+  }
   x <- data.table(x)
-  x[, ind_Sub := as.double(1:nrow(.SD)), by = c("Indice")]
-  iniCol <- x[, list(Indice, etiqu, alphaTotal, nItems, pathCMC)]
-  cols   <- c("alphaTotal", "raw_alpha", "corItBl", "corItIn")
+
+  # # Organizando resultados
+  x[, ind_Sub := as.double(1:nrow(.SD)), by = c("pba_subCon")]
+  maxItems <- max(x[, ind_Sub])
+  x[, nItems := sum(unique(nItems)), by = c("pba_subCon")]
+  colsUni <- c("indice", "etiqu", "alphaTotal", "nItems", "pathCMC")
+  iniCol  <- x[, lapply(.SD, unique), .SDcols = colsUni, by = c("pba_subCon")]
+  iniCol  <- iniCol[!duplicated(pba_subCon), ]
+  cols   <- c("alphaTotal", "raw_alpha", "corIt", "corItSub")
   x[, (cols) := round(.SD,3), .SDcols = cols]
-  x <- suppressWarnings(melt(data.table(x), id = c("ind_Sub", "Indice", "etiqu"), 
-            measure = c("id", "raw_alpha", "corItBl", "corItIn")))
+  colMeasure <- c("id", "raw_alpha", "corIt", "corItSub")
+  x <- suppressWarnings(melt(data.table(x), id = c("ind_Sub", "pba_subCon"), 
+                             measure = colMeasure))
   
-  # # Representando grado-area en una sola fila
+  # # Representando grado-area-SubConjunto en una sola fila
   x <- as.data.frame(x)
-  dcastCont <- dcast.data.table(data.table(x), Indice + etiqu ~ ind_Sub + variable, 
+  dcastCont <- dcast.data.table(data.table(x), pba_subCon ~ ind_Sub + variable, 
                                 fun.aggregate = list, value.var = c("value"), drop = "FALSE")
-  dcastCont <- merge(unique(iniCol), dcastCont, by = c("Indice", "etiqu")) 
+  dcastCont <- merge(iniCol, dcastCont, by = c("pba_subCon")) 
+  dcastCont[pba_subCon == codPrueba, indice := codPrueba]
+  dcastCont[pba_subCon == codPrueba, etiqu  := codPrueba]
+  dcastCont[, pba_subCon := NULL]
   
   # # Ordenando columnas
-  colPos    <- grep("^\\d+_(id|raw_alpha|corItBl|corItIn)", names(dcastCont))
-  idItem    <- gsub("(\\d+)_.+", "\\1", names(dcastCont)[colPos])
-  colPos    <- split(colPos, f = idItem)
-  newOrden  <- sort(as.numeric(names(colPos)), index.return = TRUE)$ix
-  colPos    <- colPos[newOrden]
-
+  colName <- lapply(1:maxItems, function(x) paste0(x,"_", colMeasure))
+  names(colName) <- as.character(1:maxItems)
+  colPos  <- lapply(colName, function(x) sapply(x, function(z) which(z == names(dcastCont))))
   finTable <- ""
                 
   for (ww in names(colPos)) {
     iterInd <- sapply(colPos[[ww]], function(x)  
                       paste0("            '<td>'+ d[", x + 1, "] +'</td>'+\n"))
-    auxRow  <- paste0("        '<tr>'+\n            '<td>", ww , "</td>'+\n",
-               paste(iterInd, collapse = ""), "        '</tr>'+")
+    auxRow  <- paste0("if (d[", min(colPos[[ww]]) + 1 , '] != "" && d[',  min(colPos[[ww]]) + 1, '] != null ', ") {    auxTable = auxTable  + '<tr>'+\n            '<td>", ww , "</td>'+\n",
+               paste(iterInd, collapse = ""), "        '</tr>';\n }")
     finTable <- paste(finTable, auxRow, sep = "\n")
   }
 
   # # Renombrando primeras columnas
   dcastCont <- data.frame(dcastCont)
   names(dcastCont)[1:4] <- c("Codigo", "Indice", "&alpha;", 
-                             "No. Items")
-
+                             "No_Items")
+  if (all(as.character(dcastCont$Codigo) == as.character(dcastCont$Indice))) {
+    nColIni               <- c(0, 2, 6:(ncol(dcastCont) + 1))  
+  } else {
+    nColIni               <- c(0, 6:(ncol(dcastCont) + 1))  
+  }
+  
   # # Tablas en Html de los items
   htmlTab1 <- datatable(
     cbind(' ' = '', dcastCont), escape = FALSE,
     options = list(
       columnDefs = list(
-        list(visible = FALSE, targets = c(0, 5:(ncol(dcastCont) + 1))),
+        list(visible = FALSE, targets = nColIni),
         list(orderable = FALSE, className = 'details-control', targets = 1)
       ),
     initComplete = JS(
@@ -53,8 +67,10 @@ reportTCT <-  function(x, subPrueba = "Indice") {
     ),  
     callback = JS(
     paste0("table.column(1).nodes().to$().css({cursor: 'pointer'});    
-    var format = function(d) {
-    return '<table border=\"0\" cellpadding=\"5\" cellspacing=\"0\" style=\"padding-left:95px;\" width=\"100%\" >'+\n",
+    var format = function(d) {",
+    "var auxTable = ''; \n", 
+    finTable,
+    "\n return '<table border=\"0\" cellpadding=\"5\" cellspacing=\"0\" style=\"padding-left:95px;\" width=\"100%\" >'+\n",
               "'<tr>' + 
     '<th>Id</th>' + 
     '<th>Item</th>' + 
@@ -63,8 +79,7 @@ reportTCT <-  function(x, subPrueba = "Indice") {
     '<th>Correlaci&oacute;n<br>- &Iacute;ndice</th>' + 
     '<th  colspan=\"4\" rowspan=\"", length(colPos) + 1, 
     "\" align = \"center\">  <img align=\"middle\" style=\"width:660px;height:550px;\" src=\"../'+ 
-    d[6] + '\"></th>' + 
-  '</tr>' +", finTable, "\n '</table>'};
+    d[6] + '\"></th>' + auxTable + '</tr></table>'};
     table.on('click', 'td.details-control', function() {
     var tr = $(this).closest('tr');
         var row = table.row( tr );

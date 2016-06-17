@@ -31,7 +31,9 @@ logPath <- file.path("..", "Log")
 pathExpeci <- file.path(inPath, "Especificaciones1.xlsx")
 pathExam   <- "AC20152"
 source(file.path("Function", "pruebaClass.R"))
+source("03TCT.R")
 source("04Exploratorio.R")
+
 paramLect <- list(infoItem = c('id' = "CODIGO_ITEM", 'subCon' = "COMPETENCIA_NOMBRE", 
                	               'prueba' = "NOMBRE_PRUEBA"), 
                   conDirs = "PBA116.con", valMUO = NA,
@@ -47,8 +49,8 @@ xlsxana1 <- outXLSX(ana1)
 
 
 ana2 <- TCT(test = prueba0)
-codeana1 <- codeAnalysis(ana1)
-xlsxana1 <- outXLSX(ana1)
+codeana2 <- codeAnalysis(ana2)
+xlsxana2 <- outXLSX(ana2)
 
 
 

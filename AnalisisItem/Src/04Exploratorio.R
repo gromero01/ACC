@@ -244,7 +244,7 @@ function(object){
 	}
 	
 	# # Guardando resultados 
-    save(listResults, file = object@outFile$pathRdata)
+    saveResult(object, listResults)
 
 })
 ################################################################################
