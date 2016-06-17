@@ -23,16 +23,6 @@
 ################################################################################
 options(encoding = "UTF-8")
 
-################################################################################
-# # global paths
-################################################################################
-# inPath        <- file.path("Input")
-# funPath       <- file.path("Src", "Function")
-# outPath       <- file.path("Output", "04Exploratorio")
-# logPath       <- file.path("Log")
-# outPathSamp   <- file.path("Output", "Muestras")
-# inPathSam     <- file.path("Input", "Muestras")
-
 ###############################################################################
 # # Load libraries
 ################################################################################
@@ -81,7 +71,7 @@ Exploratory <- function(test, paramExp = NULL) {
 						     catToNA = c('No Presentado', 'NR', 'Multimarca'),
 						     seqFactors = NULL, rotation = 'oblimin',
 						     semilla = format(Sys.time(), "%d%m%Y"),
-						     tamSize = 0.5))
+						     tamSize = 0.5)
   if (!is.null(paramExp)) {
   	isCorrect <- names(paramExp) %in% names(paramDefault) 
   	paramExp  <- c(paramExp[isCorrect], paramDefault[!isCorrect])
