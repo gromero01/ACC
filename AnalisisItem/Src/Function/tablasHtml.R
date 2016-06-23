@@ -1,4 +1,4 @@
-reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto") {
+reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL) {
   require(DT)
   #  x <- listResults[[1]]
   if (!"etiqu" %in% names(x)){
@@ -51,7 +51,12 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto") {
   } else {
     nColIni               <- c(0, 6:(ncol(dcastCont) + 1))  
   }
-  
+  linkExcel <- ''
+  if (!is.null(pathExcel)){
+    linkExcel <- paste0('<td colspan="5"><li class="linkxlscol"><a href="', pathExcel, 
+                 '"> Descargar <br> informe Excel </a></li></td>')
+  }
+
   # # Tablas en Html de los items
   htmlTab1 <- datatable(
     cbind(' ' = '', dcastCont), escape = FALSE,
@@ -77,9 +82,9 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto") {
     '<th>&Delta; &alpha;</th>' + 
     '<th>Correlaci&oacute;n<br>- Bloque</th>' + 
     '<th>Correlaci&oacute;n<br>- &Iacute;ndice</th>' + 
-    '<th  colspan=\"4\" rowspan=\"", length(colPos) + 1, 
+    '<th  colspan=\"4\" rowspan=\"", length(colPos), 
     "\" align = \"center\">  <img align=\"middle\" style=\"width:660px;height:550px;\" src=\"../'+ 
-    d[6] + '\"></th>' + auxTable + '</tr></table>'};
+    d[6] + '\"></th>' + auxTable + '", linkExcel, "</tr></table>'};
     table.on('click', 'td.details-control', function() {
     var tr = $(this).closest('tr');
         var row = table.row( tr );
@@ -104,6 +109,7 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto") {
 reporteItem <-  function(x, idPrueba, carNR = c("O", "M")) {
   require(DT)
   require(googleVis)
+
   # # Diagrama de opciones de respuesta
   # x <- tablaFin; idPrueba <- "f123"
   itObs <- grep("(_mAbility|_prop)", names(x), value = TRUE)

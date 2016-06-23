@@ -15,6 +15,7 @@
 # # File history:
 # #   20111123: Creation
 # #   20140211: Update
+# #   20160106: Adaptation for S4 Clases (Jorge Carrasco and Nelson Rodriguez) 
 ################################################################################
 
 options(encoding = "UTF-8")
@@ -54,7 +55,10 @@ TCT <- function(test, paramExp =
   return(object)
 }
 
-setGeneric(name = "codeAnalysis", def = function(object){standardGeneric("codeAnalysis")})
+################################################################################
+# # Definition of codeAnalysis Method
+################################################################################
+
 setMethod("codeAnalysis", "TCT",
  # object <- controlData[[prueba]]
 function(object){
@@ -159,8 +163,8 @@ function(object){
       if (all(corItemIndex[, "indice"] == corItemIndex[, "etiqu"])){
         corItemIndex[, "etiqu"] <- NULL
       }        
-      listResults[[auxPru]][["resulTCT"]] <- cbind(corItemIndex, 'pathCMC' = exGraphPath)
-      listResults[[auxPru]][["nObs"]]     <- ncol(dataCor)
+      listResults[[auxPru]]$resulTCT <- cbind(corItemIndex, 'pathCMC' = exGraphPath)
+      listResults[[auxPru]]$nObs     <- ncol(dataCor)
     }
    # # Guardando
    saveResult(object, listResults)
@@ -170,7 +174,6 @@ function(object){
 # # Definition of output files
 ################################################################################
 
-setGeneric(name = "outXLSX", def = function(object, ...){standardGeneric("outXLSX")})
 setMethod("outXLSX", "TCT", 
 function(object){
   outPathPba <- file.path(outPath, "03TCT")
@@ -250,29 +253,38 @@ function(object){
        xlsx::setColumnWidth(get(namesSheet), 7, 10)
        xlsx::setColumnWidth(get(namesSheet), 8, 10)
        xlsx::setColumnWidth(get(namesSheet), 9, 5)
+       listResults[[auxPru]]$fileXLSX <- outFile
+       saveResult(object, listResults)
+
     }
     saveWorkbook(wb, file = outFile)
+
   }
 
 })
 
-setGeneric(name = "outHTML", def = function(object){standardGeneric("outHTML")})
 setMethod("outHTML", "TCT", 
 function(object){
   # # Identificando Pruebas
   outPathPba <- file.path(outPath, "03TCT")
   load(object@outFile$pathRdata)
   pruebasRead <- names(object@datAnalysis)
-  pruebasRead <- split(pruebasRead, f = gsub("(.+)::(.+)", "\\1", pruebasRead))
+  pruebasRead <- split(pruebasRead, f = gsub("(.+)::(.+)", "\\1", pruebasRead)) 
   auxPru      <- lapply(pruebasRead, function(x) gsub("(::|\\s)","_", x))
   auxNombres  <- names(listResults)
   
+  # # Identificando archivos en excel
+  listXLSX <- lapply(listResults, function(x) x$fileXLSX)
+  listXLSX <- lapply(auxPru, function(x) unique(unlist(listXLSX[x])))
+
   # # Juntando subConjunto de una prueba
   listResults <- lapply(names(listResults), function(x){ 
-    return(cbind('pba_subCon' = x, listResults[[x]]$resulTCT))})
+  return(cbind('pba_subCon' = x, listResults[[x]]$resulTCT))})
   names(listResults) <- auxNombres
   listResults <- lapply(auxPru, function(x) do.call(rbind, listResults[x]))
-  
+  cat('<h2 id="TCT_Header">
+  Análisis TCT de la prueba:', nomPrueba, '</h2>') 
+
   cat('<p>El objetivo de este análisis es identificar si los ítems que hacen parte del constructo tienen propiedades, desde el punto de vista de la medición, que permiten ser una fuente de medición óptima para la estimación de un atributo determinado (escala). En particular, a partir de la TCT se establecen dos características importantes que deben ser observadas en los ítems:</p>
   <ol style="list-style-type: decimal">
   <li>Confiabilidad: esta hace referencia a la consistencia a través de un conjunto de ítems que se espera que midan el mismo constructo o dimensión teórica.</li>
@@ -293,6 +305,7 @@ function(object){
   </ol>')
 
   for (result in names(listResults)){
-    reportTCT(listResults[[result]], codPrueba = result)
+    print(listXLSX[[result]])
+    reportTCT(listResults[[result]], codPrueba = result, pathExcel = listXLSX[[result]])
   }
 })

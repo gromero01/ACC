@@ -46,11 +46,15 @@ prueba0 <- new('Test', path = paste0(pathExam, "/PBA116"),
 ana1 <- Exploratory(test = prueba0)
 codeana1 <- codeAnalysis(ana1)
 xlsxana1 <- outXLSX(ana1)
-
+#outHTML(ana1)
 
 ana2 <- TCT(test = prueba0)
 codeana2 <- codeAnalysis(ana2)
 xlsxana2 <- outXLSX(ana2)
+#outHTML(ana2)
 
+ana3 <- IRT(test = prueba0)
+
+contruirAnalisis(test = prueba0, listAnalisis = c("TCT", "Exploratory"))
 
 

@@ -5,7 +5,7 @@
 # #
 # # Author(s): Maria Fernanda Zarate Jimenez
 # #
-# # SABER 5° y 9° Factores Asociados
+# # SABER
 # # Description: Creates Excel outputs of dimensionality exporatory analysis for each
 # #              block of items
 # #
@@ -18,6 +18,7 @@
 # #   20111205: Creation
 # #   20130125: Modification to implement in factors associated
 # #   20140502: Modification to generated Excel outputs
+# #   20160106: Adaptation for S4 Clases (William Acero and Jorge Carrasco) 
 ################################################################################
 # # Definition of input and output paths
 ################################################################################
@@ -106,7 +107,6 @@ kThresholdComInfExp  <<- 0.15
 ###############################################################################
 # # Definition of Analysis
 ################################################################################
-setGeneric(name = "codeAnalysis", def = function(object){standardGeneric("codeAnalysis")})
 setMethod("codeAnalysis", "Exploratory", 
 function(object){
 	source(file.path("Function", "exploratoryFunctions.R"))
@@ -117,7 +117,7 @@ function(object){
     	dir.create(outPath, showWarnings = FALSE)
 	}
 
-	# # version with dict V00 and data _2014_01_28_17_10_35
+	# # version with object parameter
 	versionOutput <- object@verSalida
 	versionComment <- paste0("Corrida Análisis Exploratorio --",  object@test@nomTest, "--") 
 
@@ -148,20 +148,15 @@ function(object){
 	for (kk in pruebasRead) {
 	  # # create folder and routes to save results
 	  # #  carpetas por prueba
+
 	  auxPru 	 <- gsub("(::|\\s)","_", kk)
 	  outPathPba <- file.path(outPath, auxPru)
 	  # #  carpetas de muestras por prueba
-	  outPathSamPba <- file.path(outPathSamp, auxPru)
-	
-	  if(!file.exists(outPathSamPba)){
-	     dir.create(outPathSamPba, recursive = TRUE)
-	  }
-	  
+	  outPathSamPba   <- file.path(outPathSamp, auxPru)
 	  outPathPbaGraph <- file.path(outPath, "graficas")
-  	  if (!file.exists(outPathPbaGraph)) {
-         dir.create(outPathPbaGraph, recursive = TRUE)
-      }
-
+	  dir.create(outPathSamPba, recursive = TRUE, showWarnings = FALSE)
+	  dir.create(outPathPbaGraph, recursive = TRUE, showWarnings = FALSE)
+    
 	  # # keep items that aren't eliminated
 	  dictVarPrueba <- object@datAnalysis[[kk]]$dictionary
   	  varId         <- dictVarPrueba[, 'id']
@@ -251,7 +246,6 @@ function(object){
 # # Definition of output files
 ################################################################################
 
-setGeneric(name = "outXLSX", def = function(object, ...){standardGeneric("outXLSX")})
 setMethod("outXLSX", "Exploratory", 
 function(object){
 	outPath  <- file.path(outPath, "04Exploratorio")
@@ -902,12 +896,13 @@ function(object){
 	                       paste("04Exploratorio_", auxPru,"_V", 01,
 	                             ".xlsx", sep = ''))
 	  xlsx::saveWorkbook(wb, file = outFile)
+	  listResults[[auxPru]]$fileXLSX <- outFile
+	  saveResult(object, listResults)
 	  cat("Termino Salida: ", outFile, "\n")
 	}
 })
 
 
-setGeneric(name = "outHTML", def = function(object){standardGeneric("outHTML")})
 setMethod("outHTML", "Exploratory", 
 function(object){
 	
@@ -916,7 +911,7 @@ function(object){
 	
 	cat('<h2 id="Exploratory_Header">
 		Análisis exploratorio de la prueba:', nomPrueba, '
-		</h2>')
+		</h2>\n')
 
 	cat("A continuación se muestra(n) el(los) gráfico(s) de sedimentación
       para las correlaciones (tetracóricas) de la prueba, así como los
@@ -974,8 +969,12 @@ function(object){
              buscando que cada ítem pese fuertemente en una sola de las dimensiones
              conservadas, con lo cual se facilita la interpretación de las mismas.\n", sep = "")
 
-		 cat('<center><img src="', pathImg,'" alt="alt text" style = "width:472px;height:450px">
-		     </center></td>')
+		 cat("<center><a href=\"javascript:void(0)\" onclick=\"PopupCenter('", pathImg, 
+		 	 "', 'Exploratory Analysis', '944', '900')\"><img src=\"", 
+		 	 pathImg,'" alt="alt text" style = "width:472px;height:450px"></a>
+		     </center></td>', sep = "")		 
+		 cat(paste0('<td> <li class="linkxlscol"><a href="', listResults[[nomAux]]$fileXLSX, 
+		 	        '"> Descargar <br> informe Excel </a></li></td>'))
 	     cat('</tr>\n')
      
      }

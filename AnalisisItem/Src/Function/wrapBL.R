@@ -141,36 +141,36 @@ ReadBlScoFile <- function (fileName, filePath = "./", lengthIds = 8,
 ################################################################################
 
 RunFromWN <- function(runPath, scriptPath) {
-  auxDir    <- getwd()
-  batchFile <- file.path(runPath, "WinXP-RUNBILOG-PL.bat")
-  cat('SET SCRIPT_PATH=', scriptPath, '\n', file = batchFile, sep = "")
-  cat("::\n:: Genera archivos BILOG desde WINSTEPS\n::\n", file = batchFile, append = TRUE)
-
-  cat("%SCRIPT_PATH%ParcharITEM1NAMELEN.pl\n", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%WS2BILJJ.pl -blm -dat -key -cortar\n\n", file = batchFile, append = TRUE)
-
-  cat("::\n:: Corre prueba y anula items por correlacion menor que 0.05\n::", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%CorrerBLM.pl -pba -f1\n", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%BilogEliminarCorrelacion.pl -cor 0.05\n", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%WS2BILJJ.pl -blm -cortarGrado\n", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%CorrerBLM.pl -pba -f3\n", file = batchFile, append = TRUE)
-
-  cat("%SCRIPT_PATH%BILOGcheckPH2.pl -t >revisionPH2.txt", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%BILOGsco2icc.pl -mid 24 -hab 2.0", file = batchFile, append = TRUE)
-
-  cat(":: calcular Correlacion!", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%RunRCorrelacion.pl", file = batchFile, append = TRUE)
-  cat(":: graficar", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%RunRGraficos.pl ", file = batchFile, append = TRUE)
-  cat("call CrearGraficasICC.BAT %SCRIPT_PATH%", file = batchFile, append = TRUE)
-
-  cat("%SCRIPT_PATH%BILOGgetItemSTATS.pl -t", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%BILOGgetSCO2.pl -t", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%consolidarDatosReporte.pl", file = batchFile, append = TRUE)
-
-  setwd(runPath)
-  system("WinXP-RUNBILOG-PL.bat")
-  setwd(auxDir)
+   auxDir    <- getwd()
+   batchFile <- file.path(runPath, "WinXP-RUNBILOG-PL.bat")
+   cat('SET SCRIPT_PATH=', scriptPath, '\n', file = batchFile, sep = "")
+   cat("::\n:: Genera archivos BILOG desde WINSTEPS\n::\n", file = batchFile, append = TRUE)
+ 
+   cat("%SCRIPT_PATH%ParcharITEM1NAMELEN.pl\n", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%WS2BILJJ.pl -blm -dat -key -cortar\n\n", file = batchFile, append = TRUE)
+ 
+   cat("::\n:: Corre prueba y anula items por correlacion menor que 0.05\n::", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%CorrerBLM.pl -pba -f1\n", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%BilogEliminarCorrelacion.pl -cor 0.05\n", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%WS2BILJJ.pl -blm -cortarGrado\n", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%CorrerBLM.pl -pba -f3\n", file = batchFile, append = TRUE)
+ 
+   cat("%SCRIPT_PATH%BILOGcheckPH2.pl -t >revisionPH2.txt", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%BILOGsco2icc.pl -mid 24 -hab 2.0", file = batchFile, append = TRUE)
+ 
+   cat(":: calcular Correlacion!", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%RunRCorrelacion.pl", file = batchFile, append = TRUE)
+   cat(":: graficar", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%RunRGraficos.pl ", file = batchFile, append = TRUE)
+   cat("call CrearGraficasICC.BAT %SCRIPT_PATH%", file = batchFile, append = TRUE)
+ 
+   cat("%SCRIPT_PATH%BILOGgetItemSTATS.pl -t", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%BILOGgetSCO2.pl -t", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%consolidarDatosReporte.pl", file = batchFile, append = TRUE)
+ 
+   setwd(runPath)
+   system("WinXP-RUNBILOG-PL.bat")
+   setwd(auxDir)
 }
 
 RunBilog <- function (responseMatrix, runName, outPath = "./",
@@ -180,40 +180,40 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
                       logistic = TRUE, kD = NULL, dif = NULL,
                       srcPath = "../src/", binPath = "../bin/", verbose = TRUE,
                       commentFile = NULL,  calibFile = NULL,
-                      runProgram = TRUE, itNumber = NULL, NPArm = 2) {
+                      runProgram = TRUE, itNumber = NULL, NPArm = 2){
 
-  # # This function generates a Parscale control file given the options in its
-  # # arguments, runs it and reads the item parameters
-  # #
-  # # Arg:
-  # #  responseMatrix: numeric matrix or data.frame containing the (coded) responses to the items
-  # #  runName: name of the stem used for the files related with the analyses
-  # #  outPath: path where the files will be stored
-  # #  weights: vector with the weights to be asigned to each responses register
-  # #  group: vector with group numbers or single character codes of group membership
-  # #  personIds: vector with the ids to be written for each responses register
-  # #  itemIds: vector with the ids for each item
-  # #  nQuadPoints: number of quadrature points to be used for estimation
-  # #  score: logical indicating whether or not person abilities should be obtained and stored
-  # #  personEstimation: string scalar with the name of the estimation
-  # #                    method to use for ability estimates (EAP, WML or MLE)
-  # #  kD: numeric constant to use as D for scaling parameters. Dafaults
-  # #      to 1.702 if lofistic is TRUE and 1.0 if it is FALSE
-  # #  kChiGroups: numbre of groups for chi-square item fit calculations
-  # #  dif: vector indicating the group of parameters to be estimated jointly (0) or separated (1)
-  # #       (isSeparateSlopes, isSeparateThresholds, isSeparateCategories, isSeparateGuessing)
-  # #  srcPath: path to working directory
-  # #  binPath: path where the Parscale executables may be found
-  # #  verbose: logical indicating whether to show or not function progres
-  # #  commentFile: Title with information of Test
-  # #  calibFile: file name with the Parameter Calibration
-  # #  runProgram:
-  # #  NPArm: Number of parameters of the model
-  # # Ret:
-  # #  iPar: returns the estimated item parameters
-  ################################################################################
-  # # Check arguments consistency
-  ################################################################################
+    # # This function generates a Parscale control file given the options in its
+    # # arguments, runs it and reads the item parameters
+    # #
+    # # Arg:
+    # #  responseMatrix: numeric matrix or data.frame containing the (coded) responses to the items
+    # #  runName: name of the stem used for the files related with the analyses
+    # #  outPath: path where the files will be stored
+    # #  weights: vector with the weights to be asigned to each responses register
+    # #  group: vector with group numbers or single character codes of group membership
+    # #  personIds: vector with the ids to be written for each responses register
+    # #  itemIds: vector with the ids for each item
+    # #  nQuadPoints: number of quadrature points to be used for estimation
+    # #  score: logical indicating whether or not person abilities should be obtained and stored
+    # #  personEstimation: string scalar with the name of the estimation
+    # #                    method to use for ability estimates (EAP, WML or MLE)
+    # #  kD: numeric constant to use as D for scaling parameters. Dafaults
+    # #      to 1.702 if lofistic is TRUE and 1.0 if it is FALSE
+    # #  kChiGroups: numbre of groups for chi-square item fit calculations
+    # #  dif: vector indicating the group of parameters to be estimated jointly (0) or separated (1)
+    # #       (isSeparateSlopes, isSeparateThresholds, isSeparateCategories, isSeparateGuessing)
+    # #  srcPath: path to working directory
+    # #  binPath: path where the Parscale executables may be found
+    # #  verbose: logical indicating whether to show or not function progres
+    # #  commentFile: Title with information of Test
+    # #  calibFile: file name with the Parameter Calibration
+    # #  runProgram:
+    # #  NPArm: Number of parameters of the model
+    # # Ret:
+    # #  iPar: returns the estimated item parameters
+    ################################################################################
+    # # Check arguments consistency
+    ################################################################################
 
   if (!is.null(weights)) {
     if (length(weights) != nrow(responseMatrix)) {
@@ -413,7 +413,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   cat("                );\n", sep = "", file = commandFile, append = TRUE)
 
   # # TEST
-  cat(">TEST \n      TNAME = '", gsub("_V.+", "", runName), "', \n",
+  cat(">TEST \n      TNAME = '", substr(gsub("_V.+", "", runName), 1, 8), "', \n",
     sep = "", file = commandFile, append = TRUE)
   cat("      INUmber = (\n", file = commandFile, append = TRUE)
   if (is.null(itNumber)){

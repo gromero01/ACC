@@ -37,41 +37,14 @@
 # #   20151124: Adaptation for 2PL models with Bilog,
 # #             and for Test of SABER 3, 5, 7, 9
 # #             (Jorge Mario Carrasco Ortiz)
+# #   20160620: Adaptation for S4 Clases
 # #
 # # ToDo: - implement to run models PCM, RSM, MRD
-# #       - implement filters for disabled or other group of people
 # #       - implement confidence intervals in graphic ICC
-# #       - implement changes when indexes of different tests have the same name
 ################################################################################
 # # global options
 ###############################################################################
 options(encoding = "UTF-8")
-
-################################################################################
-# # Definition of input and output paths
-################################################################################
-
-inPath  <- file.path("Input")
-outPath <- file.path("Output", "06IRT")
-funPath <- file.path("Src", "Function")
-logPath <- file.path("Log")
-
-# # to run Winsteps and Parscale
-binPath <- file.path("Src", "bin")
-
-################################################################################
-# # Load libraries
-################################################################################
-require(psych)  # # 1.1.10
-require(ggplot2)  # # 0.9.3.1
-require(gtools)  # # 3.2.1
-require(scales)  # # 0.2.3
-require(car)  # # 2.0-19
-require(LaF)  # # 0.5
-require(data.table)  # # 1.8.10
-require(xlsx)  # # 0.5.5
-require(RColorBrewer) # # 1.0-5
-require(gridExtra)
 
 ###############################################################################
 # # load functions
@@ -88,62 +61,54 @@ source(file.path(funPath, "pruebaClass.R"))
 source(file.path(funPath, "WrightMapICFES.R"))
 
 ################################################################################
-# # Command line parameters
-################################################################################
-# cat("-------------- Lectura de Archivos -----------------\n")
-# # # Lectura de parámetros
-# args <- commandArgs();
-
-# # #  check if --args used. This avoids a problem with earlier versions of R
-# argsPos  <- match("--args", args)
-# codeName <- gsub("--file=Src(\\\\)?", "", args[grep("--file", args)])
-
-# # #  Parameters extraction
-# if(!is.na(argsPos) && length(args) > argsPos){
-#   controlFile <- args[argsPos + 1];  # Class with parameters
-#   #controlFile <- "controlData.Rdata"; codeName = "06IRT.R"
-# } else {
-#   cat("Parametros de la función:\n")
-#   cat("----> controlData: [Rdata] Class with parameters\n")
-#   stop("**ERROR**  en los parametros")
-# }
-
-controlFile <- "controlData.Rdata"; codeName = "06IRT.R"
-
-# # Cargando parametros de las pruebas
-load(file.path(inPath, controlFile))
-################################################################################
-# # global definitions
+# # Definition of class and parameters
 ################################################################################
 
-setGeneric(name = "analIRT", def = function(object){standardGeneric("analIRT")})
-setMethod("analIRT", "Prueba",
+# # Heritage class Analysis
+IRT <- setClass("IRT", contains = "Analysis")
+
+setMethod("initialize", "IRT", function(.Object, ..., param) {
+  .Object@outFile$pathRdata <- "../Output/06IRT/outList_IRT.Rdata"
+  .Object <- callNextMethod()
+})
+
+IRT <- function(test, paramExp = 
+                      list(kOmissionThreshold = 0.5,
+                           flagOri = FALSE, flagTotal = TRUE,
+                           flagSubCon = TRUE, orderedDat = FALSE,
+                           idNoPKey = c('O', 'M'), constDmodel = 1.7,
+                           isCheckKeys = FALSE, kThresItemCorrDic = 0.2,
+                           kThresItemCorrOrd = 0.2
+                           ))
+{
+  cat("Se correra un analisis IRT con los siguientes parametros: \n")
+  print(paramExp)
+  cat("\n----->")
+  object <- new("IRT", test = test, param = paramExp)
+  object <- filterAnalysis(object)
+  return(object)
+}
+
+################################################################################
+# # Definition of codeAnalysis Method
+################################################################################
+
+setMethod("codeAnalysis", "IRT",
           analIRT <- function(object){
+    binPath <- file.path("..", "Src", "bin")
+    outPath <- file.path(outPath, "06IRT")
+    dir.create(outPath, recursive = TRUE, showWarnings = FALSE)
 
-    idNoPKey <- c("O", "M")
-	# # tipo de aplicacion 1 = Censal, 2 = Control, 3 = SobreMuestra,
-	# # 4 = Especial, 5 = Adicional Censal, 6 = Adicional Control
-
-
-	kApli <- c(2, 3, 4, 6)
-
-	# # To conserved data from sample application if ESTUDIANTES then
-	# # isTypeB = TRUE, if CLASE or ESCUELA then isTypeB = FALSE
-	isTypeB <- FALSE
-
-	# # si Saber 5 = SB5, si saber 9 = SB9, si FA = FA
-	saber <- 'FA'
-
-	# # to run the program for specific indexes
-	isAllIndex <- TRUE
-
-	# # vector with indexes, only if isAllIndex == FALSE
-	indexWhich <- NULL
-
-	# # isReporte = TRUE si se va a sacar reporte en txt (tabla con pasos
-	# # verticalmente) / isReporte = FALSE si se va a sacar reporte en xls
-	# # (tabla con pasos horizontalmente)
-	isReporte <- FALSE
+    # # Load libraries
+    require(psych)  # # 1.1.10
+    require(ggplot2)  # # 0.9.3.1
+    require(gtools)  # # 3.2.1
+    require(scales)  # # 0.2.3
+    require(car)  # # 2.0-19
+    require(LaF)  # # 0.5
+    require(data.table)  # # 1.8.10
+    require(RColorBrewer) # # 1.0-5
+    require(gridExtra)
 
 	# # models
 	codesRasch           <- c("01", "02", "04")
@@ -151,518 +116,275 @@ setMethod("analIRT", "Prueba",
 	codesNotRasch        <- c("03", "05")
 	names(codesNotRasch) <- c("GRM", "2PL")
 
-	# # to run Winsteps and Parscale, generalmente D = 1.7 en modelos IRT
-	constDmodel <- 1.7
-
-	# # deleted students with more than 80% of omission for the topic
-	# # in the items that are not eliminated, this analysis is with the
-	# # complete data set
-	kOmissionThreshold  <- 1
-
-	# # definition of cutoff values for item review
-	kThresItemCorrDic    <- 0.2
-	kThresItemCorrOrd    <- 0.2
-
-	# # flag items with correlations less than 0.2 with the index
-	kThresItemCor      <- 0.2
-
-	# # flagCensal if TRUE get univariate from censal data
-	# # this analysis is do it only with sample data
-	flagCensal <- FALSE
-	isCensal <- is.null(flagCensal) | flagCensal
-
-	# # categories will consider as No Response
-	catToNA <- c('No Presentado', 'NR', 'Multimarca')
-
 	# # version with dict V03
-	versionOutput  <- "01"
-	versionComment <- "Salida de Exploratorio con la version de datos
-	2015_07_17 y diccionario version 01 (categorias colapsadas),
-	corrida dimensionalidad (con paralelo)"
-
-	# # extension to make the plots
-	kExt <- ".png"
-
-	# # cod for 'no eliminated' items
-	kCodNElim <- '06'
+	versionOutput  <- object@verSalida
+	versionComment <- paste0("Corrida Análisis Exploratorio --",  object@test@nomTest, "--") 
 
 	# # see ?psych::alpha
 	isCheckKeys <- FALSE
 
-	# # name of log file
-	logFile <- file.path(logPath, "log.txt")
+	# # create list to save results
+	listResults <- list()
+	pruebasRead <- names(object@datAnalysis)
 
-	versionOutput <- object@verSalida
-  	verDataIn     <- object@verEntrada
-	# # version of input response strings information and sample
-	verDataIn <- object@verEntrada
-	# # version of input dictionary
-	verDictIn <- object@verEntrada
-
-	################################################################################
-	# # load data
-	################################################################################
-	# # output from 00CrearRdata.R
-	load(object@pathDic)
-  	load(object@pathRdata)
-
-	################################################################################
-	# # adjusting the DB
-	################################################################################
-	if(object@exam == "ACC"){
-		if (isTypeB) {
-		  # # ESTUDIANTES: conserved data from sample application
-		  if (!is.data.frame(datBlock) & is.list(datBlock) & length(datBlock) == 1) {
-		    datBlockControl <- list(subset(datBlock[[1]], tipoApli %in% kApli))
-		    names(datBlockControl) <- names(datBlock)
-		  } else {
-		    datBlockControl <- lapply(datBlock, function(x)
-		                          subset(x, x$tipoApli %in% kApli))
-		  }
-		} else {
-			# # CLASE e INSTITUCION: for conserved data from sample application
-			datBlockControl <- datBlock
-		}
-
-     	# # obtener los códigos de las pruebas leídas que corresponden a las
-	  	# # pruebas que se desean analizar
-
-		if(isTypeB){
-		  varsKeep    <- c('codigo_prueba', 'codigo_forma', 'prueba')
-		} else {
-		  names(datBlockControl)[names(datBlockControl) == "noHoja"] <- "consLect"
-		  varsKeep    <- c('codigo_prueba', 'prueba')
-		}
-	} else {
-    	datBlockControl <- lapply(datBlock, function(x) {
-        	                      aux <- data.frame(x$calBlock)
-            	                  names(aux) <- gsub("X(\\d+)", "\\1", names(aux))
-                	              return(aux)})
-    	keyStrings  <- lapply(datBlock, function(x) attr(x, "keyString"))
-    	varsKeep    <- c('codigo_prueba', 'prueba')
-  	}
-
-	################################################################################
-	# # filtrando dictionaryList y datBlock si isAllIndex  == FALSE
-	################################################################################
-	if (isAllIndex) {
-	  isNoElim      <- dictionaryList$variables[, 'elimina'] == kCodNElim
-	  pruebasDesc   <- unique(dictionaryList$variables[isNoElim, varsKeep])
-	  if (object@exam == "SABER359"){
-	  	# # Quitando subloques de 3, 5, 9
-	  	pruebasDesc <- subset(pruebasDesc, codigo_prueba %like% "pba\\w\\d{2}")
-	  }
-	} else {
-      if(is.null(isDicIndex) | (!'isDicIndex' %in% object@param)){
-    	stop("Cuando este apagado 'isAllIndex' Se debe especificar indexWhich = c('INDICEXXX1', ...)\n",
-    		 "       Los indices que quiere correr.")
+	for (kk in pruebasRead) {	
+      auxPru <- gsub("(::|\\s)","_", kk)
+      # # Create Folders      
+      auxOutPath <- outPath
+      outPath    <- file.path(outPath, auxPru)
+      if (!file.exists(outPath)) {
+        dir.create(outPath, recursive = TRUE)
+        dir.create(file.path(outPath, "salidas"), recursive = TRUE)
+        dir.create(file.path(outPath, "graficos"), recursive = TRUE)
+        dir.create(file.path(outPath, "corridas"), recursive = TRUE)
       }
-	  cIndex   <- all(indexWhich %in% dictionaryList$variables[, "indice"])
-	  if(isDicIndex) {
-	    isIndexWhich <- dictionaryList$variables[, "indice"] %in% indexWhich
-	    dictIndex    <- dictionaryList$variables[isIndexWhich, ]
-	    isNoElim     <- dictIndex[, 'elimina'] == kCodNElim
-	    pruebasDesc  <- unique(dictIndex[isNoElim, varsKeep])
-	  } else {
-	    stop("No todos los índices definidos (", indexWhich,") se encuentran
-	         en el diccionario, verificar nombre")
-	  }
-	}
 
-	# # pruebas para análisis
-    if (object@exam == "ACC") {
-	  exist <- pruebasDesc[, 'codigo_prueba'] %in% names(datBlock)
-    } else {
-      exist <- pruebasDesc[, 'codigo_prueba'] %in% gsub("\\.con", "", names(datBlock))
-    }
+      # # Define Dictionary
+      dictVarPrueba <- object@datAnalysis[[kk]]$dictionary
+      varId         <- dictVarPrueba[, 'id']
 
-	pruebasRead <- pruebasDesc[exist, 'codigo_prueba']
-	pruebasRead <- sort(pruebasRead)
+      if (object@test@exam != "ACC"){
+        if (!"instr" %in% names(dictVarPrueba))
+          dictVarPrueba[, 'instr'] <-  "No disponible"
+        if (!"etiqu" %in% names(dictVarPrueba))
+          dictVarPrueba[, 'etiqu'] <-  dictVarPrueba[, "indice"]
+      }
+          
+      dicRasch     <- subset(dictVarPrueba, codMod %in% codesRasch)[, c("id", "subCon")]
+      isIndexRasch <- nrow(dicRasch) > 0
 
-	for (kk in pruebasRead) {		
-        nameNode      <- names(datBlockControl)[names(datBlockControl) %like% kk]
-        # # keep items that aren't eliminated
-        dictVarPrueba <- subset(dictionaryList$variables,
-	                            codigo_prueba == kk & elimina == kCodNElim)
-	  	if (object@exam == "SABER359"){
-	    	gradoPba <- gsub(".+List_GR\\.(\\d).+", "\\1", object@pathDic)
-           	nomPba   <- gsub(".+List_GR\\.(\\d)(pba|PBA)(\\w).+", "\\3", object@pathDic)
-           	auxKeys        <- strsplit(keyStrings[[nameNode]], "")[[1]]
-           	names(auxKeys) <- dictVarPrueba[, "id"]
-           	if (length(dictVarPrueba[, "id"]) != length(auxKeys)) {
-        	    stop("El string de respuesta no cuadra con el numero de ítems")
-            }
-	  	}
+      # # item that are part of the index
+      indexItems    <- dictVarPrueba[, 'id']
+      isIDStudent   <- names(object@datAnalysis[[kk]]$datos)
+      isIDStudent   <- isIDStudent[!isIDStudent %in% indexItems]
+      personDataBlo <- object@datAnalysis[[kk]]$datos[ , isIDStudent]
+      dataCor       <- object@datAnalysis[[kk]]$datos[, indexItems, with = FALSE]
 
-        if (! "indice" %in% names(dictVarPrueba)) {
-           	dictVarPrueba[, "indice"] <- dictVarPrueba[, "codigo_prueba"]
+
+      if (object@test@exam == "ACC"){
+         # # correlations item
+         itemCorrelations <- psych::alpha(data.frame(dataCor), check.keys = isCheckKeys)$item.stats
+         itemCorrelations <- data.frame('item' = row.names(itemCorrelations),
+                                        'correlation' = itemCorrelations[, "r.drop"])
+         isMissingHalf <- rowSums(!is.na(dataCor)) < max(length(indexItems) %/%  2, 3)
+         # # calibration criterion
+         indexreliability <- psych::alpha(dataCor)
+         alphaCoef        <- indexreliability$total[, "raw_alpha"]
+         nRatio <- 3000 / nrow(dataCor[!isMissingHalf, indexItems])
+         kThresItemChiHigh  <- 1 + (2/nRatio)
+         indexData <- paste("ind", auxPru, "_V", versionOutput, sep = "")
+      }
+
+      if (object@test@exam == "SABER359"){
+         orderSB <- subset(dictVarPrueba, id %in% indexItems, select = c("id", "SUBBLOQUE"))
+         dataCor <- dataCor[, orderSB[order(orderSB$SUBBLOQUE), "id"], with = FALSE]         
+      }
+
+      if (object@test@exam %in% c("SABER359", "SABERPRO", "SABER11")) {
+        isMissingHalf <- rep(FALSE, nrow(dataCor))
+        indexData     <- paste(auxPru, "_V", versionOutput, sep = "")
+      }
+
+      # # Check the grouping in RSM blocks
+      rsmType             <- LETTERS[1:length(indexItems)]
+      codModels           <- subset(dictVarPrueba, select =  c("id", "codMod"))
+      rownames(codModels) <- codModels[, "id"]
+      codModels           <- codModels[indexItems, "codMod"]
+      names(codModels)    <- indexItems
+
+      # # Unique code model
+      if (length(unique(codModels)) > 1) {
+         stop("%%% Para este indice hay varios códigos de modelos")
+      }
+
+      rsmType[codModels == codesRasch["RSM"]] <- 1
+
+      # # Data block to obtain results
+      resBlock <- dataCor[!isMissingHalf, indexItems, with = FALSE]
+
+      if (isIndexRasch) {
+        # #     ##################
+        # #     #### OJO HASTA AQUI VA RASH
+        # #     ##################
+      }
+      if(unique(codModels) %in% "07"){
+        auxPath <- getwd()
+
+        # # Create .blm and .dat file
+        personDataBlo <- personDataBlo[!isMissingHalf]
+        RunBilog(responseMatrix = resBlock,
+                 runName = auxPru,  srcPath = auxPath,
+                 outPath = file.path("..", 'salidas'),
+                 personIds = personDataBlo, 
+                 itemIds = paste0("I", dictVarPrueba$id), binPath = binPath,
+                 runPath = file.path(outPath, 'corridas'),
+                 verbose = TRUE, runProgram = TRUE,
+                 commentFile = indexData, NPArm = 3)
+
+        # Reading results of parameters model
+        itemDiffFile   <- paste("salidas/", indexData, ".PAR", sep = "")
+        itemParameters <- try(ReadBlParFile(itemDiffFile, outPath))
+
+        # # Reading TCT results
+        itemTCTFile <- paste("salidas/", indexData, ".TCT", sep = "")
+        tctParam    <- try(ReadBlTCTFile(itemTCTFile, outPath))
+
+      	# # Resultados estimación de habilidades
+        personAbilFile  <- paste("salidas/", toupper(indexData), ".SCO", sep = "")
+        outFileAbili    <- file.path(outPath, "salidas",
+                                     paste0("personAbilities_V",
+                                           versionOutput, ".RData"))
+        if (!file.exists(outFileAbili)) {
+           personAbilities <- try(ReadBlScoFile(personAbilFile, outPath,
+                                  lengthIds = nchar(personDataBlo[1]), 
+                                  flagGr = object@exam != "SABERPRO"))
+           save(personAbilities, file = outFileAbili)
+        } else {
+           # personAbilities[, "iSubject"]<- 1:nrow(personAbilities)
+           load(outFileAbili)
         }
 
-	  	dictVarPrueba <- subset(dictVarPrueba, indice != 'NI')
+        if (class(itemParameters) == "try-error" |
+           class(tctParam) == "try-error" |
+           class(personAbilities) == "try-error") {
+           stop("Error en Bilog no se pudo leer alguno",
+                "de estos archivos (.PAR, .TCT, .SCO)")
+        }
 
-	  	if (object@exam == "ACC"){
-	  		dictVarPrueba <- dictVarPrueba[order(dictVarPrueba[, 'orden']), ]
-	  	}
-
-	  	varId         <- dictVarPrueba[, 'id']
-
-	 	# # Compare all items with data frame block
-	  	isAllItemInDat <- all(varId %in% names(datBlockControl[[nameNode]]))
-
-	  	if(!isAllItemInDat){
-	    	cat("Warning!!!: Not all items in dictionary appear in data set!!!\n")
-	  	}
-
-	 	# # flag kOmissionThreshold
-	 	isOmissDel <- kOmissionThreshold < 1 & kOmissionThreshold > 0
-	 	# # recode to NA
-	 	dataBlo     <- data.table(datBlockControl[[nameNode]][, varId])
-	 	if (object@exam == "ACC") {
-        	dataBlo[, ] <- lapply(dataBlo, RecodeToNA, catToNA)
-            # # conserve rows with less than kOmissionThreshold NR data
-            if (isOmissDel) {
-	        	misRow  <- rowMeans(is.na(dataBlo))
-	    	}
+        # # Responses Curve
+        resBlockOri <- subset(datBlock[[nameNode]]$oriBlock, 
+                              SNP %in% personDataBlo, 
+                              select = indexItems)
+        resBlockOri[, "iSubject"] <- 1:nrow(resBlockOri)
+        if (object@exam == "SABER359") {
+          dirPlotOPpng <- paste0("graficos/plotOP-", gradoPba,
+                              nomPba, "-", indexData, ".png")                                	
         } else {
-            if (object@exam %in% c("SABERPRO", "SABER359")) {
-              datBlockControl[[nameNode]] <- plyr::rename(datBlockControl[[nameNode]] ,
-      		                                 c("SNP" = "noHoja"))
-      	      # # porcentaje of omisions
-	          if (isOmissDel) {
-	            misRow  <- rowMeans(dataBlo == "")
-	          }
-        	}
-	  }
-
-	  # # conserve rows with less than kOmissionThreshold NR data
-	  if (isOmissDel) {
-	  	isKeep  <- misRow <= kOmissionThreshold
-	  	dataBlo <- dataBlo[isKeep, ]
-	  	personDataBlo <- datBlockControl[[nameNode]][isKeep , "noHoja"]
-	  } else {
-	  	personDataBlo <- datBlockControl[[nameNode]][ , "noHoja"]
-	  }
-
-	  if (nrow(dictVarPrueba) > 3) {
-	    dataCor     <- dataBlo
-
-	    if (object@exam == "ACC") {
-	    	dataCor[, ] <- lapply(dataCor, as.numeric)
-	    }
-
-	    ###################################################
-	    ### runIndices
-	    ###################################################
-	    if(!isAllIndex) {
-	      isIndexWhich   <- dictVarPrueba[, "indice"]  %in% indexWhich
-	      dictVarPrueba  <- dictVarPrueba[isIndexWhich, ]
-	    }
-
-	    if (object@exam != "ACC"){
-	    	if (!"instr" %in% names(dictVarPrueba))
-	    		dictVarPrueba[, 'instr'] <-  "No disponible"
-			if (!"etiqu" %in% names(dictVarPrueba))
-				dictVarPrueba[, 'etiqu'] <-  dictVarPrueba[, "indice"]
-	    }
-	    selectedModel <- unique(dictVarPrueba[, c("id", "indice", "instr", "etiqu")])
-  	    # # ii = unique(selectedModel[, "indice"])[2]
-
-	    for (ii in unique(selectedModel[, "indice"])) {
-	      auxOutPath <- outPath
-	      if (object@exam == "SABER359" & (!ii %like% "(pba|PBA)\\w\\d+")){
-	      	outPath    <- file.path(outPath, paste(kk, ii, sep = "_"))
-	      } else {
-	      	outPath    <- file.path(outPath, ii)
-	  	  }
-
-	      if (!file.exists(outPath)) {
-	        dir.create(outPath, recursive = TRUE)
-	        dir.create(file.path(outPath, "salidas"), recursive = TRUE)
-	        dir.create(file.path(outPath, "graficos"), recursive = TRUE)
-	        dir.create(file.path(outPath, "corridas"), recursive = TRUE)
-	      }
-
-	      dicRasch     <- subset(dictVarPrueba, codMod %in% codesRasch)[, c("id", "indice")]
-	      dicRasch     <- subset(dicRasch, indice == ii)
-	      isIndexRasch <- nrow(dicRasch) > 0
-
-              # # item that are part of the index
-	      indexItems    <<- subset(selectedModel, indice == ii)[, "id"]
-	      corBlock      <- dataCor[, indexItems, with = FALSE]
-
-	      if (object@exam == "ACC"){
-		    # # correlations item
-		    itemCorrelations <- psych::alpha(corBlock, check.keys = isCheckKeys)$item.stats
-		    itemCorrelations <- data.frame('item' = row.names(itemCorrelations),
-		                                 'correlation' = itemCorrelations[, "r.drop"])
-			isMissingHalf <- rowSums(!is.na(corBlock)) < max(length(indexItems) %/%  2, 3)
-
-		    # # calibration criterion
-		    indexreliability <- psych::alpha(corBlock)
-		    alphaCoef        <- indexreliability$total[, "raw_alpha"]
-
-		    nRatio <- 3000 / nrow(dataCor[!isMissingHalf, indexItems])
-		    kThresItemChiHigh  <- 1 + (2/nRatio)
-		    indexData <- paste("ind", ii, "_V", versionOutput, sep = "")
-		  }
-
-		  if (object@exam == "SABER359"){
-		  	  orderSB       <- subset(dictVarPrueba, id %in% indexItems, select = c("id", "SUBBLOQUE"))
-		  	  corBlock      <- corBlock[, orderSB[order(orderSB$SUBBLOQUE), "id"], with = FALSE]
-
-		  }
-
-                  if (object@exam %in% c("SABER359", "SABERPRO")) {
-                    isMissingHalf <- rep(FALSE, nrow(corBlock))
-                    if (ii %like% "(pba|PBA)\\w\\d+"){
-		      indexData     <- paste(ii, "_V", versionOutput, sep = "")
-		    } else {
-		      indexData     <- paste("ind_", ii, "_", kk, "_V", versionOutput, sep = "")
-		    }
-                  }
-
-	      # # Check the grouping in RSM blocks
-		  rsmType             <- LETTERS[1:length(indexItems)]
-		  codModels           <- subset(dictVarPrueba,
-		                                indice == ii, select =  c("id", "codMod"))
-		  rownames(codModels) <- codModels[, "id"]
-		  codModels           <- codModels[indexItems, "codMod"]
-		  names(codModels)    <- indexItems
-
-		  # # Unique code model
-		  if (length(unique(codModels)) > 1) {
-		    stop("%%% Para este indice hay varios códigos de modelos")
-		  }
-
-		  # # Compare unique code of model
-		  if (any(!codModels %in% dictionaryList$model[, "codMod"])) {
-		    nError <- names(codModels)[!codModels %in% dictionaryList$model[, "codMod"]]
-		    stop("%%% No existe el código del Modelo en el Diccionario, para
-		           el/los ítem/s", paste(nError, collapse = " "))
-		  }
-		  # #
-		  rsmType[codModels == codesRasch["RSM"]] <- 1
-
-	      # # Data block to obtain results
-	      resBlock <- dataCor[!isMissingHalf, indexItems, with = FALSE]
-
-          # f_dowle2 = function(DT, value = " ") {
-          #   for (i in names(DT))
-          #     DT[get(i) == "", i := value, with=FALSE]
-          # }
-          # f_dowle2(resBlock)
-	      if (isIndexRasch) {
-	        # #     ##################
-	        # #     #### OJO HASTA AQUI VA RASH
-	        # #     ##################
-	      }
-              if(unique(codModels) %in% "07"){
-                auxPath <- getwd()
-
-                # #  Complete information of items
-                itemFinal <- subset(dictVarPrueba, id %in% indexItems,
-                                    select = c("id", "COMPONENTE", "COMPETENCIA", "SESION",
-                                               "ORDEN", "EQUATING", "SUBBLOQUE"))
-                itemFinal <- apply(itemFinal[match(indexItems, itemFinal$id), ],
-                                   1, paste, collapse = "")
-
-                # # Create .con and .dat file
-                # resBloc debe tener las respuestas NO codificadas (cambiar linea 232)
-                # RunWinsteps(responses = resBlock,
-                #             keysItems = auxKeys[names(resBlock)],
-                #             runName = indexData,
-                #             outPath = file.path("..", 'salidas'),
-                #             runPath = file.path(outPath, 'corridas'),
-                #             personIds = personDataBlo[!isMissingHalf], itemIds = itemFinal,
-                #             tables = c(1, 3, 14), quotes = "Y", sep = "\t",
-                #             verbose = TRUE, runProgram = FALSE)
-
-                # # Run Bilog from Winsteps
-                #RunFromWN(runPath = file.path(outPath, 'corridas'),
-                #          scriptPath = '..\\..\\..\\..\\Src\\PERL\\')
-
-                # # Create .blm and .dat file
-                personDataBlo <- personDataBlo[!isMissingHalf]
-                indexData <- gsub("(pba|PBA)","", indexData)
-                
-                if(object@exam == "SABERPRO"){
-                  itemFinal <- substr(itemFinal, 1, 6)
-                }
-                
-                RunBilog(responseMatrix = resBlock,
-                         runName = indexData,  srcPath = auxPath,
-                         outPath = file.path("..", 'salidas'),
-                         personIds = personDataBlo,
-                         itemIds = itemFinal, binPath = binPath,
-                         runPath = file.path(outPath, 'corridas'),
-                         verbose = TRUE, runProgram = TRUE,
-                         commentFile = indexData, NPArm = 3)
-
-
-            # Reading results of parameters model
-	      	itemDiffFile   <- paste("salidas/", indexData, ".PAR", sep = "")
-	      	itemParameters <- try(ReadBlParFile(itemDiffFile, outPath))
-
-	        # # Reading TCT results
-	      	itemTCTFile <- paste("salidas/", indexData, ".TCT", sep = "")
-	      	tctParam    <- try(ReadBlTCTFile(itemTCTFile, outPath))
-
-	      	# # Resultados estimación de habilidades
-	        personAbilFile  <- paste("salidas/", toupper(indexData), ".SCO", sep = "")
-	        outFileAbili    <- file.path(outPath, "salidas",
-	                                     paste0("personAbilities_V",
-	                                           versionOutput, ".RData"))
-	        if (!file.exists(outFileAbili)) {
-	        	personAbilities <- try(ReadBlScoFile(personAbilFile, outPath,
-	        		                   lengthIds = nchar(personDataBlo[1]), 
-	        		                   flagGr = object@exam != "SABERPRO"))
-	        	save(personAbilities, file = outFileAbili)
-	        } else {
-	        	# personAbilities[, "iSubject"]<- 1:nrow(personAbilities)
-	        	load(outFileAbili)
-	        }
-
-	      	if (class(itemParameters) == "try-error" |
-	      		class(tctParam) == "try-error" |
-	      		class(personAbilities) == "try-error") {
-                stop("Error en Bilog no se pudo leer alguno",
-                	 "de estos archivos (.PAR, .TCT, .SCO)")
-	      	}
-
-	 		# # Responses Curve
-	      	resBlockOri <- subset(datBlock[[nameNode]]$oriBlock,
-	      		                  SNP %in% personDataBlo,
-	      		                  select = indexItems)
-			resBlockOri[, "iSubject"] <- 1:nrow(resBlockOri)
-            if (object@exam == "SABER359") {
-            	dirPlotOPpng <- paste0("graficos/plotOP-", gradoPba,
-                                	nomPba, "-", indexData, ".png")                                	
-            } else {
-            	dirPlotOPpng <- paste0("graficos/plotOP-", indexData, ".png")                                	
-            }
+          dirPlotOPpng <- paste0("graficos/plotOP-", indexData, ".png")                                	
+        }
             
-            dirPlotOPpng <- file.path(outPath, dirPlotOPpng)
-	        keyData      <- subset(dictVarPrueba, id %in% indexItems,
-	        	                   select = c("id", "keyItem"))
-	        dirCatFre <- file.path(outPath, "salidas",
-	        	                   paste0("catFreq_V",
-	                                      versionOutput, ".RData"))
-	        listOP <- responseCurve(resBlockOri, personAbilities,
-	                                methodBreaks = "Sturges",
-	                                keyData = keyData,
-	                                dirPlot = dirPlotOPpng, plotName =
-                                    "Opciones Item", dirCatFreq = dirCatFre)
-	        load(dirCatFre)  # This load tablaRep Constructed by responseCurve
+        dirPlotOPpng <- file.path(outPath, dirPlotOPpng)
+        keyData      <- subset(dictVarPrueba, id %in% indexItems,
+                               select = c("id", "keyItem"))
+        dirCatFre <- file.path(outPath, "salidas",
+                               paste0("catFreq_V",
+                               versionOutput, ".RData"))
+        listOP <- responseCurve(resBlockOri, personAbilities,
+                                methodBreaks = "Sturges",
+                                keyData = keyData,
+                                dirPlot = dirPlotOPpng, plotName =
+                                "Opciones Item", dirCatFreq = dirCatFre)
+        load(dirCatFre)  # This load tablaRep Constructed by responseCurve
 
-	      	# # ICC curve
-      		resBlock[,"consLect"]  <- personDataBlo[!isMissingHalf]
-	        resBlock[, "iSubject"] <- 1:nrow(resBlock)
+        # # ICC curve
+        resBlock[,"consLect"]  <- personDataBlo[!isMissingHalf]
+        resBlock[, "iSubject"] <- 1:nrow(resBlock)
 
-			if (object@exam == "SABER359") {
-            	dirPlotICCpng <- paste0("graficos/plotICC-", gradoPba,
-                                	nomPba, "-", indexData, ".png")                                	
-            } else {
-            	dirPlotICCpng <- paste0("graficos/plotICC-", indexData, ".png")                                	
-            }
-	        dirPlotICCpng <- file.path(outPath, dirPlotICCpng)
-	        listICC <- plotICCB(itemParameters, resBlock, personAbilities,
-	                   scaleD = constDmodel, flagGrSep = TRUE,
-	                   methodBreaks = "Sturges", nameIndice = ii,
-	                   dirPlot = dirPlotICCpng, plotName =
-	                   paste("ICC para", object@nomPrueba), prueba = kk, 
-	                   dirSalida = outPath)
+        if (object@exam == "SABER359") {
+            dirPlotICCpng <- paste0("graficos/plotICC-", gradoPba,
+                                    nomPba, "-", indexData, ".png")
+        } else {
+            dirPlotICCpng <- paste0("graficos/plotICC-", indexData, ".png")
+        }
+        dirPlotICCpng <- file.path(outPath, dirPlotICCpng)
+        listICC <- plotICCB(itemParameters, resBlock, personAbilities,
+                   scaleD = object@param$constDmodel, flagGrSep = TRUE,
+                   methodBreaks = "Sturges", nameIndice = ii,
+                   dirPlot = dirPlotICCpng, plotName =
+                   paste("ICC para", object@nomPrueba), prueba = kk, 
+                   dirSalida = outPath)
 
-	      	# # Items - Person Curve
-	      	if (object@exam == "SABER359") {
-            	dirPerItem <- paste0("graficos/personItem-", gradoPba,
-                                	nomPba, "-", indexData, ".png")                                	
-            } else {
-            	dirPerItem <- paste0("graficos/personItem-", indexData, ".png")                                	
-            }
-	      	dirPerItem <- file.path(outPath, dirPerItem)
-	      	pathGraph  <- object@nomPrueba
-	      	itHaMap    <- WrightMapICFES(itemParameters, personAbilities,
-                                         "ABILITY", "dif", file = dirPerItem,
-                                         Title = gsub("(\\s+)?SABER 3,\\s?5 y 9 ", "", pathGraph))
+        # # Items - Person Curve
+        if (object@exam == "SABER359") {
+          dirPerItem <- paste0("graficos/personItem-", gradoPba,
+                              nomPba, "-", indexData, ".png")                                	
+         } else {
+          dirPerItem <- paste0("graficos/personItem-", indexData, ".png")                                	
+         }
+         dirPerItem <- file.path(outPath, dirPerItem)
+         pathGraph  <- object@nomPrueba
+         itHaMap    <- WrightMapICFES(itemParameters, personAbilities,
+                                      "ABILITY", "dif", file = dirPerItem,
+                                      Title = gsub("(\\s+)?SABER 3,\\s?5 y 9 ", "", pathGraph))
 
 
-	        # # Information of block
-			if (object@exam == "SABER359") {
-	  		  infoBloque <- data.table(dictVarPrueba)
-	  		  infoBloque <- infoBloque[id %in% indexItems, ]
-			  infoBloque <- infoBloque[match(indexItems, infoBloque$id),
-	  		                           list(codigo_prueba, COMPONENTE,
-	                           	            COMPETENCIA, keyItem, 'item_cod' = id,
-	  		                           	    'item' = paste0(SUBBLOQUE, sprintf("%.2d", 1:length(id)))),
-	  		                                by = "SUBBLOQUE"]
-	        } else {
-	          infoBloque <- data.table(dictVarPrueba)
-	  		  infoBloque <- infoBloque[id %in% indexItems, ]
-			  infoBloque <- infoBloque[match(indexItems, infoBloque$id),
-	  		                           list('item' = paste0("ITEM", sprintf("%.4d", 1:length(id))),
-                                         	'item_cod' = id, codigo_prueba, keyItem)]
-	        }
+        # # Information of block
+        if (object@exam == "SABER359") {
+           infoBloque <- data.table(dictVarPrueba)
+           infoBloque <- infoBloque[id %in% indexItems, ]
+           infoBloque <- infoBloque[match(indexItems, infoBloque$id),
+                                    list(codigo_prueba, COMPONENTE,
+                                         COMPETENCIA, keyItem, 'item_cod' = id,
+                                         'item' = paste0(SUBBLOQUE, sprintf("%.2d", 1:length(id)))),
+                                          by = "SUBBLOQUE"]
+	    } else {
+          infoBloque <- data.table(dictVarPrueba)
+          infoBloque <- infoBloque[id %in% indexItems, ]
+          infoBloque <- infoBloque[match(indexItems, infoBloque$id),
+                                   list('item' = paste0("ITEM", sprintf("%.4d", 1:length(id))),
+                                        'item_cod' = id, codigo_prueba, keyItem)]
+        }
 
-			# # Codigos de los subloques
-			itemParameters <- merge(itemParameters, infoBloque, by = "item", all.x = TRUE)
-			setnames(itemParameters, c("item", "item_cod"), c("item_blq", "item"))
-			selecColTCT    <- names(tctParam)
-			tctParam 	   <- merge(tctParam, infoBloque, by = "item", all.x = TRUE)
-			setnames(tctParam, c("item", "item_cod"), c("item_blq", "item"))
-			tctParam       <- tctParam[, selecColTCT]
+        # # Codigos de los subloques
+        itemParameters <- merge(itemParameters, infoBloque, by = "item", all.x = TRUE)
+        setnames(itemParameters, c("item", "item_cod"), c("item_blq", "item"))
+        selecColTCT    <- names(tctParam)
+        tctParam 	   <- merge(tctParam, infoBloque, by = "item", all.x = TRUE)
+        setnames(tctParam, c("item", "item_cod"), c("item_blq", "item"))
+        tctParam       <- tctParam[, selecColTCT]
 
-			# # Construct Flag Proportions and flag of habilities
-			tablaFlags  <- merge(data.table(itemParameters)[, list(item, keyItem)],
-				                 tablaRep, by = "item", all.y = TRUE)
-			tablaFlags[keyItem == categoria, keyAbility := mAbility]
-			tablaFlags[, keyAbility := na.omit(keyAbility)[1], by = "item"]
-            tablaFlags  <- tablaFlags[!categoria %in% idNoPKey,
-                                      list('FLAGPROP' = ifelse(min(prop) < 0.1 | max(prop) >= 0.9, 1, 0),
-            	                           'FLAGKEY2'  = ifelse(sum(mAbility > keyAbility), 1, 0)), by = "item"]
+        # # Construct Flag Proportions and flag of habilities
+        tablaFlags  <- merge(data.table(itemParameters)[, list(item, keyItem)],
+                             tablaRep, by = "item", all.y = TRUE)
+        tablaFlags[keyItem == categoria, keyAbility := mAbility]
+        tablaFlags[, keyAbility := na.omit(keyAbility)[1], by = "item"]
+        tablaFlags  <- tablaFlags[!categoria %in% object@param$idNoPKey,
+                                  list('FLAGPROP' = ifelse(min(prop) < 0.1 | max(prop) >= 0.9, 1, 0),
+                                       'FLAGKEY2'  = ifelse(sum(mAbility > keyAbility), 1, 0)), by = "item"]
 
-			# # Construct Data Consolidation
-			ldirOP   <- data.table('item' = names(listOP), 'dir_OP' = sapply(listOP, function(x) x$dir))
-			ldirICC  <- data.table('item' = names(listICC), 'dir_ICC' = sapply(listICC, function(x) x$dir))
-			tablaRep <- melt(tablaRep, id = 1:2, measure = 3:4)
-			tablaRep <- dcast.data.table(tablaRep, item ~ categoria + variable, fun = sum,
-				                         value.var = c("value"))
-			tablaFin <- merge(merge(ldirOP, ldirICC, by = "item"), tablaRep, by = "item")
-			tablaFin <- merge(tablaFin, itemParameters, by = "item")
-			tablaFin <- merge(tablaFin, tctParam, by = "item")
-			tablaFin <- merge(tablaFin, tablaFlags, by = "item")
+        # # Construct Data Consolidation
+        ldirOP   <- data.table('item' = names(listOP), 'dir_OP' = sapply(listOP, function(x) x$dir))
+        ldirICC  <- data.table('item' = names(listICC), 'dir_ICC' = sapply(listICC, function(x) x$dir))
+        tablaRep <- melt(tablaRep, id = 1:2, measure = 3:4)
+        tablaRep <- dcast.data.table(tablaRep, item ~ categoria + variable, fun = sum,
+                                     value.var = c("value"))
+        tablaFin <- merge(merge(ldirOP, ldirICC, by = "item"), tablaRep, by = "item")
+        tablaFin <- merge(tablaFin, itemParameters, by = "item")
+        tablaFin <- merge(tablaFin, tctParam, by = "item")
+        tablaFin <- merge(tablaFin, tablaFlags, by = "item")
 
-			# # Fill other columns in the report
-            colFix <- c("CORRELACION", "PCT", "disc", "dif", "azar","INFIT", "OUTFIT", "BISERIAL", "item_blq", "TRIED", "SUBBLOQUE",
-            			"COMPONENTE", "COMPETENCIA")
-            colFix <- colFix[!colFix %in% names(tablaFin)]
-            for(col in colFix){
-            	tablaFin <- cbind(tablaFin, 'newCol' = "No aplica")
-            	setnames(tablaFin, 'newCol', col)
-            }
+        # # Fill other columns in the report
+        colFix <- c("CORRELACION", "PCT", "disc", "dif", "azar","INFIT", "OUTFIT", "BISERIAL", "item_blq", "TRIED", "SUBBLOQUE",
+                    "COMPONENTE", "COMPETENCIA")
+        colFix <- colFix[!colFix %in% names(tablaFin)]
+        for(col in colFix){
+           tablaFin <- cbind(tablaFin, 'newCol' = "No aplica")
+           setnames(tablaFin, 'newCol', col)
+        }
 
-		    # # Other Flags
-            tablaFin[, indPos := ifelse(TRIED <= 200, 1, ifelse(TRIED > 100000, 4, ifelse(TRIED > 500, 3, 2))), by = item]
-            tablaFin[, minOutms := c(0.7, 0.75, 0.8, 0.9)[indPos]]
-            tablaFin[, maxOutms := c(1.3, 1.25, 1.2, 1.1)[indPos]]
+        # # Other Flags
+        tablaFin[, indPos := ifelse(TRIED <= 200, 1, ifelse(TRIED > 100000, 4, ifelse(TRIED > 500, 3, 2))), by = item]
+        tablaFin[, minOutms := c(0.7, 0.75, 0.8, 0.9)[indPos]]
+        tablaFin[, maxOutms := c(1.3, 1.25, 1.2, 1.1)[indPos]]
 
-            # # Modifica William 
-			tablaFin <- cbind(tablaFin, tablaFin[, list(
-				                      'codMOD' = unique(codModels),
- 				                      'FLAGMEAN' = ifelse((PCT >90) | (PCT < 10), 1, 0),
-			                          'FLAGCORR' = ifelse(CORRELACION < 0.1, 1, 0),
-			                          'FLAGA'    = ifelse(disc < 0.5 , 1, 0),
-			                          'FLAGB'    = ifelse(dif > 3, 1, 0),
-			                          'FLAGBISE' = ifelse(BISERIAL < 0.1, 1, 0), 
-			                          'FLAGINFIT' = ifelse((INFIT < minOutms[indPos]) | (INFIT > maxOutms[indPos]), 1, 0),
-			                          'FLAGOUTFIT' = ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
-			                          'FLAGKEY1' = 0, 'FLAGKEY3' = 0,
-			                          'FLAGDIFDIS' = ifelse(dif < -3 & disc > 0.5, 1, 0),
-			                          'FLAGAZAR'  = ifelse(azar > 0.25 | eeazar > 0.15, 1, 0))])
+        # # Modifica William 
+        tablaFin <- cbind(tablaFin, tablaFin[, list(
+                          'codMOD' = unique(codModels),
+                          'FLAGMEAN' = ifelse((PCT >90) | (PCT < 10), 1, 0),
+                          'FLAGCORR' = ifelse(CORRELACION < 0.1, 1, 0),
+                          'FLAGA'    = ifelse(disc < 0.5 , 1, 0),
+                          'FLAGB'    = ifelse(dif > 3, 1, 0),
+                          'FLAGBISE' = ifelse(BISERIAL < 0.1, 1, 0), 
+                          'FLAGINFIT' = ifelse((INFIT < minOutms[indPos]) | (INFIT > maxOutms[indPos]), 1, 0),
+                          'FLAGOUTFIT' = ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
+                          'FLAGKEY1' = 0, 'FLAGKEY3' = 0,
+                          'FLAGDIFDIS' = ifelse(dif < -3 & disc > 0.5, 1, 0),
+                          'FLAGAZAR'  = ifelse(azar > 0.25 | eeazar > 0.15, 1, 0))])
 
 			save(tablaFin, file = file.path(outPath, "datosReport.Rdata"))
 			return(list('datosReport' = tablaFin, 'mapa' = itHaMap,
 				        'listOP' = listOP, 'listICC' = listICC))
-          }
+        }
 
 # 	      if (unique(codModels) %in% "05") {
 # 	   	    ##########################################################################
@@ -761,7 +483,7 @@ setMethod("analIRT", "Prueba",
 # 	                            	nomPba, "-", indexData, ".png")
 # 	        dirPlotICCpng <- file.path(outPath, dirPlotICCpng)
 # 	        listICC <- plotICCB(itemParameters, resBlock, personAbilities,
-# 	                   scaleD = constDmodel, flagGrSep = TRUE,
+# 	                   scaleD = object@param$constDmodel, flagGrSep = TRUE,
 # 	                   methodBreaks = "Sturges", nameIndice = ii,
 # 	                   dirPlot = dirPlotICCpng, plotName =
 # 	                   paste("ICC para", object@nomPrueba))
@@ -801,7 +523,7 @@ setMethod("analIRT", "Prueba",
 # 				                 tablaRep, by = "item", all.y = TRUE)
 # 			tablaFlags[keyItem == categoria, keyAbility := mAbility]
 # 			tablaFlags[, keyAbility := na.omit(keyAbility)[1], by = "item"]
-#             tablaFlags  <- tablaFlags[!categoria %in% idNoPKey,
+#             tablaFlags  <- tablaFlags[!categoria %in% object@param$idNoPKey,
 #                                       list('FLAGPROP' = ifelse(min(prop) < 0.1 | max(prop) >= 0.9, 1, 0),
 #             	                           'FLAGKEY2'  = ifelse(sum(mAbility > keyAbility), 1, 0)), by = "item"]
 # 
@@ -862,7 +584,7 @@ setMethod("analIRT", "Prueba",
 # 	                        score = TRUE, rsm = rsmType,
 # 	                        group = NULL, weights = NULL,
 # 	                        rasch = rep(FALSE, length(table(rsmType))),
-# 	                        itemIds = indexItems, kD = constDmodel,
+# 	                        itemIds = indexItems, kD = object@param$constDmodel,
 # 	                        personIds = personDataBlo[!isMissingHalf],
 # 	                        binPath = binPath,
 # 	                        verbose = FALSE,
@@ -1201,7 +923,7 @@ setMethod("analIRT", "Prueba",
 # 	                                         ".png", sep = ""))
 # 
 # 	          plotICCP(itemParameters, resBlock, personAbilities,
-# 	                 scaleD = constDmodel,
+# 	                 scaleD = object@param$constDmodel,
 # 	                 methodBreaks = "Sturges", nameIndice = ii,
 # 	                 dirPlot = c(dirPlotICCeps, dirPlotICCpng), plotName =
 # 	                 paste("CCI para el índice", ii))
@@ -1210,7 +932,7 @@ setMethod("analIRT", "Prueba",
 # 	          parItems           <- itemParameters[, c(6, grep("step",
 # 	                                                         names(itemParameters)))]
 # 	          rownames(parItems) <- itemParameters[, "itemName"]
-# 	          model     <- subset(dictionaryList$model,
+# 	          model     <- subset(dictVarPrueba$model,
 # 	                            codMod == unique(codModels))[, "model"]
 # 	          infoModel <- list('threshtable' = parItems,
 # 	                          'X' = resBlock[, indexItems], 'model' = model,
@@ -1222,7 +944,7 @@ setMethod("analIRT", "Prueba",
 # 	          png(dirPerItem, res = 72*2, width = 480*2, height = 480*2)
 # 	          plotPI(main = paste("Mapa Personas-Items (", ii, ")", sep = ""),
 # 	               latdim = "Dimensión latente", object = infoModel, sorted = TRUE,
-# 	               scaleD = constDmodel, pplabel = "Distribución\n habilidades",
+# 	               scaleD = object@param$constDmodel, pplabel = "Distribución\n habilidades",
 # 	               discrimination = itemParameters[, "discrimination"],
 # 	               thresholdDiff = 0.5, histogram =  TRUE)
 # 	          dev.off()
@@ -1232,7 +954,7 @@ setMethod("analIRT", "Prueba",
 # 	          postscript(dirPerItem)
 # 	          plotPI(main = paste("Mapa Personas-Items (", ii, ")", sep = ""),
 # 	               latdim = "Dimensión latente", object = infoModel, sorted = TRUE,
-# 	               scaleD = constDmodel, pplabel = "Distribución\n habilidades",
+# 	               scaleD = object@param$constDmodel, pplabel = "Distribución\n habilidades",
 # 	               discrimination = itemParameters[, "discrimination"],
 # 	               thresholdDiff = 0.5, , histogram =  TRUE)
 # 	          dev.off()
@@ -2077,13 +1799,23 @@ setMethod("analIRT", "Prueba",
   }
 )
 
-resulIRT <- list()
-for(qq in names(controlData)){
-	resulIRT[[qq]] <- analIRT(controlData[[qq]])
-}
+################################################################################
+# # Definition of output files
+################################################################################
 
-resulModel <- lapply(resulIRT, function(x) x[["datosReport"]])
-save(resulModel, file = "Output\\06IRT\\granDatosReporte.Rdata")	
+setMethod("codeAnalysis", "IRT", 
+function(object){
+	print("en contrucción codeAnalysis")
+})
 
-resulMapa <- lapply(resulIRT, function(x) x[["mapa"]])
-save(resulMapa, file = "Output\\06IRT\\mpITPERS.Rdata")	
+
+setMethod("outXLSX", "IRT", 
+function(object){
+	print("en contrucción outXLSX")
+})
+
+setMethod("outHTML", "IRT", 
+function(object){
+	print("en construcción outHTML")
+
+})

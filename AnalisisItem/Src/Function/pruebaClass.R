@@ -15,7 +15,7 @@
 # #   20150914: Creation
 # #   20160516: Modificación de las clases test y Análisis
 # # ToDo:
-# #       Inclusión de la definición de las clases y los metodos
+# #       Inclución de FlagCensal para el caso de 359 y ACC
 ################################################################################
 
 ################################################################################
@@ -493,5 +493,10 @@ setMethod("saveResult", "Analysis", function(object, listResults){
 
 
 ################################################################################
-# # Definición Clase FactorClass
+# # Definición Metodos necesarios para definir una clase
 ################################################################################
+setGeneric(name = "codeAnalysis", def = function(object, ...){standardGeneric("codeAnalysis")})
+setGeneric(name = "outXLSX", def = function(object, ...){standardGeneric("outXLSX")})
+setGeneric(name = "outHTML", def = function(object, ...){standardGeneric("outHTML")})
+
+
