@@ -177,7 +177,7 @@ function(object, desElim = NULL){
     ################################################################################
     # # Put default values in required variables
     ################################################################################
-    infoCon <- rename(infoCon, c("IDENTIFICADOR" = "id"))
+    infoCon <-  plyr::rename(infoCon, c("IDENTIFICADOR" = "id"))
     # # keyItem Column
     infoCon[, "keyItem"] <- keyString
 
@@ -558,6 +558,7 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
           # #         souItemPrev <- substr(read[, "string"], posiNo, posiEnd)
           souItem <- read[, nameItem, with = FALSE][[1]]
           missingValues <- c("", "O", "M")
+
           #########################################################################
           # # decoded, put 1 in when student
           #########################################################################

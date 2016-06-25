@@ -82,7 +82,7 @@ function(object){
     if (controlPrueba@path == "" | is.na(controlPrueba@path))
 	    stop("**ERROR** Se debe especificar una ruta para cada prueba")
 	  if (!file.exists(file.path(inPath, controlPrueba@path)))
-		  stop("**ERROR** El directorio de la prueba no existe")
+		  stop("**ERROR** El directorio de la prueba no existe:", file.path(inPath, controlPrueba@path))
     if (is.na(controlPrueba@verInput))
 	    stop("**ERROR** Se debe especificar la versión de entrada")
     if (!"conDirs" %in% names(controlAnal))
@@ -145,7 +145,7 @@ function(object){
 		   	load(datDictionary)
 		  } 
 		  datBlock <- ReadDataAI(folderName = inFolder, dict = dictionaryList,
-	                           multiMarkOmiss = TRUE, verbose = TRUE,
+	                           multiMarkOmiss = FALSE, verbose = TRUE,
 	                           eliminatedVars = FALSE)
 		  save(datBlock, file = datReadBlock)
     } else {
@@ -161,8 +161,9 @@ function(object){
       # # Reading the DB using generic dictionary (only for dichotomous items)
       if (is.null(object@paramLect$valMUO))
         object@paramLect$valMUO <- 9
-	    datBlock <- ReadGeneric(object, dict = dictionaryList, verbose =  FALSE, 
-                              valMUO = object@paramLect$valMUO, eliminatedVars = FALSE)
+	      datBlock <- ReadGeneric(object, dict = dictionaryList, verbose =  FALSE, 
+                                valMUO = object@paramLect$valMUO, 
+                                eliminatedVars = FALSE, multiMarkOmiss = FALSE)
 	    save(datBlock, file = datReadBlock)
     }    
     # # Save directions of Rdata and datDictionary    
