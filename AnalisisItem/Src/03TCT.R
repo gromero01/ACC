@@ -41,15 +41,21 @@ setMethod("initialize", "TCT", function(.Object, ..., param) {
   .Object <- callNextMethod()
 })
 
-TCT <- function(test, paramExp = 
-                      list(kOmissionThreshold = 0.5,
-                           flagOri = FALSE, flagTotal = TRUE,
-                           flagSubCon = TRUE, orderedDat = TRUE,
-                           catToNA = c('No Presentado', 'NR', 'Multimarca'), 
-                           isCheckKeys = FALSE)){
-  cat("Se correra un analisis TCT con los siguientes parametros: \n")
+TCT <- function(test, paramExp = NULL){
+  paramDefault <- list(kOmissionThreshold = 0.5,
+                       flagOri = FALSE, flagTotal = TRUE,
+                       flagSubCon = TRUE, orderedDat = TRUE,
+                       catToNA = c('No Presentado', 'NR', 'Multimarca'), 
+                       isCheckKeys = FALSE)
+  if (!is.null(paramExp)) {
+    isCorrect <- names(paramExp) %in% names(paramDefault) 
+    paramExp  <- c(paramExp[isCorrect], paramDefault[!isCorrect])
+  } else {
+    paramExp <- paramDefault
+  }
+  cat("----->Se correra un analisis TCT con los siguientes parametros: \n")
   print(paramExp)
-  cat("\n----->")
+  cat("\n----->\n")
   object <- new("TCT", test = test, param = paramExp)
   object <- filterAnalysis(object)
   return(object)
@@ -258,9 +264,8 @@ function(object){
 
     }
     saveWorkbook(wb, file = outFile)
-
+    cat("Termino Salida: ", outFile, "\n")
   }
-
 })
 
 setMethod("outHTML", "TCT", 
@@ -272,7 +277,7 @@ function(object){
   pruebasRead <- split(pruebasRead, f = gsub("(.+)::(.+)", "\\1", pruebasRead)) 
   auxPru      <- lapply(pruebasRead, function(x) gsub("(::|\\s)","_", x))
   auxNombres  <- names(listResults)
-  
+
   # # Identificando archivos en excel
   listXLSX <- lapply(listResults, function(x) x$fileXLSX)
   listXLSX <- lapply(auxPru, function(x) unique(unlist(listXLSX[x])))
@@ -283,7 +288,7 @@ function(object){
   names(listResults) <- auxNombres
   listResults <- lapply(auxPru, function(x) do.call(rbind, listResults[x]))
   cat('<h2 id="TCT_Header">
-  Análisis TCT de la prueba:', nomPrueba, '</h2>') 
+       An&aacute;lisis TCT de la prueba:', object@test@nomTest, '</h2>') 
 
   cat('<p>El objetivo de este análisis es identificar si los ítems que hacen parte del constructo tienen propiedades, desde el punto de vista de la medición, que permiten ser una fuente de medición óptima para la estimación de un atributo determinado (escala). En particular, a partir de la TCT se establecen dos características importantes que deben ser observadas en los ítems:</p>
   <ol style="list-style-type: decimal">
@@ -305,7 +310,7 @@ function(object){
   </ol>')
 
   for (result in names(listResults)){
-    print(listXLSX[[result]])
+    #print(listXLSX[[result]])
     reportTCT(listResults[[result]], codPrueba = result, pathExcel = listXLSX[[result]])
   }
 })

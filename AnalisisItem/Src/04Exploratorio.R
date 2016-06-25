@@ -79,9 +79,9 @@ Exploratory <- function(test, paramExp = NULL) {
   } else {
   	paramExp <- paramDefault
   }
-  cat("Se correra un analisis exploratorio con los siguientes parametros: \n \n")
+  cat("----->Se correra un analisis exploratorio con los siguientes parametros: \n \n")
   print(paramExp)
-  cat("\n----->")
+  cat("\n----->\n")
   object <- new("Exploratory", test = test, param = paramExp)
   object <- filterAnalysis(object)
   return(object)
@@ -125,7 +125,8 @@ function(object){
 	verDataIn <- object@test@verInput
 
 	# # Dimensiones que quiere explorar el usuario
-	flagUser <- !is.null(object@param$seqFactors)
+	flagUser <- !is.null(object@param$seqFactors) 
+	flagUser <- flagUser | length(object@param$seqFactors) == 0
 
 
 	################################################################################
@@ -214,6 +215,7 @@ function(object){
 	                          MakeExploratory(x, object@param$rotation,
 	                        				  dictVarPrueba, corExpBlock))
 	     } else{
+	     	cat('---------"seqFactors"... Definidos por el Usuario\n')
 	        seqFactors <- c(nFactors - 1, nFactors, nFactors + 1)
 	        resultsExp <- lapply(seqFactors, function(x)
 	                          MakeExploratory(x, object@param$rotation,
@@ -253,6 +255,7 @@ function(object){
 	# # Function to Make Cabezotes
 	#####################################################
 	flagUser <- !is.null(object@param$seqFactors)
+	flagUser <- flagUser | length(object@param$seqFactors) == 0
 	PutCabezote <-  function(nameSheet, object, kk, isCensal = TRUE){
 	  codigo_prueba      <- gsub("^(.*)(::)(.*)","\\1", kk)
 	  nItems <- nrow(object@datAnalysis[[kk]]$dictionary)
@@ -853,7 +856,7 @@ function(object){
 
 		posiciones <- outer(rowRetain, colRetain, FUN = "paste", sep = '.')
 
-	      ld0  <- (loadingsTotI > -kThresholdLoadInfExp & loadingsTotI < -kThresholdLoadNCExp) |
+        ld0  <- (loadingsTotI > -kThresholdLoadInfExp & loadingsTotI < -kThresholdLoadNCExp) |
 	             (loadingsTotI > kThresholdLoadNCExp   & loadingsTotI < kThresholdLoadInfExp)
 
 	      ld1  <-  loadingsTotI < kThresholdLoadNCExp & loadingsTotI >
