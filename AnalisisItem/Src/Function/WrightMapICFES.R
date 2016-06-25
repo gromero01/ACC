@@ -57,7 +57,7 @@ WrightMapICFES <- function(infoItem, infoCal, colHab, colDiff,
   p <- p + theme_bw() + scale_colour_brewer(palette="Set1") + xlab("Medida") + ylab("Densidad") 
   p <- p + theme(legend.position="top")
   if (!is.null(Title)){ 
-    p <- p + ggtitle(paste0("Mapa Items-Personas (", Title, ")"))
+    p <- p + ggtitle(paste0("Mapa Items-Personas ", Title, ""))
   } else {
     p <- p + ggtitle("Mapa Items-Personas")
   }

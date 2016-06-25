@@ -21,7 +21,7 @@ responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges"
                           dirPlot = "ICCexample.eps", plotName  = "Opciones de respuesta",
                           xlabel = "Habilidad", ylabel = "Proporción",
                           legendName = "Categorías", keyData = keyData,
-                          dirCatFreq = "catFreq.Rdata") {
+                          dirCatFreq = "catFreq.Rdata", indexItems) {
   # # This function reads person ability estimates from Bilog
   # # and construct the Response Curve
   # # Arg:
@@ -36,6 +36,7 @@ responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges"
   # #  ylabel:          Label the y-axis of the current axes
   # #  legendName:      Label the legend of the current graph
   # #  keyData:         Data frame with the key of the items (id and keyItem)
+  # #  indexItems:      Variable indexItems
   # #
   # # Ret:
   # #     : Graphs in eps and png format
@@ -92,7 +93,6 @@ responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges"
 
   tablaRep <- countCategory(abiliBlock, names(resBlockOri))
   save(tablaRep, file = dirCatFreq)
-  cat("Guardado informacion de opciones de respuesta")
   # # Break the intervals of abilities
   breaksAbili <- hist(plot = FALSE, abiliBlock[, ABILITY],
                       breaks = methodBreaks)$breaks
@@ -147,7 +147,7 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
                       plotName  = "Curvas ICC", xlabel = "Habilidad",
                       ylabel    = "Probabilidad", legendName = "Categorías",
                       flagGrSep = FALSE, alpha = 0.05, prueba = NULL, 
-                      dirSalida = outPath) {
+                      dirSalida = outPath, indexItems) {
 
   # # This function reads person ability estimates from Bilog
   # # and construct the ICC graphs
@@ -166,6 +166,7 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
   # #  ylabel:          Label the y-axis of the current axes
   # #  legendName:      Label the legend of the current graph
   # #  alpha:           confidence level to ICC interval
+  # #  indexItems:      variable indexItems
   # #
   # # Ret:
   # #     : Graphs in eps and png format
@@ -277,8 +278,6 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
                    include.lowest = TRUE)
     xempICC <- aggregate(abiliBlock[, ABILITY], by = list(cutOff),
                          FUN = mean)
-
-    abiliBlock <- abiliBlock[, indexItems, with = FALSE]
     abiliBlock <- split(abiliBlock, f = cutOff)
 
     grupMal    <- names(abiliBlock)[unlist(lapply(abiliBlock, nrow)) == 0]
@@ -465,7 +464,7 @@ plotICCP <- function (itemParameters, resBlock, personAbilities,
 
     abiliBlock <- merge(resBlock, abiliBlock, by = "iSubject")
     abiliBlock <- abiliBlock[order(abiliBlock[, "ability"]),]
-    cateName   <- sort(unique(unlist(lapply(abiliBlock[, indexItems], unique))))
+    cateName   <- sort(unique(unlist(lapply(abiliBlock, unique))))
     cateName   <- cateName[-1]
 
     # # Building Empiric ICC
@@ -480,8 +479,6 @@ plotICCP <- function (itemParameters, resBlock, personAbilities,
                    include.lowest = TRUE)
     xempICC <- aggregate(abiliBlock[, "ability"], by = list(cutOff),
                          FUN = mean)
-
-    abiliBlock <- abiliBlock[, indexItems]
     abiliBlock <- split(abiliBlock, f = cutOff)
 
     grupMal    <- names(abiliBlock)[unlist(lapply(abiliBlock, nrow)) == 0]
@@ -646,7 +643,7 @@ plotICCW <- function (itemParameters, resBlock, personAbilities,
 
     abiliBlock <- merge(resBlock, abiliBlock, by = "personId")
     abiliBlock <- abiliBlock[order(abiliBlock[, "ability"]),]
-    cateName   <- sort(unique(unlist(lapply(abiliBlock[, indexItems], unique))))
+    cateName   <- sort(unique(unlist(lapply(abiliBlock, unique))))
     cateName   <- cateName[-1]
 
     # # Building Empiric ICC
@@ -658,8 +655,6 @@ plotICCW <- function (itemParameters, resBlock, personAbilities,
                    include.lowest = TRUE)
     xempICC <- aggregate(abiliBlock[, "ability"], by = list(cutOff),
                          FUN = mean)
-
-    abiliBlock <- abiliBlock[, indexItems]
     abiliBlock <- split(abiliBlock, f = cutOff)
 
     grupMal    <- names(abiliBlock)[unlist(lapply(abiliBlock, nrow)) == 0]

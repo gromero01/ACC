@@ -106,7 +106,7 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
   return(htmlTab1)
 }
 
-reporteItem <-  function(x, idPrueba, carNR = c("O", "M")) {
+reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
   require(DT)
   require(googleVis)
 
@@ -181,13 +181,13 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M")) {
                                         paste0(datChart, "\\1"), exaCombo$html$chart["jsData"])
   # # Final codigo java Script grafico de opciones
   jsonGPREP <- exaCombo$html$chart[c("jsData", "jsDrawChart", "jsDisplayChart")] 
-  pathJson  <- paste0("../../Doc/Js/", chartID, ".js")
-  if (!file.exists("../../Doc/Js")) {
-    dir.create("../../Doc/Js")
-  }
-  cat(jsonGPREP, file = pathJson)
- cat("<script src=\"Js/", paste0(chartID, ".js"), "\"></script>\n", sep = "")
- cat("<script type=\"text/javascript\" src=\"https://www.google.com/jsapi?callback=displayChart", chartID,"\"></script>\n", sep = "")  # # Numero total de alertas
+  pathJson  <- file.path(dirBase, "../Doc/Js")
+  fileJson  <- file.path(pathJson, paste0(chartID, ".js"))
+  dir.create(pathJson, recursive = TRUE, showWarnings = FALSE)
+
+  cat(jsonGPREP, file = fileJson)
+  cat("<script src=\"Js/", paste0(chartID, ".js"), "\"></script>\n", sep = "")
+  cat("<script type=\"text/javascript\" src=\"https://www.google.com/jsapi?callback=displayChart", chartID,"\"></script>\n", sep = "")  # # Numero total de alertas
 
   # # Numero total de alertas
   x[, nAlertas := sum(FLAGA, FLAGB, FLAGBISE, FLAGCORR,  

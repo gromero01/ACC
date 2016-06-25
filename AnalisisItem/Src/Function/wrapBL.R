@@ -93,46 +93,35 @@ ReadBlTCTFile <- function (fileName, filePath = "./") {
   return(tctData)
 }
 
-ReadBlScoFile <- function (fileName, filePath = "./", lengthIds = 8,
-                          flagGr = TRUE) {
+ReadBlScoFile <- function (fileName, filePath = "./", lengthIds = 8) {
   # # This function reads person ability estimates from Parscale
   # #
   # # Arg:
   # #  fileName:  The file name
   # #  filePath:  The file path
   # #  lengthIds: The length of the key
-  # #  flagGr:    The flag if the last number is the group
   # # Ret:
-  # #  pPar: The person abilities table as a data.frame
+  # #  readFile: The person abilities table as a data.frame
 
   inFile <- file.path(filePath, fileName)
   if (!file.exists(inFile)) {
     stop(fileName, " not found in ", filePath, "\n")
   }
+  readFile <- readLines(inFile)
+  indPegue <- data.frame(colId = seq(1, length(readFile), 2), 
+                         colHab = seq(2, length(readFile), 2))
+  readFile <- apply(indPegue, 1, function(x) paste(readFile[x], collapse = ""))[-1]
+  readFile <- gsub("\\s+", " ", readFile)
+  readFile <- read.delim(text = readFile, sep = " ", header = FALSE, 
+                         colClasses = c("integer", rep("character", 2),
+                           "double", "character", "integer",
+                           "integer", rep("double", 5)))
 
-  flagGr    <- ifelse(flagGr, 1, 0)
-  auxCwidth <- c(3, 2 + lengthIds, flagGr, 6, 8, 7, 5, 10, 12, 12, 11, 9)
-  system(paste("vim.exe \"+set backup\" \"+%s/\\(  \\d\\{1\\}  \\(\\d\\|\\w\\)\\+\\)\\n/\\1/\" \"+1\"",
-               "\"+d\" \"+d\" \"+x\"", inFile))
-
-  if (nchar(readLines(inFile, 5)[5]) != sum(auxCwidth)) {
-    stop("Ancho de las columnas no cuadraron revisar parametros (lengthIds y flagGr)")
-  }
-
-  pPar <- laf_open_fwf(filename = inFile, trim = TRUE,
-                       column_widths = auxCwidth,
-                       column_types = c("integer", rep("character", 2),
-                                        "double", "character", "integer",
-                                        "integer", rep("double", 5)))
-  pPar   <- pPar[, ]
-  names(pPar) <- c("GROUP", "ID", "group_id", "WEIGHT", "TEST", "TRIED",
-                   "RIGHT", "PERCENT", "ABILITY", "SERROR",
-                   "C11", "C12")
-  pPar[, "iSubject"]<- 1:nrow(pPar)
-  close(file(inFile, "wt"))
-  file.append(inFile, gsub(".SCO", ".SCO~", inFile))
-  file.remove(gsub(".SCO", ".SCO~", inFile))
-  return(pPar[, !names(pPar) %in% c("C11", "C12")])
+  names(readFile) <- c("C1", "GROUP", "ID", "WEIGHT", "TEST", "TRIED",
+                       "RIGHT", "PERCENT", "ABILITY", "SERROR",
+                       "C11", "C12")
+  readFile[, "iSubject"]<- 1:nrow(readFile)
+  return(readFile[, !names(readFile) %in% c("C1", "C11", "C12")])
 }
 
 
