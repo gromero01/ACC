@@ -22,27 +22,7 @@
 ################################################################################
 # # Definition of input and output paths
 ################################################################################
-options(encoding = "UTF-8")
-
-###############################################################################
-# # Load libraries
-################################################################################
-library(xtable)   # # 1.5-6
-library(polycor)  # # 0.7-8
-library(mc2d)     # # 0.1-12
-library(ggplot2)  # # 0.8.9
-library(lavaan)   # # 0.4-10
-library(semTools)
-library(car)
-library(semPlot)  # # 0.2-8
-library(GPArotation)
-library(xlsx)
-library(pcaPA)
-library(reshape)
-library(RColorBrewer) # # 1.0-5
-library(kernlab)
-library(HistogramTools)
-library(cluster)
+#options(encoding = "UTF-8")
 
 ################################################################################
 # # Load sourcefiles
@@ -81,7 +61,6 @@ Exploratory <- function(test, paramExp = NULL) {
   }
   cat("----->Se correra un analisis exploratorio con los siguientes parametros: \n \n")
   print(paramExp)
-  cat("\n----->\n")
   object <- new("Exploratory", test = test, param = paramExp)
   object <- filterAnalysis(object)
   return(object)
@@ -109,6 +88,25 @@ kThresholdComInfExp  <<- 0.15
 ################################################################################
 setMethod("codeAnalysis", "Exploratory", 
 function(object){
+
+    # # Load libraries
+    require(xtable)   # # 1.5-6
+    require(polycor)  # # 0.7-8
+    require(mc2d)     # # 0.1-12
+    require(ggplot2)  # # 0.8.9
+    require(lavaan)   # # 0.4-10
+    require(semTools)
+    require(car)
+    require(semPlot)  # # 0.2-8
+    require(GPArotation)
+    require(xlsx)
+    require(pcaPA)
+    require(reshape)
+    require(RColorBrewer) # # 1.0-5
+    require(kernlab)
+    require(HistogramTools)
+    require(cluster)
+
 	source(file.path("Function", "exploratoryFunctions.R"))
     outPath  <- file.path(outPath, "04Exploratorio")
     if(dir.exists(outPath)){
@@ -126,7 +124,7 @@ function(object){
 
 	# # Dimensiones que quiere explorar el usuario
 	flagUser <- !is.null(object@param$seqFactors) 
-	flagUser <- flagUser | length(object@param$seqFactors) == 0
+	flagUser <- flagUser | length(object@param$seqFactors) != 0
 
 
 	################################################################################
@@ -209,13 +207,13 @@ function(object){
   
 	  # # Sugerido por los eigenvalues
 	  if(!flagUser){
+	  	 cat('---------"seqFactors"... Analisis Paralelo\n')
 	     if(nFactors == 1){
 	        seqFactors <- c(nFactors, nFactors + 1)
 	        resultsExp <- lapply(seqFactors, function(x)
 	                          MakeExploratory(x, object@param$rotation,
 	                        				  dictVarPrueba, corExpBlock))
-	     } else{
-	     	cat('---------"seqFactors"... Definidos por el Usuario\n')
+	     } else{	     	
 	        seqFactors <- c(nFactors - 1, nFactors, nFactors + 1)
 	        resultsExp <- lapply(seqFactors, function(x)
 	                          MakeExploratory(x, object@param$rotation,
@@ -226,6 +224,7 @@ function(object){
 
 	  # Las dimensiones que quiera explorar el usuario
 	  if(flagUser){
+	  	cat('---------"seqFactors"... Definidos por el Usuario\n')
 	    if(nFactors == 1){
 	       resultsExp <- lapply(seqFactors, function(x) 
 	     					  MakeExploratory(x, object@param$rotation,
@@ -249,13 +248,13 @@ function(object){
 ################################################################################
 
 setMethod("outXLSX", "Exploratory", 
-function(object){
-	outPath  <- file.path(outPath, "04Exploratorio")
+function(object, srcPath = "."){
+	outPath  <- file.path(srcPath, outPath, "04Exploratorio")
 	#####################################################
 	# # Function to Make Cabezotes
 	#####################################################
 	flagUser <- !is.null(object@param$seqFactors)
-	flagUser <- flagUser | length(object@param$seqFactors) == 0
+	flagUser <- flagUser | length(object@param$seqFactors) != 0
 	PutCabezote <-  function(nameSheet, object, kk, isCensal = TRUE){
 	  codigo_prueba      <- gsub("^(.*)(::)(.*)","\\1", kk)
 	  nItems <- nrow(object@datAnalysis[[kk]]$dictionary)
@@ -358,7 +357,7 @@ function(object){
 	  xlsx::setCellStyle(cells[[pcl3]], csC2)
 
 	}
-	load(object@outFile$pathRdata)
+	load(file.path(srcPath, object@outFile$pathRdata))
 	pruebasRead <- names(object@datAnalysis)
 	
 	for (kk in pruebasRead) {
@@ -882,6 +881,7 @@ function(object){
 
 	    try(lapply(pcl0, function(x) xlsx::setCellStyle(cells[[x]], csL0) ), TRUE)
 	    
+	
 	    try(lapply(pcl1, function(x) xlsx::setCellStyle(cells[[x]], csL1) ), TRUE)
 	    try(lapply(pcl2, function(x) xlsx::setCellStyle(cells[[x]], csL2) ), TRUE)
 	    try(lapply(pcl3, function(x) xlsx::setCellStyle(cells[[x]], csL3) ), TRUE)
@@ -900,21 +900,19 @@ function(object){
 	                             ".xlsx", sep = ''))
 	  xlsx::saveWorkbook(wb, file = outFile)
 	  listResults[[auxPru]]$fileXLSX <- outFile
-	  saveResult(object, listResults)
+	  saveResult(object, listResults, srcPath)
 	  cat("Termino Salida: ", outFile, "\n")
 	}
 })
 
 
 setMethod("outHTML", "Exploratory", 
-function(object){
+function(object, srcPath = "."){
 	
-	load(object@outFile$pathRdata) # load listResults
+	load(file.path(srcPath, object@outFile$pathRdata)) # load listResults
 	nomPrueba <- object@test@nomTest
 	
-	cat('<h2 id="Exploratory_Header">
-		Análisis exploratorio de la prueba:', nomPrueba, '
-		</h2>\n')
+	cat("<h2>An&aacute;lisis exploratorio de la prueba:", nomPrueba, "</h2>\n")
 
 	cat("A continuación se muestra(n) el(los) gráfico(s) de sedimentación
       para las correlaciones (tetracóricas) de la prueba, así como los
@@ -939,8 +937,7 @@ function(object){
       similares a lo que se esperarían cuando los ítems no se asocian y así
       explorar un menor número de dimensiones.\n", sep  = "")
 
-	cat('<table bgcolor="#FFFFFF" border="0" cellpadding="2" cellspacing="2" width="100%" class="table-bordered table-condensed">
-	<tbody>')
+	cat("<table bgcolor=\"#FFFFFF\" border=\"0\" cellpadding=\"2\" cellspacing=\"2\" width=\"100%\" class=\"table-bordered table-condensed\"><tbody>")
 
      nomSubPru <- names(object@datAnalysis)
      
@@ -952,17 +949,14 @@ function(object){
 	     nFactors<- listResults[[nomAux]]$nFactors
 	     nFactAux <- paste(nFactors,"Factores")
 	     expVar1 <- listResults[[nomAux]]$resultsExp[[nFactAux]]$VarExplained[,2]
-    cat('<tr>
-	     <td width="80%">
-	     <center>
-		     <b>
-		     <h3 id="Exploratory_Header_tab">
-		     Análisis exploratorio de:', nomSub, '
-		     </h3>
-		     </b>
-		     </center>
-		     </td>
-		     </tr>')
+    cat("<tr>",
+        "<td width=\"80%\">",	     
+        "<center>",
+        "<b>",
+        "<h3 id=\"Exploratory_Header_tab\">",
+        "An&aacute;lisis exploratorio de:", nomSub, 
+        "</h3>", "</b>", "</center>",
+        "</td>", "</tr>")
          cat('<tr>')    
          cat('<td width="100%">')
 		 cat("Al realizar un análisis factorial exploratorio se encontró que los primeros ",
@@ -981,6 +975,5 @@ function(object){
 	     cat('</tr>\n')
      
      }
-     
      cat('</tbody></table>')
 })

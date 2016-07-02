@@ -18,7 +18,7 @@
 # #   20160106: Adaptation for S4 Clases (Jorge Carrasco and Nelson Rodriguez) 
 ################################################################################
 
-options(encoding = "UTF-8")
+#options(encoding = "UTF-8")
 
 ###############################################################################
 # # Load wrapWS.R functions
@@ -55,7 +55,6 @@ TCT <- function(test, paramExp = NULL){
   }
   cat("----->Se correra un analisis TCT con los siguientes parametros: \n")
   print(paramExp)
-  cat("\n----->\n")
   object <- new("TCT", test = test, param = paramExp)
   object <- filterAnalysis(object)
   return(object)
@@ -181,9 +180,9 @@ function(object){
 ################################################################################
 
 setMethod("outXLSX", "TCT", 
-function(object){
-  outPathPba <- file.path(outPath, "03TCT")
-  load(object@outFile$pathRdata)
+function(object, srcPath = "."){
+  outPathPba <- file.path(srcPath, outPath, "03TCT")
+  load(file.path(srcPath, object@outFile$pathRdata))
   pruebasRead <- names(object@datAnalysis)
   keyPba      <- gsub("(.+)::(.+)", "\\1", pruebasRead)
   pruebasRead <- split(pruebasRead, f = keyPba)
@@ -225,6 +224,7 @@ function(object){
        namesSheet   <- auxPru
        corItemIndex <- listResults[[auxPru]][["resulTCT"]]
        exGraphPath  <- unique(as.character(corItemIndex[, "pathCMC"]))
+       exGraphPath  <- file.path(srcPath, exGraphPath)
        assign(namesSheet, xlsx::createSheet(wb, sheetName = auxPru))
      
        # # poner el data.frame en la hoja
@@ -260,8 +260,7 @@ function(object){
        xlsx::setColumnWidth(get(namesSheet), 8, 10)
        xlsx::setColumnWidth(get(namesSheet), 9, 5)
        listResults[[auxPru]]$fileXLSX <- outFile
-       saveResult(object, listResults)
-
+       saveResult(object, listResults, srcPath)
     }
     saveWorkbook(wb, file = outFile)
     cat("Termino Salida: ", outFile, "\n")
@@ -269,10 +268,10 @@ function(object){
 })
 
 setMethod("outHTML", "TCT", 
-function(object){
+function(object, srcPath = "."){
   # # Identificando Pruebas
-  outPathPba <- file.path(outPath, "03TCT")
-  load(object@outFile$pathRdata)
+  outPathPba <- file.path(srcPath, outPath, "03TCT")  
+  load(file.path(srcPath, object@outFile$pathRdata))
   pruebasRead <- names(object@datAnalysis)
   pruebasRead <- split(pruebasRead, f = gsub("(.+)::(.+)", "\\1", pruebasRead)) 
   auxPru      <- lapply(pruebasRead, function(x) gsub("(::|\\s)","_", x))
@@ -287,8 +286,7 @@ function(object){
   return(cbind('pba_subCon' = x, listResults[[x]]$resulTCT))})
   names(listResults) <- auxNombres
   listResults <- lapply(auxPru, function(x) do.call(rbind, listResults[x]))
-  cat('<h2 id="TCT_Header">
-       An&aacute;lisis TCT de la prueba:', object@test@nomTest, '</h2>') 
+  cat("<h2> An&aacute;lisis TCT de la prueba:", object@test@nomTest, "</h2>") 
 
   cat('<p>El objetivo de este análisis es identificar si los ítems que hacen parte del constructo tienen propiedades, desde el punto de vista de la medición, que permiten ser una fuente de medición óptima para la estimación de un atributo determinado (escala). En particular, a partir de la TCT se establecen dos características importantes que deben ser observadas en los ítems:</p>
   <ol style="list-style-type: decimal">

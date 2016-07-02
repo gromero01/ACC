@@ -58,8 +58,7 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
   }
 
   # # Tablas en Html de los items
-  htmlTab1 <- datatable(
-    cbind(' ' = '', dcastCont), escape = FALSE,
+  htmlTab1 <- datatable(cbind(' ' = '', dcastCont), escape = FALSE,
     options = list(
       columnDefs = list(
         list(visible = FALSE, targets = nColIni),
@@ -83,7 +82,7 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
     '<th>Correlaci&oacute;n<br>- Bloque</th>' + 
     '<th>Correlaci&oacute;n<br>- &Iacute;ndice</th>' + 
     '<th  colspan=\"4\" rowspan=\"", length(colPos), 
-    "\" align = \"center\">  <img align=\"middle\" style=\"width:660px;height:550px;\" src=\"../'+ 
+    "\" align = \"center\">  <img align=\"middle\" style=\"width:660px;height:550px;\" src=\"'+ 
     d[6] + '\"></th>' + auxTable + '", linkExcel, "</tr></table>'};
     table.on('click', 'td.details-control', function() {
     var tr = $(this).closest('tr');
@@ -103,7 +102,8 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
         }
     } );"
   )))
-  return(htmlTab1)
+  #save(htmlTab1, file = "auxtbla.Rdata")
+  cat(as.character(htmltools::tagList(htmlTab1)))
 }
 
 reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
@@ -220,7 +220,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
                      "Azar", "Alertas")
 
   # # Tablas en Html de los items
-  htmlTab1 <- datatable(
+  htmlTab1 <- datatable(#filter = 'bottom',
     cbind(' ' = '', x), escape = FALSE,
     options = list(
       columnDefs = list(
@@ -315,8 +315,8 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
       '<td colspan=\"2\">'+ d[25] +'</td>'+
     '</tr>'+
     '<tr>'+
-      '<td colspan=\"3\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ d[22] +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"../'+ d[22] +'\"></a></td>'+
-      '<td colspan=\"4\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ d[23] +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"../'+ d[23] +'\"></a></td>'+
+      '<td colspan=\"3\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ d[22].replace('..', '') +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"'+ d[22] +'\"></a></td>'+
+      '<td colspan=\"4\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ d[23].replace('..', '') +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"'+ d[23] +'\"></a></td>'+
     '</tr>'+", "\n'</table>';
     };
     table.on('click', 'td.details-control', function() {
@@ -338,6 +338,5 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
         }
     } );"
   )))
-  htmlTab1
-  return(htmlTab1)
+  cat(as.character(htmltools::tagList(htmlTab1)))
 }

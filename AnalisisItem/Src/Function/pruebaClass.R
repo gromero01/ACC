@@ -2,11 +2,10 @@
 # # pruebaClass.R
 # # R Versions: R version 3.0.0 i386
 # #
-# # Author(s): Jorge Mario Carrasco, Nelson Rodriguez, William Acero, 
-# #            Robert Romero
+# # Author(s): Jorge Mario Carrasco
 # #
 # # SABER 359, SABER PRO, SABER 11 y ACC
-# # Description: Función creada para definar la clase test, la clase análisis y
+# # Description: Función creada para definar la clase Test, la clase Analysis y
 # #              reporte test para las definir las funciones de análisis de item.
 # #
 # # Outputs: Funciones para crear objetos y metodos
@@ -478,8 +477,8 @@ setMethod("filterAnalysis", "Analysis",
 
 # # Save result of Analysis
 setGeneric(name = "saveResult", def = function(object, ...){standardGeneric("saveResult")})
-setMethod("saveResult", "Analysis", function(object, listResults){
-     outRdata <- object@outFile$pathRdata
+setMethod("saveResult", "Analysis", function(object, listResults, srcPath = "."){
+     outRdata <- file.path(srcPath, object@outFile$pathRdata)
      if (!file.exists(outRdata)){
        save(listResults, file = outRdata)
      } else {
@@ -492,12 +491,136 @@ setMethod("saveResult", "Analysis", function(object, listResults){
      }
 })
 
-
-################################################################################
 # # Definición Metodos necesarios para definir una clase
-################################################################################
 setGeneric(name = "codeAnalysis", def = function(object, ...){standardGeneric("codeAnalysis")})
 setGeneric(name = "outXLSX", def = function(object, ...){standardGeneric("outXLSX")})
 setGeneric(name = "outHTML", def = function(object, ...){standardGeneric("outHTML")})
+
+################################################################################
+# # Metodos para correr varias pruebas con varios analisis
+################################################################################
+
+analyzeTests <- function(fileJson, fUpdate = FALSE){
+  # # inicializa la clase Test para cada prueba en la entrada
+  # #
+  # # Arg:
+  # #  fileJson: [character] la ruta del archivo de parametros
+  # #
+  # # Ret:
+  # #  listTests: [list-Test] lista con todas las pruebas analizadas
+  
+  # # Load  scripts
+  require(jsonlite)
+  readJson <- fromJSON(fileJson, simplifyVector = TRUE, 
+                       simplifyDataFrame = FALSE, 
+                       simplifyMatrix = FALSE)
+  listTests <- list() 
+  # # Comprobando si existe nombre para la salida
+  if (! "labelHtml" %in% names(readJson)){
+    stop('___ERROR___ Se debe definir en el archivo de parametros "labelHtml"')
+  }
+  readJson <- readJson[names(readJson) != "labelHtml"]    
+
+  for (test in names(readJson)){
+    jsonLec   <- readJson[[test]]$paramLect
+    paramLect <- list(infoItem = jsonLec$infoItem, conDirs = jsonLec$conDirs, 
+                    valMUO = jsonLec$valMUO, subConInfo = jsonLec$subConInfo)
+    auxTest <- new('Test', path = jsonLec$path, exam = jsonLec$exam, 
+                   codMod = jsonLec$codMod, verInput = jsonLec$verInput, 
+                   nomTest = jsonLec$nomTest, paramLect = paramLect) 
+    auxTest <- runAnalysis(auxTest, jsonTest = readJson[[test]]$Analisis, 
+                         fUpdate = fUpdate)
+    listTests[[test]] <- auxTest
+  }
+  return(listTests)
+}
+  
+setGeneric(name = "runAnalysis", def = function(object, ...){standardGeneric("runAnalysis")})
+setMethod("runAnalysis", "Test",
+function(object, jsonTest, fUpdate = FALSE, f){
+  # # Ejecuta los analisis con los parametros del archivo .json
+  # #
+  # # Arg:
+  # #  jsonTest: [list] filtro del archivo con los parametros de la prueba
+  # #
+  # # Ret:
+  # #  object: [Analysis] objecto prueba guardando todos los analisis
+  for(ii in 1:length(jsonTest)){
+     # # Verificando si codeAnalysis existe para ese analisis
+     analisis  <- names(jsonTest[[ii]])
+     posAnalys <- as.character(methods("codeAnalysis"))
+     posAnalys <- gsub("codeAnalysis,(.+)-.+", "\\1", posAnalys)
+     if (!analisis %in% posAnalys) {
+      warning('_OjO_______________________________________________________________\n', 
+            '(El análisis "', analisis, '" no tine clase y/o metodos definidos)\n',
+            '___________________________________________________________________')
+     } else {
+       # # Definiendo analisis
+       exprAnalysis <- paste0(analisis, "(test = object, paramExp = jsonTest[[ii]][[1]])")
+       auxAnalysis  <- eval(parse(text = exprAnalysis))
+       object@listAnal <- c(object@listAnal, auxAnalysis)
+       names(object@listAnal)[length(object@listAnal)] <- analisis
+     # # Corriendo analisis
+     isExecuted <- file.exists(auxAnalysis@outFile$pathRdata)
+     if (fUpdate | !isExecuted){
+         codeAnalysis(auxAnalysis)  
+         outXLSX(auxAnalysis, srcPath = ".")
+     } else {
+         cat("-----> Cargando los resultados de la clase '", analisis, "'\n")
+     }
+     }
+  }
+  return(object)
+})
+
+jointReports <- function(listTests, fileJson, pathJS = 'lib', flagView = FALSE){
+  # # Crear el reporte html para 1 o varias pruebas
+  # #
+  # # Arg:
+  # #  listTests: [list-Test] lista con todas las pruebas analizadas
+  # #
+  # # Ret:
+  # #  archivos html con el nombre asignado en json$labelHtml
+  options(encoding = "UTF-8")
+  readJson  <- fromJSON(fileJson, simplifyVector = TRUE, 
+                       simplifyDataFrame = FALSE, 
+                       simplifyMatrix = FALSE)
+  if (!file.exists(docPath)) dir.create(docPath)
+  options(encoding = "native.enc")
+  rmarkdown::render('.\\Sweave\\reportAnaItem.Rmd', 'knitrBootstrap::bootstrap_document', 
+                    output_file = readJson$labelHtml,  output_dir = docPath, 
+                    encoding = "utf-8")
+  salPathDoc <- file.path(docPath, readJson$labelHtml)
+
+  # # Incluyendo archivos .js necesarios para las tablas
+  jsonLib <- c(paste0('  <script src="', pathJS,'/htmlwidgets-0.5/htmlwidgets.js"></script>'),
+               paste0('  <script src="', pathJS,'/jquery-1.11.1/jquery.min.js"></script>'),
+               paste0('  <script src="', pathJS,'/datatables-binding-0.1/datatables.js"></script>'),
+               paste0('  <script src="', pathJS,'/datatables-1.10.7/jquery.dataTables.min.js"></script>'),
+               paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.css"></script>'),
+               paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.js"></script>'),
+               paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.bootstrap3.css"></script>'),
+               paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.min.js"></script>'),               
+               paste0('  <script src="', pathJS,'/popUPGR.js"></script>'),
+  #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoom.js" type="text/javascript"></script>',
+  #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoomHTML.js" type="text/javascript"></script>',
+               paste0('  <link href="', pathJS,'/datatables-default-1.10.7/dataTables.extra.css" rel="stylesheet" />'),
+               paste0('  <link href="', pathJS,'/datatables-default-1.10.7/jquery.dataTables.min.css" rel="stylesheet" />'))
+               
+  archHtml  <- readLines(salPathDoc)
+  archCSS   <- grep("<!-- jQuery -->", archHtml)
+  indCSStab <- grep("/\\* style tables \\*/", archHtml)
+  archHtml  <- gsub("font-weight: bold;", "font-weight: bold; \n color: red; \n background-image: url(\"FondoPresentacionesICFES01.png\");" , archHtml)
+  archHtml  <- gsub("<body>", "<body onload=\"setupZoom()\">" , archHtml)  
+  #archHtml  <- archHtml[-seq(indCSStab, indCSStab + 1)]
+  archHtml[indCSStab + 1]  <- "$('table3').addClass('table-bordered table-condensed');"
+  
+  archHtml <- c(archHtml[1:(archCSS + 2)], jsonLib, archHtml[(archCSS + 3):length(archHtml)])
+  cat(archHtml, file = salPathDoc, sep = "\n")
+  if (flagView) {
+    browseURL(salPathDoc)
+  }
+  options(encoding = "UTF-8")
+}
 
 

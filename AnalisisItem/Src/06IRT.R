@@ -44,7 +44,7 @@
 ################################################################################
 # # global options
 ###############################################################################
-options(encoding = "UTF-8")
+#options(encoding = "UTF-8")
 
 ################################################################################
 # # Definition of class and parameters
@@ -73,7 +73,6 @@ IRT <- function(test, paramExp = NULL){
   }
   cat("----->Se correra un analisis IRT con los siguientes parametros: \n")
   print(paramExp)
-  cat("\n----->\n")
   object <- new("IRT", test = test, param = paramExp)
   object <- filterAnalysis(object)
   return(object)
@@ -216,11 +215,11 @@ setMethod("codeAnalysis", "IRT",
       if(unique(codModels) %in% "07"){
         auxPath <- getwd()
         # # Create .blm and .dat file
-        personDataBlo <- personDataBlo[!isMissingHalf]
+        personDataBlo <- personDataBlo[!isMissingHalf]        
         RunBilog(responseMatrix = resBlock,
                  runName = indexData,  srcPath = auxPath,
                  outPath = file.path("..", 'salidas'),
-                 personIds = personDataBlo[[1]], 
+                 personIds = as.character(personDataBlo[[1]]), 
                  itemIds = paste0("I", dictVarPrueba$id), binPath = binPath,
                  runPath = file.path(outPath, 'corridas'),
                  verbose = TRUE, runProgram = TRUE,
@@ -265,7 +264,7 @@ setMethod("codeAnalysis", "IRT",
         resBlockOri <- object@test@datBlock[[datBase]]$oriBlock
         isIDgood    <- resBlockOri[[isIDStudent]] %in% personDataBlo[[1]]
         resBlockOri <- subset(object@test@datBlock[[datBase]]$oriBlock, 
-                              isIDgood, select = indexItems)
+                              isIDgood), select = indexItems)
         resBlockOri[, "iSubject"] <- 1:nrow(resBlockOri)
 
         # # Curvas de respuestas
@@ -398,17 +397,17 @@ setMethod("codeAnalysis", "IRT",
 ################################################################################
 
 setMethod("outXLSX", "IRT", 
-function(object){
-  print("en contrucción outXLSX")
+function(object, srcPath = "."){
+  print("en contrucción outXLSX para IRT")
 })
 
 setMethod("outHTML", "IRT", 
-function(object){
-  load(object@outFile$pathRdata) # load listResults
+function(object, srcPath){
+  source(file.path(srcPath, "Function", "gvisUtils.R"))
+  load(file.path(srcPath, object@outFile$pathRdata)) # load listResults
   nomPrueba <- object@test@nomTest
   
-  cat('<h2 id="estadísticas-por-ítem"> Estadísticas por ítem:', nomPrueba, '
-       </h2>\n')
+  cat("<h2> Estad&iacute;sticas por &iacute;tem:", nomPrueba, "</h2>\n")
   # # Imprimiento descripciones
   cat('<p>A continuación se presentan los datos de identificación: código, posición, 
       y clave de los items de la prueba. Estadísticos relevantes para la toma de decisiones 
@@ -418,77 +417,76 @@ function(object){
   cat('<p>Se definieron señales de aviso que indican mal funcionamiento del ítem en cuanto a dificultad, 
       correlación, porcentaje, infit, outfit, pendiente de la clave y promedio de habilidad de la clave.</p>')
 
-  cat('<p>Las señales generadas fueron las siguientes:</p>
-       <center>
-       <table style="width:83%;">
-       <colgroup>
-       <col width="5%" />
-       <col width="77%" />
-       </colgroup>
-       <thead style="color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);">
-       <tr class="header">
-       <th align="left">Señal</th>
-       <th align="left">Descripción</th>
-       </tr>
-       </thead>
-       <tbody>
-       <tr role="row" class="odd">
-       <td align="left">1</td>
-       <td align="left">La correlación ítem-prueba excluyendo al ítem es menor a <span class="math inline">0.1</span>.</td>
-       </tr>
-       <tr role="row" class="even">
-       <td align="left">2</td>
-       <td align="left">Las pendientes de las curvas empíricas de dos o más opciones son mayores a 0.05.</td>
-       </tr>
-       <tr role="row" class="odd">
-       <td align="left">3</td>
-       <td align="left">La pendiente de la curva empírica de la clave del ítem es negativa.</td>
-       </tr>
-       <tr role="row" class="even">
-       <td align="left">4</td>
-       <td align="left">La pendiente de la curva empírica de la clave del ítem es negativa.El promedio de habilidad de la clave es inferior al promedio de habilidad de alguna de las otras opciones de respuesta.</td>
-       </tr>
-       <tr role="row" class="odd">
-       <td align="left">5</td>
-       <td align="left">El porcentaje de respuestas por opción es menor a <span class="math inline">10%</span> o mayor a <span class="math inline">90%</span>.</td>
-       </tr>
-       <tr role="row" class="even">
-       <td align="left">6</td>
-       <td align="left">El tamaño de la población es inferior a 200 y el valor de infit y/o outfit es menor a <span class="math inline">0.7</span> o mayor a <span class="math inline">1.3</span>.</td>
-       </tr>
-       <tr role="row" class="odd">
-       <td align="left">7</td>
-       <td align="left">El tamaño de la población es superior a 200 e inferior a 500 y el valor de infit y/o outfit es menor a <span class="math inline">0.75</span> o mayor a <span class="math inline">1.25</span>.</td>
-       </tr>
-       <tr role="row" class="even">
-       <td align="left">8</td>
-       <td align="left">El tamaño de la población es superior 501 y el valor de infit y/o outfit es menor a <span class="math inline">0.8</span> o mayor a <span class="math inline">1.2</span>.</td>
-       </tr>
-       <tr role="row" class="odd">
-       <td align="left">9</td>
-       <td align="left">La dificultad del ítem, bajo Rasch, es menor a -3 o mayor a 3.</td>
-       </tr>
-       <tr role="row" class="even">
-       <td align="left">10</td>
-       <td align="left">El porcentaje de respuestas correctas es menor a <span class="math inline">10%</span> o mayor a <span class="math inline">90%</span>.</td>
-       </tr>
-       </tbody>
-       </table>
-       </center>')
+  cat("<p>Las señales generadas fueron las siguientes:</p>",
+       "<center>",
+       "<table style=\"width:83%;\">",
+       "<colgroup>",
+       "<col width=\"5%\" />",
+       "<col width=\"77%\" />",
+       "</colgroup>",
+       "<thead style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">",
+       "<tr class=\"header\">",
+       "<th align=\"left\">Señal</th>",
+       "<th align=\"left\">Descripción</th>",
+       "</tr>",
+       "</thead>",
+       "<tbody>",
+       "<tr role=\"row\" class=\"odd\">",
+       "<td align=\"left\">1</td>",
+       "<td align=\"left\">La correlación ítem-prueba excluyendo al ítem es menor a <span class=\"math inline\">0.1</span>.</td>",
+       "</tr>",
+       "<tr role=\"row\" class=\"even\">",
+       "<td align=\"left\">2</td>",
+       "<td align=\"left\">Las pendientes de las curvas empíricas de dos o más opciones son mayores a 0.05.</td>",
+       "</tr>",
+       "<tr role=\"row\" class=\"odd\">",
+       "<td align=\"left\">3</td>",
+       "<td align=\"left\">La pendiente de la curva empírica de la clave del ítem es negativa.</td>",
+       "</tr>",
+       "<tr role=\"row\" class=\"even\">",
+       "<td align=\"left\">4</td>",
+       "<td align=\"left\">La pendiente de la curva empírica de la clave del ítem es negativa.El promedio de habilidad de la clave es inferior al promedio de habilidad de alguna de las otras opciones de respuesta.</td>",
+       "</tr>",
+       "<tr role=\"row\" class=\"odd\">",
+       "<td align=\"left\">5</td>",
+       "<td align=\"left\">El porcentaje de respuestas por opción es menor a <span class=\"math inline\">10%</span> o mayor a <span class=\"math inline\">90%</span>.</td>",
+       "</tr>",
+       "<tr role=\"row\" class=\"even\">",
+       "<td align=\"left\">6</td>",
+       "<td align=\"left\">El tamaño de la población es inferior a 200 y el valor de infit y/o outfit es menor a <span class=\"math inline\">0.7</span> o mayor a <span class=\"math inline\">1.3</span>.</td>",
+       "</tr>",
+       "<tr role=\"row\" class=\"odd\">",
+       "<td align=\"left\">7</td>",
+       "<td align=\"left\">El tamaño de la población es superior a 200 e inferior a 500 y el valor de infit y/o outfit es menor a <span class=\"math inline\">0.75</span> o mayor a <span class=\"math inline\">1.25</span>.</td>",
+       "</tr>",
+       "<tr role=\"row\" class=\"even\">",
+       "<td align=\"left\">8</td>",
+       "<td align=\"left\">El tamaño de la población es superior 501 y el valor de infit y/o outfit es menor a <span class=\"math inline\">0.8</span> o mayor a <span class=\"math inline\">1.2</span>.</td>",
+       "</tr>",
+       "<tr role=\"row\" class=\"odd\">",
+       "<td align=\"left\">9</td>",
+       "<td align=\"left\">La dificultad del ítem, bajo Rasch, es menor a -3 o mayor a 3.</td>",
+       "</tr>",
+       "<tr role=\"row\" class=\"even\">",
+       "<td align=\"left\">10</td>",
+       "<td align=\"left\">El porcentaje de respuestas correctas es menor a <span class=\"math inline\">10%</span> o mayor a <span class=\"math inline\">90%</span>.</td>",
+       "</tr>",
+       "</tbody>",
+       "</table>",
+       "</center>")
   nomSubPru <- names(object@datAnalysis)
   for(ii in nomSubPru){
     nomAux <- gsub("::|\\s", "_", ii) 
     nomSub <- gsub("^(.+)(::)(.+)", "\\3", ii)
-    if (nomSub == ii) {
-      nomSub <- "Calibración Global de la Prueba"
-    } else {
-      nomSub <- paste0("Análisis para ", nomSub)
-    }
-    cat('<h3 id="Exploratory_Header_tab">\n', nomSub, 
-        '</h3>\n\n')
-    if (nomAux %in% names(listResults)){
+    if (nomAux %in% names(listResults)){    
+      if (nomSub == ii) {
+        nomSub <- "Calibración Global de la Prueba"
+      } else {
+        nomSub <- paste0("An&aacute;lisis para ", nomSub)
+      }
+      cat('<h3 id="Exploratory_Header_tab">\n', nomSub, 
+          '</h3>\n\n')
       reporteItem(listResults[[nomAux]]$tablaFin, idPrueba = nomAux)    
     }    
   }
 })
-
