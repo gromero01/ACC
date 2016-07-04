@@ -145,7 +145,7 @@ function(object){
                                 estIndex$total[, 'raw_alpha']
                              estIndItems[, 'nItems'] <- length(x)
                              return(estIndItems)})
-      corItemIndex <- MakeListData(corItemIndex, nvar = "indice")
+      corItemIndex <- MakeListData(corItemIndex, nvar = "subCon")
       corItemIndex <- merge(corItemIndex, corBlock)
   
       # # variables to keep from dictionary in orderto complete the output
@@ -153,7 +153,7 @@ function(object){
         varKeepDict <- c('id', 'instr', 'etiqu')
       } else {
         if (!"etiqu" %in% names(dictVarPrueba)) {
-          dictVarPrueba[,"etiqu"] <-  dictVarPrueba[,"indice"]
+          dictVarPrueba[, "etiqu"] <-  dictVarPrueba[, "subCon"]
         }
         varKeepDict <- c('id', 'etiqu')
       }
@@ -163,9 +163,9 @@ function(object){
       if (any(isVacio)) {
         corItemIndex[isVacio, 'etiqu'] <- corItemIndex[isVacio, 'instr']
       }
-      corItemIndex <- corItemIndex[, c("id", "indice", "etiqu", "alphaTotal", "alphaSub",
+      corItemIndex <- corItemIndex[, c("id", "subCon", "etiqu", "alphaTotal", "alphaSub",
                                        "raw_alpha", "corIt", "corItSub", "nItems")]
-      if (all(corItemIndex[, "indice"] == corItemIndex[, "etiqu"])){
+      if (all(corItemIndex[, "subCon"] == corItemIndex[, "etiqu"])){
         corItemIndex[, "etiqu"] <- NULL
       }        
       listResults[[auxPru]]$resulTCT <- cbind(corItemIndex, 'pathCMC' = exGraphPath)

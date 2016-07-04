@@ -264,7 +264,7 @@ setMethod("codeAnalysis", "IRT",
         resBlockOri <- object@test@datBlock[[datBase]]$oriBlock
         isIDgood    <- resBlockOri[[isIDStudent]] %in% personDataBlo[[1]]
         resBlockOri <- subset(object@test@datBlock[[datBase]]$oriBlock, 
-                              isIDgood), select = indexItems)
+                              isIDgood, select = indexItems)
         resBlockOri[, "iSubject"] <- 1:nrow(resBlockOri)
 
         # # Curvas de respuestas

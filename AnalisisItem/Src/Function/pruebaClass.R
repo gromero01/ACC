@@ -442,7 +442,7 @@ setMethod("buildSubsets", "Analysis",
 				    'datos'      = object@test@datBlock[iiTest][[1]][[auxParGet]],
 				    'dictionary' = filConP)
         }
-        if(flagSubCon) {
+        if(flagSubCon & length(unique(filConP$subCon)) > 1) {
           for(jjSubCon in unique(filConP$subCon)){             
              filterDict <- subset(filConP, subCon == jjSubCon)
              colGet     <- names(object@test@datBlock[iiTest][[1]][[auxParGet]])
@@ -523,8 +523,15 @@ analyzeTests <- function(fileJson, fUpdate = FALSE){
 
   for (test in names(readJson)){
     jsonLec   <- readJson[[test]]$paramLect
-    paramLect <- list(infoItem = jsonLec$infoItem, conDirs = jsonLec$conDirs, 
-                    valMUO = jsonLec$valMUO, subConInfo = jsonLec$subConInfo)
+    if (!is.null(jsonLec$infoItem) & !is.null(jsonLec$subConInfo)){
+      paramLect <- list(infoItem = jsonLec$infoItem, 
+                        conDirs = jsonLec$conDirs, 
+                        valMUO = jsonLec$valMUO, 
+                        subConInfo = jsonLec$subConInfo)      
+    } else {
+      paramLect <- list(conDirs = jsonLec$conDirs, 
+                        valMUO = jsonLec$valMUO)            
+    }
     auxTest <- new('Test', path = jsonLec$path, exam = jsonLec$exam, 
                    codMod = jsonLec$codMod, verInput = jsonLec$verInput, 
                    nomTest = jsonLec$nomTest, paramLect = paramLect) 
