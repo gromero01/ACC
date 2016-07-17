@@ -22,6 +22,35 @@
 # # Function for reading Parscale output file
 ################################################################################
 
+ readPH2CHI <- function(fileName, filePath = "./"){
+  # # Reads the item parameters from Bilog
+  # #
+  # # Arg:
+  # #  fileName: The file name
+  # #  filePath: The file path
+  # #
+  # # Ret:
+  # #
+  require(dplyr)
+  inFile <- file.path(filePath, fileName)
+  data   <- readLines(inFile)
+  linea  <- grep(pattern = "QUADRATURE POINTS, POSTERIOR WEIGHTS", data)
+  indPri <- grep("ITEM PARAMETERS AFTER CYCLE", data)
+  data  <- data[(max(indPri) + 5):(linea - 17)]
+  sp    <- seq(from = 3, to = (3 * (length(data) + 1) / 3 - 2), by = 3) 
+  tab <- gsub("\\n", "", data[-sp] %>% paste(collapse = "\n"))
+  tab <- data.table('Original' = strsplit(tab, ") I")[[1]])
+  tab <- tab[, tstrsplit(Original, "|", fixed=TRUE)]
+  tab <- tab[, list('item'  =  gsub("I", "", V1), 
+                    'p_val_chi2' = as.numeric(gsub("\\(|\\)", "", V13)), 
+                    'chi2'       = as.numeric(gsub("(\\d.+)\\s+(\\d.+)", "\\1", V7)), 
+                    'gl_chi2'    = as.numeric(gsub("(\\d.+)\\s+(\\d.+)", "\\2", V7)))]
+  tab <- tab[, item := paste0("I", gsub("\\s", "", item))]
+  return(tab)
+}
+
+
+
 ReadBlParFile <- function (fileName, filePath = "./") {
   # # Reads the item parameters from Bilog
   # #

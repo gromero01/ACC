@@ -28,7 +28,7 @@
 # #
 # # File history:
 # #   20111214: Creation
-# #   20130222: Adaptation for FA indices (Mario Carrasco)
+# #   20130222: Adaptation for FA subCons (Mario Carrasco)
 # #   20140425: Adaptation for output in xlsx (Sandra Ropero)
 # #   20140530: Adaptation for graphics and tables additional (Sandra Ropero)
 # #   20140609: Adaptation for 2PL models, indexes with just three items
@@ -106,6 +106,7 @@ setMethod("codeAnalysis", "IRT",
   source(file.path(funPath, "wrapPS.R"))
   source(file.path(funPath, "wrapBL.R"))
   source(file.path(funPath, "plotICCP.R"))
+  source(file.path(funPath, "ggplot_dual_axis.R"))
   source(file.path(funPath, "plotPImap.R"))
   source(file.path(funPath, "plotPImap.R"))
   source(file.path(funPath, "WrightMapICFES.R"))
@@ -137,12 +138,10 @@ setMethod("codeAnalysis", "IRT",
       # # Create Folders      
       auxOutPath <- outPath
       outPath    <- file.path(outPath, auxPru)
-      if (!file.exists(outPath)) {
-        dir.create(outPath, recursive = TRUE)
-        dir.create(file.path(outPath, "salidas"), recursive = TRUE)
-        dir.create(file.path(outPath, "graficos"), recursive = TRUE)
-        dir.create(file.path(outPath, "corridas"), recursive = TRUE)
-      }
+      dir.create(outPath, recursive = TRUE, showWarnings = FALSE)
+      dir.create(file.path(outPath, "salidas"), recursive = TRUE, showWarnings = FALSE)
+      dir.create(file.path(outPath, "graficos"), recursive = TRUE, showWarnings = FALSE)
+      dir.create(file.path(outPath, "corridas"), recursive = TRUE, showWarnings = FALSE)
 
       # # Define Dictionary
       dictVarPrueba <- object@datAnalysis[[kk]]$dictionary
@@ -152,7 +151,7 @@ setMethod("codeAnalysis", "IRT",
         if (!"instr" %in% names(dictVarPrueba))
           dictVarPrueba[, 'instr'] <-  "No disponible"
         if (!"etiqu" %in% names(dictVarPrueba))
-          dictVarPrueba[, 'etiqu'] <-  dictVarPrueba[, "indice"]
+          dictVarPrueba[, 'etiqu'] <-  dictVarPrueba[, "subCon"]
       }
           
       dicRasch     <- subset(dictVarPrueba, codMod %in% codesRasch)[, c("id", "subCon")]
@@ -199,7 +198,7 @@ setMethod("codeAnalysis", "IRT",
 
       # # Unique code model
       if (length(unique(codModels)) > 1) {
-         stop("%%% Para este indice hay varios códigos de modelos")
+         stop("%%% Para este subCon hay varios códigos de modelos")
       }
 
       rsmType[codModels == codesRasch["RSM"]] <- 1
@@ -214,6 +213,7 @@ setMethod("codeAnalysis", "IRT",
       }
       if(unique(codModels) %in% "07"){
         auxPath <- getwd()
+        runPath <- file.path(outPath, 'corridas')
         # # Create .blm and .dat file
         personDataBlo <- personDataBlo[!isMissingHalf]        
         RunBilog(responseMatrix = resBlock,
@@ -224,6 +224,10 @@ setMethod("codeAnalysis", "IRT",
                  runPath = file.path(outPath, 'corridas'),
                  verbose = TRUE, runProgram = TRUE,
                  commentFile = indexData, NPArm = 3)
+        
+        # Reading results of chi square test 
+        itemPH2File <- paste(indexData, ".PH2", sep = "")
+        itemPH2     <- try(readPH2CHI(itemPH2File, runPath))
 
         # Reading results of parameters model
         itemDiffFile   <- paste("salidas/", indexData, ".PAR", sep = "")
@@ -248,8 +252,9 @@ setMethod("codeAnalysis", "IRT",
 
         # # Comprobación de errores
         if (class(itemParameters) == "try-error" |
-           class(tctParam) == "try-error" |
-           class(personAbilities) == "try-error") {
+            class(tctParam) == "try-error" |
+            class(personAbilities) == "try-error" | 
+            any(class(itemPH2) == "try-error")) {
            warning("Error en Bilog no se pudo leer alguno",
                    "de estos archivos (.PAR, .TCT, .SCO)")
            next
@@ -291,13 +296,14 @@ setMethod("codeAnalysis", "IRT",
         dirPlotICCpng <- paste0("graficos/plotICC-", indexData, ".png")
         dirPlotICCpng <- file.path(outPath, dirPlotICCpng)
 
-        cat("......Guardado ICC. \n")
+        cat("......Guardado ICC. \n")  
         listICC <- plotICCB(itemParameters, resBlock, personAbilities,
                    scaleD = object@param$constDmodel, flagGrSep = TRUE,
-                   methodBreaks = "Sturges", nameIndice = subComm,
+                   methodBreaks = "Sturges", namesubCon = subComm,
                    dirPlot = dirPlotICCpng, plotName =
                    paste("ICC para", object@nomPrueba), prueba = kk, 
-                   dirSalida = outPath, indexItems = indexItems)
+                   dirSalida = outPath, indexItems = indexItems, 
+                   codModel = object@test@codMod)
 
         # # Items - Person Curve
         dirPerItem <- paste0("graficos/personItem-", indexData, ".png")                                	
@@ -357,10 +363,13 @@ setMethod("codeAnalysis", "IRT",
         tablaFin <- merge(tablaFin, itemParameters, by = "item")
         tablaFin <- merge(tablaFin, tctParam, by = "item")
         tablaFin <- merge(tablaFin, tablaFlags, by = "item")
+        tablaFin <- merge(tablaFin, itemPH2, by = "item")
+
 
         # # Fill other columns in the report
-        colFix <- c("CORRELACION", "PCT", "disc", "dif", "azar","INFIT", "OUTFIT", "BISERIAL", "item_blq", "TRIED", "SUBBLOQUE",
-                    "COMPONENTE", "COMPETENCIA")
+        colFix <- c("CORRELACION", "PCT", "disc", "dif", "azar","INFIT", "OUTFIT", 
+                    "BISERIAL", "item_blq", "TRIED", "SUBBLOQUE", "COMPONENTE", "COMPETENCIA", 
+                    "chi2", "gl_chi2", "p_val_chi2")
         colFix <- colFix[!colFix %in% names(tablaFin)]
         for(col in colFix){
            tablaFin <- cbind(tablaFin, 'newCol' = "No aplica")
@@ -384,7 +393,8 @@ setMethod("codeAnalysis", "IRT",
                           'FLAGOUTFIT' = ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
                           'FLAGKEY1' = 0, 'FLAGKEY3' = 0,
                           'FLAGDIFDIS' = ifelse(dif < -3 & disc > 0.5, 1, 0),
-                          'FLAGAZAR'  = ifelse(azar > 0.25 | eeazar > 0.15, 1, 0))])
+                          'FLAGAZAR'  = ifelse(azar > 0.25 | eeazar > 0.15, 1, 0), 
+                          'FLAGCHI2' = ifelse(p_val_chi2 > 0.1, 1, 0))])
 			  listResults[[auxPru]][["tablaFin"]] <- tablaFin
       }
       outPath <- auxOutPath
@@ -451,24 +461,16 @@ function(object, srcPath){
        "<td align=\"left\">5</td>",
        "<td align=\"left\">El porcentaje de respuestas por opción es menor a <span class=\"math inline\">10%</span> o mayor a <span class=\"math inline\">90%</span>.</td>",
        "</tr>",
-       "<tr role=\"row\" class=\"even\">",
+       "<tr role=\"row\" class=\"odd\">",
        "<td align=\"left\">6</td>",
-       "<td align=\"left\">El tamaño de la población es inferior a 200 y el valor de infit y/o outfit es menor a <span class=\"math inline\">0.7</span> o mayor a <span class=\"math inline\">1.3</span>.</td>",
-       "</tr>",
-       "<tr role=\"row\" class=\"odd\">",
-       "<td align=\"left\">7</td>",
-       "<td align=\"left\">El tamaño de la población es superior a 200 e inferior a 500 y el valor de infit y/o outfit es menor a <span class=\"math inline\">0.75</span> o mayor a <span class=\"math inline\">1.25</span>.</td>",
-       "</tr>",
-       "<tr role=\"row\" class=\"even\">",
-       "<td align=\"left\">8</td>",
-       "<td align=\"left\">El tamaño de la población es superior 501 y el valor de infit y/o outfit es menor a <span class=\"math inline\">0.8</span> o mayor a <span class=\"math inline\">1.2</span>.</td>",
-       "</tr>",
-       "<tr role=\"row\" class=\"odd\">",
-       "<td align=\"left\">9</td>",
        "<td align=\"left\">La dificultad del ítem, bajo Rasch, es menor a -3 o mayor a 3.</td>",
        "</tr>",
        "<tr role=\"row\" class=\"even\">",
-       "<td align=\"left\">10</td>",
+       "<td align=\"left\">7</td>",
+       "<td align=\"left\">El porcentaje de respuestas correctas es menor a <span class=\"math inline\">10%</span> o mayor a <span class=\"math inline\">90%</span>.</td>",
+       "</tr>",
+       "<tr role=\"row\" class=\"even\">",
+       "<td align=\"left\">8</td>",
        "<td align=\"left\">El porcentaje de respuestas correctas es menor a <span class=\"math inline\">10%</span> o mayor a <span class=\"math inline\">90%</span>.</td>",
        "</tr>",
        "</tbody>",

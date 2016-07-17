@@ -103,9 +103,9 @@ function(object){
     require(pcaPA)
     require(reshape)
     require(RColorBrewer) # # 1.0-5
-    require(kernlab)
-    require(HistogramTools)
-    require(cluster)
+    #require(kernlab)
+    #require(HistogramTools)
+    #require(cluster)
 
 	source(file.path("Function", "exploratoryFunctions.R"))
     outPath  <- file.path(outPath, "04Exploratorio")
@@ -435,6 +435,12 @@ function(object, srcPath = "."){
 
 
 	  # # Salida de resúmen de los items
+	  print(names(object@datAnalysis))
+	  auxEtiq <- object@datAnalysis[[kk]]$dictionary 
+      if (!"etiqu" %in% auxEtiq) {
+      	 auxEtiq <- auxEtiq[, "subCon"]
+         object@datAnalysis[[kk]]$dictionary[, "etiqu"] <- auxEtiq
+      }	  
       varKeepDict   <- c('id', 'subCon', 'etiqu')
 	  expItemIndex <- object@datAnalysis[[kk]]$dictionary[, varKeepDict]
       isVacio <- expItemIndex[, 'etiqu'] == '' | is.na(expItemIndex[, 'etiqu'])
@@ -817,7 +823,7 @@ function(object, srcPath = "."){
 	   loadingsTot[, expression] <- ''
 	   names(loadingsTot) <- gsub("Item.[1-9]", ' ', names(loadingsTot))
 	   names(loadingsTot) <- gsub("Factor\\.(\\d)(\\.\\d)*", "Factor \\1", names(loadingsTot))
-	   names(loadingsTot) <- recode(names(loadingsTot), "NA = '' ")
+	   names(loadingsTot) <- car::recode(names(loadingsTot), "NA = '' ")
 	   
 	      
 	   auxTable    <- expItemIndex[, c("id", "etiqu")]

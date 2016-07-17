@@ -2,7 +2,7 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
   require(DT)
   #  x <- listResults[[1]]
   if (!"etiqu" %in% names(x)){
-    x[, "etiqu"] <- x[, "indice"]
+    x[, "etiqu"] <- x[, "subCon"]
   }
   x <- data.table(x)
 
@@ -10,7 +10,7 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
   x[, ind_Sub := as.double(1:nrow(.SD)), by = c("pba_subCon")]
   maxItems <- max(x[, ind_Sub])
   x[, nItems := sum(unique(nItems)), by = c("pba_subCon")]
-  colsUni <- c("indice", "etiqu", "alphaTotal", "nItems", "pathCMC")
+  colsUni <- c("subCon", "etiqu", "alphaTotal", "nItems", "pathCMC")
   iniCol  <- x[, lapply(.SD, unique), .SDcols = colsUni, by = c("pba_subCon")]
   iniCol  <- iniCol[!duplicated(pba_subCon), ]
   cols   <- c("alphaTotal", "raw_alpha", "corIt", "corItSub")
@@ -24,29 +24,32 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
   dcastCont <- dcast.data.table(data.table(x), pba_subCon ~ ind_Sub + variable, 
                                 fun.aggregate = list, value.var = c("value"), drop = "FALSE")
   dcastCont <- merge(iniCol, dcastCont, by = c("pba_subCon")) 
-  dcastCont[pba_subCon == codPrueba, indice := codPrueba]
+  dcastCont[pba_subCon == codPrueba, subCon := codPrueba]
   dcastCont[pba_subCon == codPrueba, etiqu  := codPrueba]
   dcastCont[, pba_subCon := NULL]
   
   # # Ordenando columnas
   colName <- lapply(1:maxItems, function(x) paste0(x,"_", colMeasure))
   names(colName) <- as.character(1:maxItems)
-  colPos  <- lapply(colName, function(x) sapply(x, function(z) which(z == names(dcastCont))))
+  colPos   <- lapply(colName, function(x) sapply(x, function(z) which(z == names(dcastCont))))
   finTable <- ""
                 
   for (ww in names(colPos)) {
     iterInd <- sapply(colPos[[ww]], function(x)  
                       paste0("            '<td>'+ d[", x + 1, "] +'</td>'+\n"))
-    auxRow  <- paste0("if (d[", min(colPos[[ww]]) + 1 , '] != "" && d[',  min(colPos[[ww]]) + 1, '] != null ', ") {    auxTable = auxTable  + '<tr>'+\n            '<td>", ww , "</td>'+\n",
-               paste(iterInd, collapse = ""), "        '</tr>';\n }")
+    auxRow  <- paste0("if (d[", min(colPos[[ww]]) + 1 , '] != "" && d[',  
+                      min(colPos[[ww]]) + 1, '] != null ', ") {    ", 
+                      "auxTable = auxTable  + '<tr>'+\n            '<td>", ww , "</td>'+\n",
+                      paste(iterInd, collapse = ""), "        '</tr>';\n }")
     finTable <- paste(finTable, auxRow, sep = "\n")
   }
 
   # # Renombrando primeras columnas
   dcastCont <- data.frame(dcastCont)
-  names(dcastCont)[1:4] <- c("Codigo", "Indice", "&alpha;", 
+  names(dcastCont)[1:4] <- c("Codigo", "subCon", "&alpha;", 
                              "No_Items")
-  if (all(as.character(dcastCont$Codigo) == as.character(dcastCont$Indice))) {
+  dcastCont[, "&alpha;"] <- round(as.numeric(dcastCont[, "&alpha;"], 3))
+  if (all(as.character(dcastCont$Codigo) == as.character(dcastCont$subCon))) {
     nColIni               <- c(0, 2, 6:(ncol(dcastCont) + 1))  
   } else {
     nColIni               <- c(0, 6:(ncol(dcastCont) + 1))  
@@ -82,7 +85,9 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
     '<th>Correlaci&oacute;n<br>- Bloque</th>' + 
     '<th>Correlaci&oacute;n<br>- &Iacute;ndice</th>' + 
     '<th  colspan=\"4\" rowspan=\"", length(colPos), 
-    "\" align = \"center\">  <img align=\"middle\" style=\"width:660px;height:550px;\" src=\"'+ 
+    "\" align = \"center\"> <a href=\"javascript:void(0)\" onclick=\"PopupCenter('",
+    "+ d[6] +', 'TCT Analysis', '944', '900')\">",
+    "<img align=\"middle\" style=\"width:660px;height:550px;\" src=\"'+ 
     d[6] + '\"></th>' + auxTable + '", linkExcel, "</tr></table>'};
     table.on('click', 'td.details-control', function() {
     var tr = $(this).closest('tr');
@@ -181,7 +186,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
                                         paste0(datChart, "\\1"), exaCombo$html$chart["jsData"])
   # # Final codigo java Script grafico de opciones
   jsonGPREP <- exaCombo$html$chart[c("jsData", "jsDrawChart", "jsDisplayChart")] 
-  pathJson  <- file.path(dirBase, "../Doc/Js")
+  pathJson  <- file.path(dirBase, "../../Doc/Js")
   fileJson  <- file.path(pathJson, paste0(chartID, ".js"))
   dir.create(pathJson, recursive = TRUE, showWarnings = FALSE)
 
@@ -202,16 +207,18 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
   }
   
   # # Ordenando columnas
-  x <- x[, list(item_blq, item, nAlertas, disc, dif, azar, item_blq, 
-                  item, SUBBLOQUE, COMPONENTE, COMPETENCIA, keyItem, 
-                  "", TRIED, RIGHT, PCT, "", BISERIAL, 
-                  'disc' = paste0(disc, " (", eedisc, ") "),
-                  'dif' = paste0(dif, " (", eedif, ") "), dir_OP, dir_ICC,
-                  'Mult' = paste0("M: ", round(M_prop * 100, 2), "% (",  round(M_mAbility, 3), ")"), 
-                  'Omis' = paste0("O: ", round(O_prop * 100, 2), "% (",  round(O_mAbility, 3), ")")
-                  ,FLAGA, FLAGB, FLAGBISE, FLAGCORR, FLAGINFIT, FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN,
-                  FLAGOUTFIT, FLAGPROP, FLAGDIFDIS, FLAGAZAR, 'azar' = paste0(azar, " (", eeazar, ") "), 
-                  'posReporte' = match(x$item, names(itObs)) - 1)]
+  x <- x[, list(item_blq, item, nAlertas, disc, dif, azar, item_blq,                                   # 2  - 8
+                item, SUBBLOQUE, COMPONENTE, COMPETENCIA, keyItem,                                     # 9  - 13
+                "", TRIED, RIGHT, PCT, "", BISERIAL,                                                   # 14 - 19
+                'disc' = paste0(disc, " (", eedisc, ") "),                                             # 20
+                'dif' = paste0(dif, " (", eedif, ") "), dir_OP, dir_ICC,                               # 21 - 23
+                'Mult' = paste0("M: ", round(M_prop * 100, 2), "% (",  round(M_mAbility, 3), ")"),     # 24
+                'Omis' = paste0("O: ", round(O_prop * 100, 2), "% (",  round(O_mAbility, 3), ")"),     # 25
+                'Chis' = paste0(chi2, " - gl. ", gl_chi2, "(", p_val_chi2, ")"),                       # 26 
+                FLAGA, FLAGB, FLAGBISE, FLAGCORR, FLAGINFIT, FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN,   # 27 - 35
+                FLAGOUTFIT, FLAGPROP, FLAGDIFDIS, FLAGAZAR, FLAGCHI2,                                  # 36 - 40
+                'azar' = paste0(azar, " (", eeazar, ") "),                                             # 41
+                'posReporte' = match(x$item, names(itObs)) - 1)]                                       # 42
   
   # # Renombrando primeras columnas
   x <- data.frame(x)
@@ -253,20 +260,21 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
       }
     };
     var format = function(d) {
-      current    = d[40]
-      FLAGA      = d[26]
-      FLAGB      = d[27]
-      FLAGBISE   = d[28]
-      FLAGCORR   = d[29]
-      FLAGINFIT  = d[30]
-      FLAGKEY1   = d[31]
-      FLAGKEY2   = d[32]
-      FLAGKEY3   = d[33]
-      FLAGMEAN   = d[34]
-      FLAGOUTFIT = d[35]
-      FLAGPROP   = d[36]
-      FLAGDIFDIS = d[37]
-      FLAGAZAR   = d[38]
+      current    = d[42]
+      FLAGA      = d[27]
+      FLAGB      = d[28]
+      FLAGBISE   = d[29]
+      FLAGCORR   = d[30]
+      FLAGINFIT  = d[31]
+      FLAGKEY1   = d[32]
+      FLAGKEY2   = d[33]
+      FLAGKEY3   = d[34]
+      FLAGMEAN   = d[35]
+      FLAGOUTFIT = d[36]
+      FLAGPROP   = d[37]
+      FLAGDIFDIS = d[38]
+      FLAGAZAR   = d[39]
+      FLAGCHI2   = d[40]
       titulos = '<table border=\"0\" cellpadding=\"5\" cellspacing=\"0\" style=\"padding-left:95px;\" width=\"100%\" >'+\n",
               "'<tr>'+
                 '<th>Nombre</th>'+
@@ -308,7 +316,8 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
            imprimirDato(d[19], 'Correlaci&oacute;n biserial', FLAGBISE) +               
            imprimirDato(d[20], 'Discriminaci&oacute;n', FLAGA) +               
            imprimirDato(d[21], 'Dificultad', FLAGB) +
-           imprimirDato(d[39], 'Azar', FLAGAZAR) +                               
+           imprimirDato(d[41], 'Azar', FLAGAZAR) +   
+           imprimirDato(d[26], 'estad&iacute;stico chi', FLAGCHI2) +   
     '<tr>'+
       '<td colspan=\"3\">  </td>'+
       '<td colspan=\"2\">'+ d[24] +'</td>'+

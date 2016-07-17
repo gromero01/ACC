@@ -2,7 +2,7 @@
 output:
   knitrBootstrap::bootstrap_document:
     title: "Analisis de item ICFES"
-    theme: Simplex
+    theme: Cerulean
     highlight: Tomorrow
     theme.chooser: TRUE
     highlight.chooser: TRUE
@@ -10,11 +10,11 @@ output:
 
 <style type="text/css" class="init">
 td.details-control {
-    background: url("lib/SD7Dz.png") no-repeat center center;
+    background: url("../../../../lib/SD7Dz.png") no-repeat center center;
     cursor: pointer;
 }
  tr.shown td.details-control {
-    background: url("lib/d4ICC.png") no-repeat center center;
+    background: url("../../../../lib/d4ICC.png") no-repeat center center;
 }
 </style>
 
@@ -22,13 +22,13 @@ td.details-control {
 <TABLE bgcolor="#FFFFFF" BORDER="0" CELLPADDING="2" CELLSPACING="2" WIDTH="100%">
 <TR>
 <TD WIDTH="80%"><center><font size="26"><B>An&aacute;lisis de &iacute;tems de las prueba SABER T&T </B></font></center></TD>
-<TD WIDTH="20%"><img src="logo.png" title="Logo Title Text 1" alt="alt text" /></TD>
+<TD WIDTH="20%"><img src="../../../../logo.png" title="Logo Title Text 1" alt="alt text" /></TD>
 </TR>
 </TABLE>
 
 ```{r, echo = FALSE, message = F, results = "asis", comment = NA, warning = F}
 for (Test in listTests){
-  cat("<h1> Prueba de", pp@nomTest, "</h1> \n ")
+  cat("<h1> Prueba de", Test@nomTest, "</h1> \n ")
   for (analysis in Test@listAnal){
     outHTML(analysis, srcPath = "..")
   }

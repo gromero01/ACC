@@ -203,14 +203,14 @@ function(object, desElim = NULL){
       infoItem <- setnames(infoItem, rnColum, names(rnColum))      
 
       if (object@exam == "SABERPRO") {
-        infoItem <- infoItem[toupper(infoItem[, "prueba"]) ==
-                             toupper(gsub("(\\.con|pba|PBA)", "", nameCon)), ]
+        #infoItem <- infoItem[toupper(infoItem[, "prueba"]) ==
+        #                     toupper(gsub("(\\.con|pba|PBA)", "", nameCon)), ]
         if ("subCon" %in% names(rnColum)) {
           infoItem[, "etiqu"]   <- gsub("^\\s?(\\d{1}\\..+)", "\\1", infoItem[, "subCon"])
           infoItem[, "subCon"]  <- gsub("^\\s?((\\d|\\.)+)(\\s+)?(\\w.+)", "AFIRM\\1", infoItem[, "subCon"])
         }
       }
-      nrowAnte <- nrow(infoCon)
+
       infoCon  <- merge(infoCon, infoItem[, c(names(rnColum), 'etiqu' = 'etiqu')], by = "id", all.x = TRUE)
       if (any(is.na(infoCon$subCon)))
         warning("**WARNING** Al cruzar con el archivo (eliminar duplicados o hay faltantes): ",

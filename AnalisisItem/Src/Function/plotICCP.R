@@ -2,7 +2,7 @@
 # # MantelLI.R
 # # R Versions: 2.15.0
 # #
-# # Author(s): Jorge Marop Carrasco Ortiz
+# # Author(s): Jorge Mario Carrasco Ortiz
 # #
 # # Description: Displays the empiric ICC vs theorical ICC for all
 # #
@@ -17,6 +17,39 @@
 # #   20151210: - Adapt to run ICC plots from information of Bilog
 # #             - Adapt to save a plot for each item in a Index
 ################################################################################
+
+irt.4PM.Info <- function(theta, item.par, D=1.7) {
+   # This function calculates the Fisher information for
+   # Four Parameter Model, given item parameters and ability.
+   #
+   # item.par should be a matrix with four columns:
+   # Each row represents an item,
+   # first column represents a parameters (item discrimination)
+   # second column represents b parameters (item difficulty)
+   # third column represents c parameters(pseudo-guessing parameter)
+   # fourth column represents d parameters (upper asymptote)
+   # theta can be a single number or a vector.
+
+if (length(item.par) < 4) {
+   item.par[4] = 1
+}
+
+if (length(item.par) < 3) {
+   item.par[3] = 0
+}
+
+if (length(item.par) < 2) {
+   item.par[2] = 1
+}
+
+return(((D * item.par[1])^2 * (item.par[4] - item.par[3]) ^ 2) /
+         ((item.par[3] + item.par[4] *
+           exp(D*item.par[1] * (theta - item.par[2]))) *
+         (1 - item.par[3] + (1-item.par[4]) *
+           exp(D*item.par[1] * (theta-item.par[2]))) *
+         (1 + exp(-D * item.par[1] * (theta - item.par[2])))^2) )
+}
+
 responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges",
                           dirPlot = "ICCexample.eps", plotName  = "Opciones de respuesta",
                           xlabel = "Habilidad", ylabel = "Proporción",
@@ -143,7 +176,7 @@ responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges"
 
 plotICCB <- function (itemParameters, resBlock, personAbilities, 
                       scaleD    = 1.702, methodBreaks = "Sturges",
-                      dirPlot   = "ICCexample.eps", nameIndice = NULL,
+                      dirPlot   = "ICCexample.eps", namesubCon = NULL,
                       plotName  = "Curvas ICC", xlabel = "Habilidad",
                       ylabel    = "Probabilidad", legendName = "Categorías",
                       flagGrSep = FALSE, alpha = 0.05, prueba = NULL, 
@@ -227,26 +260,37 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
       nameCategory       <- paramICC[[zz]][, "category"]
       itemICC            <- as.data.frame(t(paramICC[[zz]]))
       colnames(itemICC)  <- nameCategory
-      itemICC <- lapply(itemICC, function(z) {
+      auxItemICC <- itemICC
+      itemICC   <- lapply(itemICC, function(z) {
                           cj  <- as.numeric(as.character(z["azar"]))
                           bjk <- as.numeric(as.character(z["Location"]))
                           aj  <- as.numeric(as.character(z["discrimination"]))
                           return(cj + (1 - cj) * plogis(limX, location = bjk,
                                         scale = 1/(scaleD * aj)))
                         })
-      x            <- rep(limX, length(nameCategory))
-      categoria    <- rep(nameCategory, sapply(itemICC, length))
-      y            <- unlist(itemICC)
-      item         <- rep(zz, length(categoria))
-      itemICC <- data.frame(x, y, item, categoria)
-      curves  <- rbind(curves, itemICC)
+      plotINFO <- lapply(auxItemICC, function(z) { 
+                          cj  <- as.numeric(as.character(z["azar"]))
+                          bjk <- as.numeric(as.character(z["Location"]))
+                          aj  <- as.numeric(as.character(z["discrimination"]))
+                          irt.4PM.Info(limX, c(aj, bjk, cj))})      
+      x         <- rep(limX, length(nameCategory))
+      categoria <- rep(nameCategory, sapply(itemICC, length))
+      y         <- unlist(itemICC)
+      item      <- rep(zz, length(categoria))
+      itemICC   <- data.frame(x, y, item, categoria, curva = "ICC")
+      plotINFO  <- data.frame(x, 'y' = unlist(plotINFO), item, 
+                              categoria, curva = "INFO") 
+      curves    <- rbind(curves, itemICC, plotINFO)
     }
 
     curves[, 'categoria'] <- factor(curves[, 'categoria'])
 
     ntheDiff <- length(unique(personAbilities[, "ABILITY"]))
+    if (is.null(namesubCon)){
+      namesubCon <- ""
+    }    
     ntheDiff <- data.frame('Numero_Diferentes' = ntheDiff,
-                           'Indice' = nameIndice, 'Prueba' = prueba)
+                           'Indice' = namesubCon, 'Prueba' = prueba)
 
     fileThetaDif <- file.path(dirSalida, "corridas/thetasDiferentes.txt")
     if (file.exists(fileThetaDif)) {
@@ -322,24 +366,41 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
         auxAlp <- round(paramICC[[itName]]["discrimination"], 3)
         auxBet <- round(paramICC[[itName]]["Location"], 3)
         auxAza <- round(paramICC[[itName]]["azar"], 3)
-        finalPlot <- ggplot(itemCurve[[itName]], aes(x = x, y = y)) + geom_line(size = 0.8) +
+        maxINFO <- max(subset(itemCurve[[itName]], curva == "INFO")$y)
+        facScal <- ifelse(1 / maxINFO < 4, 1 / maxINFO, 4)
+        maxINFO <- ifelse(maxINFO < 1, maxINFO  * facScal, maxINFO)
+        textSize <- 20
+        # # Grafico 
+        infoPlt   <- ggplot(subset(itemCurve[[itName]], curva == "INFO"), 
+                            aes(x = x, y = y)) + theme_bw(18) + expand_limits( y = c(0, maxINFO)) + 
+                     geom_line(size = 0.3, linetype = "dashed", colour = "red") + labs(y = "")        
+        finalPlot <- ggplot(subset(itemCurve[[itName]], curva == "ICC"), 
+                            aes(x = x, y = y)) + 
+                     geom_line(aes(linetype = "ICC", colour="ICC"), size = 0.8) + 
                      labs(x = xlabel, y = ylabel) + facet_wrap(~item) +
-                     geom_point(data = empiricICC[[itName]], mapping = aes(x = x, y = y), shape = 18) +
-                     geom_line(data = empiricICC[[itName]], mapping = aes(x = x, y = y), linetype = 3, alpha = 0.5, size = 1) +
+                     geom_point(data = empiricICC[[itName]], mapping = aes(x = x, y = y), shape = textSize) +
+                     geom_line(data = empiricICC[[itName]], mapping = aes(x = x, y = y, linetype = "Information", colour="Information"), alpha = 0.5, size = 1) + 
+                     geom_line(data = empiricICC[[itName]], mapping = aes(x = x, y = y, linetype = "Empiric", colour="Empiric"), alpha = 0.5, size = 1) +
+                     scale_colour_manual(name="", values= c("blue", "black", "red")) + 
+                     scale_linetype_manual(name="", values=c("dashed", "solid", "dashed")) + 
                      geom_ribbon(data = empiricICC[[itName]], aes(ymin = pL,ymax = pU),
                                  linetype = 2, fill = "blue", colour = "blue", alpha = 0.25) +
                      #annotate("rect", xmin = -4.3, xmax = -3, ymin = 0.875, ymax = 1, alpha = .1) +
-                     annotate("text", x = -3.9, y = 0.965, label = paste("alpha == ", auxAlp), color = "blue", parse = TRUE) +
-                     annotate("text", x = -3.9, y = 0.915, label = paste("beta == ", auxBet), color = "blue", parse = TRUE)
-        if (auxAza != 0) {
-          finalPlot <- finalPlot + annotate("text", x = -3.9, y = 0.865, label = paste("c == ", auxAza), color = "blue", parse = TRUE)
+                     annotate("text", x = -3.9, y = 0.965, label = paste("alpha == ", auxAlp), color = "black", parse = TRUE, size = 6) +
+                     annotate("text", x = -3.9, y = 0.915, label = paste("beta == ", auxBet), color = "black", parse = TRUE, size = 6) +
+                     theme(legend.title = element_text(), # switch off the legend title
+                          legend.key.size = unit(1.5, "lines"),
+                          legend.key = element_rect(fill = "white"))# switch off the rectangle around symbols in the legend)
+        if (codModel == "07") {
+          finalPlot <- finalPlot + annotate("text", x = -3.9, y = 0.865, label = paste("c == ", auxAza), 
+                                            color = "black", parse = TRUE, size = 6)
         }                    
-        finalPlot <- finalPlot  + theme_light()
-
+        finalPlot <- finalPlot  + theme_bw(textSize) +  theme(legend.position = "bottom")
+        arrangeFinal <- ggplot_dual_axis(finalPlot, infoPlt)
         dirAux <- sapply(dirPlot, function(x) gsub("(_V.+\\.png)",
                          paste0("_", itName, "\\1"), x))
-        listGGp[[itName]] <- list('graph' = finalPlot, 'dir' = dirAux)
-        sapply(dirAux, function(x) ggsave(x, width = 10))
+        listGGp[[itName]] <- list('graph' = arrangeFinal, 'dir' = dirAux)
+        sapply(dirAux, function(x) ggsave(file = x, plot = arrangeFinal, width = 410, height = 297, units = "mm"))
       }
     }
     return(listGGp)
@@ -347,7 +408,7 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
 
 plotICCP <- function (itemParameters, resBlock, personAbilities,
                       scaleD    = 1.702, methodBreaks = "Sturges",
-                      dirPlot   = "ICCexample.eps", nameIndice = NULL,
+                      dirPlot   = "ICCexample.eps", namesubCon = NULL,
                       plotName  = "Curvas ICC", xlabel = "Habilidad",
                       ylabel    = "Probabilidad", legendName = "Categorías",
                       flagGrSep = FALSE, prueba = NULL, dirSalida = outPath) {
@@ -445,7 +506,7 @@ plotICCP <- function (itemParameters, resBlock, personAbilities,
 
     ntheDiff <- length(unique(personAbilities[, "ability"]))
     ntheDiff <- data.frame('Numero_Diferentes' = ntheDiff,
-                           'Indice' = nameIndice, 'Prueba' = prueba)
+                           'Indice' = namesubCon, 'Prueba' = prueba)
 
     fileThetaDif <- file.path(dirSalida, "corridas/thetasDiferentes.txt")
     if (file.exists(fileThetaDif)) {
@@ -494,7 +555,7 @@ plotICCP <- function (itemParameters, resBlock, personAbilities,
     if (length(countNA) != 0){
       countNA <- data.frame('Intervalo' = names(countNA),
                             'Item_All_NA' = as.character(countNA),
-                            'Indice' = nameIndice, 'Prueba' = prueba)
+                            'Indice' = namesubCon, 'Prueba' = prueba)
 
       if (file.exists(fileProInt)) {
         counAux  <- read.table(file = fileProInt, header = TRUE, sep = " ")
@@ -578,7 +639,7 @@ plotICCP <- function (itemParameters, resBlock, personAbilities,
 
 plotICCW <- function (itemParameters, resBlock, personAbilities,
                       scaleD = 1, methodBreaks = "Sturges",
-                      dirPlot = "ICCexample.eps", nameIndice = NULL,
+                      dirPlot = "ICCexample.eps", namesubCon = NULL,
                       plotName = "Curvas ICC", xlabel = "Habilidad",
                       ylabel = "Probabilidad") {
 
@@ -622,8 +683,11 @@ plotICCW <- function (itemParameters, resBlock, personAbilities,
     }
 
     ntheDiff <- length(unique(personAbilities[, "ability"]))
+    if (is.null(namesubCon)){
+      namesubCon <- ""
+    }
     ntheDiff <- data.frame('Numero_Diferentes' = ntheDiff,
-                           'Indice' = nameIndice, 'Prueba' = prueba)
+                           'Indice' = namesubCon, 'Prueba' = prueba)
 
     fileThetaDif <- file.path(dirSalida, "corridas/thetasDiferentes.txt")
     if (file.exists(fileThetaDif)) {
@@ -670,7 +734,7 @@ plotICCW <- function (itemParameters, resBlock, personAbilities,
     if (length(countNA) != 0){
       countNA <- data.frame('Intervalo' = names(countNA),
                             'Item_All_NA' = as.character(countNA),
-                            'Indice' = nameIndice, 'Prueba' = prueba)
+                            'Indice' = namesubCon, 'Prueba' = prueba)
 
       if (file.exists(fileProInt)) {
         counAux  <- read.table(file = fileProInt, header = TRUE, sep = " ")

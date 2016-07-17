@@ -544,7 +544,7 @@ analyzeTests <- function(fileJson, fUpdate = FALSE){
   
 setGeneric(name = "runAnalysis", def = function(object, ...){standardGeneric("runAnalysis")})
 setMethod("runAnalysis", "Test",
-function(object, jsonTest, fUpdate = FALSE, f){
+function(object, jsonTest, fUpdate = FALSE){
   # # Ejecuta los analisis con los parametros del archivo .json
   # #
   # # Arg:
@@ -555,18 +555,15 @@ function(object, jsonTest, fUpdate = FALSE, f){
   for(ii in 1:length(jsonTest)){
      # # Verificando si codeAnalysis existe para ese analisis
      analisis  <- names(jsonTest[[ii]])
-     posAnalys <- as.character(methods("codeAnalysis"))
-     posAnalys <- gsub("codeAnalysis,(.+)-.+", "\\1", posAnalys)
-     if (!analisis %in% posAnalys) {
-      warning('_OjO_______________________________________________________________\n', 
-            '(El análisis "', analisis, '" no tine clase y/o metodos definidos)\n',
-            '___________________________________________________________________')
-     } else {
-       # # Definiendo analisis
-       exprAnalysis <- paste0(analisis, "(test = object, paramExp = jsonTest[[ii]][[1]])")
-       auxAnalysis  <- eval(parse(text = exprAnalysis))
+     
+     # # Definiendo analisis
+     exprAnalysis <- paste0(analisis, "(test = object, paramExp = jsonTest[[ii]][[1]])")
+     auxAnalysis  <- try(eval(parse(text = exprAnalysis)))
+     if (class(auxAnalysis) != "try-error"){
        object@listAnal <- c(object@listAnal, auxAnalysis)
        names(object@listAnal)[length(object@listAnal)] <- analisis
+     }
+          
      # # Corriendo analisis
      isExecuted <- file.exists(auxAnalysis@outFile$pathRdata)
      if (fUpdate | !isExecuted){
@@ -575,7 +572,7 @@ function(object, jsonTest, fUpdate = FALSE, f){
      } else {
          cat("-----> Cargando los resultados de la clase '", analisis, "'\n")
      }
-     }
+     
   }
   return(object)
 })
@@ -595,9 +592,9 @@ jointReports <- function(listTests, fileJson, pathJS = 'lib', flagView = FALSE){
   if (!file.exists(docPath)) dir.create(docPath)
   options(encoding = "native.enc")
   rmarkdown::render('.\\Sweave\\reportAnaItem.Rmd', 'knitrBootstrap::bootstrap_document', 
-                    output_file = readJson$labelHtml,  output_dir = docPath, 
+                    output_file = readJson$labelHtml[["html"]],  output_dir = docPath, 
                     encoding = "utf-8")
-  salPathDoc <- file.path(docPath, readJson$labelHtml)
+  salPathDoc <- file.path(docPath, readJson$labelHtml[["html"]])
 
   # # Incluyendo archivos .js necesarios para las tablas
   jsonLib <- c(paste0('  <script src="', pathJS,'/htmlwidgets-0.5/htmlwidgets.js"></script>'),
@@ -617,7 +614,8 @@ jointReports <- function(listTests, fileJson, pathJS = 'lib', flagView = FALSE){
   archHtml  <- readLines(salPathDoc)
   archCSS   <- grep("<!-- jQuery -->", archHtml)
   indCSStab <- grep("/\\* style tables \\*/", archHtml)
-  archHtml  <- gsub("font-weight: bold;", "font-weight: bold; \n color: red; \n background-image: url(\"FondoPresentacionesICFES01.png\");" , archHtml)
+  #archHtml  <- gsub("font-weight: bold;", "font-weight: bold; \n color: red; \n background-image: url(\"FondoPresentacionesICFES01.png\");" , archHtml)
+  archHtml  <- gsub("font-weight: bold;", "font-weight: bold; \n background-image: url(\"../../../../FondoPresentacionesICFES01.png\");" , archHtml)
   archHtml  <- gsub("<body>", "<body onload=\"setupZoom()\">" , archHtml)  
   #archHtml  <- archHtml[-seq(indCSStab, indCSStab + 1)]
   archHtml[indCSStab + 1]  <- "$('table3').addClass('table-bordered table-condensed');"
@@ -625,9 +623,86 @@ jointReports <- function(listTests, fileJson, pathJS = 'lib', flagView = FALSE){
   archHtml <- c(archHtml[1:(archCSS + 2)], jsonLib, archHtml[(archCSS + 3):length(archHtml)])
   cat(archHtml, file = salPathDoc, sep = "\n")
   if (flagView) {
-    browseURL(salPathDoc)
+    browseURL(normalizePath(salPathDoc))
   }
   options(encoding = "UTF-8")
 }
 
+
+publishRepo <- function(fileJson, pathDest, flagActualizar = FALSE){
+
+  # # Lectura de json 
+  options(encoding = "UTF-8")
+  readJson <- jsonlite::fromJSON(fileJson, simplifyVector = TRUE, 
+                       simplifyDataFrame = FALSE, 
+                       simplifyMatrix = FALSE)
+  jsonHtml <- file.path(pathDest, "index.json")
+  if (file.exists(jsonHtml)){
+    auxJson <- jsonlite::fromJSON(jsonHtml, simplifyVector = TRUE, 
+                       simplifyDataFrame = FALSE, 
+                       simplifyMatrix = FALSE)
+  } else {
+    auxJson <- list()
+  }
+  auxJson <- unlist(auxJson)
+
+  # # Creando estructura de Json
+  outExam  <- unlist(sapply(readJson, function(x) x$paramLect$exam))
+  outYear  <- rep(readJson$labelHtml[["year"]], length(outExam))
+  outStage <- rep(readJson$labelHtml[["mode"]], length(outExam))
+  outName  <- unlist(sapply(readJson, function(x) x$paramLect$nomTest))
+  outName  <- gsub(".+\\((.+)\\)", "\\1", outName)
+  outList  <- rep(readJson$labelHtml[["html"]], length(outExam))
+  names(outList) <- paste(outExam, outYear, outStage, outName, sep = ".")
+
+  for (value in names(unlist(outList))){
+    auxJson[value] <- unlist(outList)[value]
+  }
+
+  # # Creación de carpetas
+  foldIni <- unique(file.path(pathDest, outExam, outYear, outStage))  
+  for (folder in foldIni){
+    dir.create(folder, recursive = TRUE, showWarnings = FALSE)
+    foldOut <- file.path(folder, c("Doc", "Output"))
+    for (out in foldOut){
+      dir.create(out, recursive = TRUE, showWarnings = FALSE)      
+    }
+    # # Verificando archivos
+    fileOut <- file.path(folder, "Output", list.files(outPath, recursive = TRUE))
+    fileDoc <- file.path(folder, "Doc", list.files(docPath, recursive = TRUE))
+    if (!flagActualizar){
+      if (any(file.exists(c(fileOut, fileDoc)))){
+        stop("---------------- Ya existen los archivos, no se creara el indice ni se copiaran (Si lo desea cambiar parametros flagActualizar = TRUE)-----------------")
+      }
+    }
+    # # Copiando archivos
+    file.copy(docPath, folder, recursive = TRUE)
+    file.copy(outPath, folder, recursive = TRUE)
+  }
+
+ 
+  # # Creando Lista 
+  consNode <- function(label, child = list()){
+      nodeAux <- list(jj = child)
+      names(nodeAux) <- label
+      return(nodeAux)
+  }
+
+  indexJson  <- list()
+  labelList  <- strsplit(names(auxJson), "\\.")
+  finalLabel <- unique(lapply(labelList, function(x) x[-length(x)]))
+  for (list in finalLabel) {
+    nodeList  <- consNode(list[1], consNode(list[2], consNode(list[3])))
+    indexJson <- append(indexJson, nodeList)
+  }
+
+  # # llenando lista
+  for (ii in 1:length(auxJson)){
+    list    <- labelList[[ii]]
+    auxHtml <- file.path(list[1], list[2], list[3], "Doc", auxJson[[ii]]) 
+    indexJson[[list[1]]][[list[2]]][[list[3]]][[list[4]]] <- auxHtml
+  }
+  # # Imprimir lista
+  cat(jsonlite::toJSON(indexJson, pretty = TRUE), file = jsonHtml)
+}
 
