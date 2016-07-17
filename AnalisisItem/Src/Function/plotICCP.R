@@ -180,7 +180,7 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
                       plotName  = "Curvas ICC", xlabel = "Habilidad",
                       ylabel    = "Probabilidad", legendName = "Categorías",
                       flagGrSep = FALSE, alpha = 0.05, prueba = NULL, 
-                      dirSalida = outPath, indexItems) {
+                      dirSalida = outPath, indexItems, codModel) {
 
   # # This function reads person ability estimates from Bilog
   # # and construct the ICC graphs

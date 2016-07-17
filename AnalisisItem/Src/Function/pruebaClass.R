@@ -638,7 +638,8 @@ publishRepo <- function(fileJson, pathDest, flagActualizar = FALSE){
                        simplifyMatrix = FALSE)
   jsonHtml <- file.path(pathDest, "index.json")
   if (file.exists(jsonHtml)){
-    auxJson <- jsonlite::fromJSON(jsonHtml, simplifyVector = TRUE, 
+    ppJson  <- gsub("var indexData\\s+=\\s+", "", readLines(jsonHtml, warn = FALSE))
+    auxJson <- jsonlite::fromJSON(ppJson, simplifyVector = TRUE, 
                        simplifyDataFrame = FALSE, 
                        simplifyMatrix = FALSE)
   } else {
@@ -704,5 +705,9 @@ publishRepo <- function(fileJson, pathDest, flagActualizar = FALSE){
   }
   # # Imprimir lista
   cat(jsonlite::toJSON(indexJson, pretty = TRUE), file = jsonHtml)
+  ppJson    <- readLines(jsonHtml, warn = FALSE)
+  ppJson[1] <- paste0("var indexData = ", ppJson[1]) 
+  cat(ppJson, file = jsonHtml, sep = "\n")
+
 }
 

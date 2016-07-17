@@ -85,10 +85,9 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
     '<th>Correlaci&oacute;n<br>- Bloque</th>' + 
     '<th>Correlaci&oacute;n<br>- &Iacute;ndice</th>' + 
     '<th  colspan=\"4\" rowspan=\"", length(colPos), 
-    "\" align = \"center\"> <a href=\"javascript:void(0)\" onclick=\"PopupCenter('",
-    "+ d[6] +', 'TCT Analysis', '944', '900')\">",
+    "\" align = \"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\'' + d[6].replace('..', '') +'\\')\">",
     "<img align=\"middle\" style=\"width:660px;height:550px;\" src=\"'+ 
-    d[6] + '\"></th>' + auxTable + '", linkExcel, "</tr></table>'};
+    d[6] + '\"></a></th>' + auxTable + '", linkExcel, "</tr></table>'};
     table.on('click', 'td.details-control', function() {
     var tr = $(this).closest('tr');
         var row = table.row( tr );
