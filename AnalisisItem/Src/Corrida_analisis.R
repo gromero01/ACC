@@ -37,17 +37,18 @@ source("06IRT.R")
 # # Execute 
 ################################################################################
 
-#dirPandoc <- file.path(Sys.getenv("APPDATA"), "..", "Local\\Pandoc") 
-Sys.setenv(RSTUDIO_PANDOC = "C:\\Program Files (x86)\\Pandoc")
+dirPandoc <- file.path(Sys.getenv("APPDATA"), "..", "Local\\Pandoc") 
+Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
+#Sys.setenv(RSTUDIO_PANDOC = "C:\\Program Files (x86)\\Pandoc")
 fileJson  <- "../Input/parameters.json"
 listTests <- analyzeTests(fileJson, fUpdate = FALSE)
 jointReports(listTests, fileJson, pathJS = "../../../../lib", flagView = FALSE)
 
-publishRepo(fileJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\MENU_ANALISISITEM", 
+publishRepo(fileJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 
             flagActualizar = TRUE)
 
 ################################################################################
 # # Depuración metodo 
 ################################################################################
 prueba0 <- listTests[[1]]
-object  <- Exploratory(prueba0)
+object  <- IRT(prueba0)
