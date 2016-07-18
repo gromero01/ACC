@@ -21,7 +21,16 @@ td.details-control {
 <BR>
 <TABLE bgcolor="#FFFFFF" BORDER="0" CELLPADDING="2" CELLSPACING="2" WIDTH="100%">
 <TR>
-<TD WIDTH="80%"><center><font size="26"><B>An&aacute;lisis de &iacute;tems de las prueba SABER T&T </B></font></center></TD>
+<TD WIDTH="80%"><center><font size="26"><B>An&aacute;lisis de &iacute;tems  
+
+```{r, echo = FALSE, message = F, results = "asis", comment = NA, warning = F}
+examLabel <- lapply(listTests, function(x) gsub("SABER", "", x@exam))
+examLabel <- unique(examLabel)
+if (length(examLabel) == 1){
+  examLabel <- ifelse(examLabel == "359", "3, 5, 7 y 9", examLabel)
+  cat('SABER', examLabel, '</B></font></center></TD>')  
+}
+```
 <TD WIDTH="20%"><img src="../../../../logo.png" title="Logo Title Text 1" alt="alt text" /></TD>
 </TR>
 </TABLE>
