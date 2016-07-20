@@ -54,8 +54,9 @@ Exploratory <- function(test, paramExp = NULL) {
 						     semilla = format(Sys.time(), "%d%m%Y"),
 						     tamSize = 0.5)
   if (!is.null(paramExp)) {
-  	isCorrect <- names(paramExp) %in% names(paramDefault) 
-  	paramExp  <- c(paramExp[isCorrect], paramDefault[!isCorrect])
+    isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
+    isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
+    paramExp  <- c(paramExp[isNew], paramDefault[isDefault])
   } else {
   	paramExp <- paramDefault
   }

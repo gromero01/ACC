@@ -27,6 +27,7 @@ Test <- setClass("Test",
  			        dictionaryList = 'list',		   # Diccionario de variables
  			        datBlock       = 'list',  	   # Datos leidos
  			        exam           = 'character',  # (SABER359, SABER11, SABERPRO)
+              periodo        = 'character',  # (AC20142, EK2015)
 	            verInput       = 'numeric',    # Version con el que se genera diccionarios
 	            nomTest        = 'character',  # Nombre para impresion en los reportes
 	            paramLect      = 'list',       # Parametros de lectura de la prueba
@@ -534,9 +535,16 @@ analyzeTests <- function(fileJson, fUpdate = FALSE){
     }
     auxTest <- new('Test', path = jsonLec$path, exam = jsonLec$exam, 
                    codMod = jsonLec$codMod, verInput = jsonLec$verInput, 
-                   nomTest = jsonLec$nomTest, paramLect = paramLect) 
+                   periodo = jsonLec$periodo,
+                   nomTest = jsonLec$nomTest, paramLect = paramLect)
+    if ("Filtros" %in% names(readJson[[test]])){
+      auxFiltros <- Filtros(auxTest, readJson[[test]]$Filtros)  
+      auxTest    <- codeAnalysis(auxFiltros)
+    }    
     auxTest <- runAnalysis(auxTest, jsonTest = readJson[[test]]$Analisis, 
                          fUpdate = fUpdate)
+    auxTest@listAnal <- c('Filtros' = auxFiltros, 
+                          auxTest@listAnal)
     listTests[[test]] <- auxTest
   }
   return(listTests)

@@ -4,7 +4,7 @@
 # #
 # # Author(s): Jorge Mario Carrasco
 # #
-# # SABER 11
+# # SABER 11	
 # # Description: Función creada para definar la clase prueba, la clase análisis y
 # #              reporte prueba para las definir las funciones de análisis de item.
 # #
@@ -28,7 +28,9 @@ outPath <- file.path("..", "Output")
 logPath <- file.path("..", "Log")
 
 options(encoding = "UTF-8")
-source(file.path("Function", "pruebaClass.R"))
+source(file.path(funPath, "tablasHtml.R"))
+source(file.path(funPath, "pruebaClass.R"))
+source("00Filtros.R")
 source("03TCT.R")
 source("04Exploratorio.R")
 source("06IRT.R") 
@@ -47,8 +49,9 @@ jointReports(listTests, fileJson, pathJS = "../../../../lib", flagView = FALSE)
 publishRepo(fileJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 
             flagActualizar = TRUE)
 
+
 ################################################################################
 # # Depuración metodo 
 ################################################################################
-prueba0 <- listTests[[1]]
-object  <- IRT(prueba0)
+object <- listTests[[1]]@listAnal[["Filtros"]]
+#outHTML(analisis)

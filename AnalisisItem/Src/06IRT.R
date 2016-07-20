@@ -66,8 +66,9 @@ IRT <- function(test, paramExp = NULL){
                        isCheckKeys = FALSE, kThresItemCorrDic = 0.2,
                        kThresItemCorrOrd = 0.2)
   if (!is.null(paramExp)) {
-    isCorrect <- names(paramExp) %in% names(paramDefault) 
-    paramExp  <- c(paramExp[isCorrect], paramDefault[!isCorrect])
+    isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
+    isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
+    paramExp  <- c(paramExp[isNew], paramDefault[isDefault])
   } else {
     paramExp <- paramDefault
   }
@@ -380,6 +381,9 @@ setMethod("codeAnalysis", "IRT",
         tablaFin[, indPos := ifelse(TRIED <= 200, 1, ifelse(TRIED > 100000, 4, ifelse(TRIED > 500, 3, 2))), by = item]
         tablaFin[, minOutms := c(0.7, 0.75, 0.8, 0.9)[indPos]]
         tablaFin[, maxOutms := c(1.3, 1.25, 1.2, 1.1)[indPos]]
+
+        # # Compute B rescal
+        #tablaFin[, diffRescal := ((dif -mean(dif))/ sd(dif)) * object@param$espSd + object@param$espMean]
 
         # # Modifica William 
         tablaFin <- cbind(tablaFin, tablaFin[, list(

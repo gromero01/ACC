@@ -213,7 +213,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
                 'dif' = paste0(dif, " (", eedif, ") "), dir_OP, dir_ICC,                               # 21 - 23
                 'Mult' = paste0("M: ", round(M_prop * 100, 2), "% (",  round(M_mAbility, 3), ")"),     # 24
                 'Omis' = paste0("O: ", round(O_prop * 100, 2), "% (",  round(O_mAbility, 3), ")"),     # 25
-                'Chis' = paste0(chi2, " - gl. ", gl_chi2, "(", p_val_chi2, ")"),                       # 26 
+                'Chis' = paste0(chi2, "(pval = ", p_val_chi2, ") - gl = ", gl_chi2),                   # 26 
                 FLAGA, FLAGB, FLAGBISE, FLAGCORR, FLAGINFIT, FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN,   # 27 - 35
                 FLAGOUTFIT, FLAGPROP, FLAGDIFDIS, FLAGAZAR, FLAGCHI2,                                  # 36 - 40
                 'azar' = paste0(azar, " (", eeazar, ") "),                                             # 41

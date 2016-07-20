@@ -20,14 +20,6 @@
 
 #options(encoding = "UTF-8")
 
-###############################################################################
-# # Load wrapWS.R functions
-################################################################################
-source(file.path(funPath, "univariateFunctions01.R"))
-source(file.path(funPath, "log.R"))  # # log
-source(file.path(funPath, "plotCMC.R"))
-source(file.path(funPath, "pruebaClass.R"))
-source(file.path(funPath, "tablasHtml.R"))
 
 ################################################################################
 # # Definition of class and parameters
@@ -48,8 +40,9 @@ TCT <- function(test, paramExp = NULL){
                        catToNA = c('No Presentado', 'NR', 'Multimarca'), 
                        isCheckKeys = FALSE)
   if (!is.null(paramExp)) {
-    isCorrect <- names(paramExp) %in% names(paramDefault) 
-    paramExp  <- c(paramExp[isCorrect], paramDefault[!isCorrect])
+    isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
+    isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
+    paramExp  <- c(paramExp[isNew], paramDefault[isDefault])
   } else {
     paramExp <- paramDefault
   }
@@ -67,6 +60,11 @@ TCT <- function(test, paramExp = NULL){
 setMethod("codeAnalysis", "TCT",
  # object <- controlData[[prueba]]
 function(object){
+  
+    # # Load wrapWS.R functions
+    source(file.path(funPath, "univariateFunctions01.R"))
+    source(file.path(funPath, "log.R"))  # # log
+    source(file.path(funPath, "plotCMC.R"))
 
     # # Load libraries
     require(psych)  # # 1.1.10

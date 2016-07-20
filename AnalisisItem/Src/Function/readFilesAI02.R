@@ -430,9 +430,8 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
       nombres <- nombres[-1]
     }
     if (object@exam %in% c("SABERPRO")) {
-      anchos  <- anchos[-1]; anchos[1] <- anchos[1] + 1
-      anchos[2] <- anchos[2] - 1
-      nombres <- nombres[-1]
+      anchos    <- anchos[-1]
+      nombres   <- nombres[-1]
     }
 
     read <-  laf_open_fwf(filename = inFileDat, column_widths = anchos,

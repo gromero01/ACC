@@ -24,7 +24,7 @@ td.details-control {
 <TD WIDTH="80%"><center><font size="26"><B>An&aacute;lisis de &iacute;tems  
 
 ```{r, echo = FALSE, message = F, results = "asis", comment = NA, warning = F}
-examLabel <- lapply(listTests, function(x) gsub("SABER", "", x@exam))
+examLabel <- sapply(listTests, function(x) gsub("SABER", "", x@exam))
 examLabel <- unique(examLabel)
 if (length(examLabel) == 1){
   examLabel <- ifelse(examLabel == "359", "3, 5, 7 y 9", examLabel)
