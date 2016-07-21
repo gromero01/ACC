@@ -306,7 +306,16 @@ function(object, srcPath = "."){
   </ol>')
 
   for (result in names(listResults)){
-    #print(listXLSX[[result]])
+    #x = listResults[[result]]; codPrueba = result; pathExcel = listXLSX[[result]]
     reportTCT(listResults[[result]], codPrueba = result, pathExcel = listXLSX[[result]])
+    totAlpha <- unique(listResults[[result]][, "alphaTotal"])
+    cat("El coeficiente &alpha; de Cronbach (KR-20) para el total de preguntas de la prueba es de ", 
+        round(totAlpha, 2), ".", sep = "")
+    cat("Las figuras presentadas anteriormente corresponden", 
+        "a la(s) curva(s) de Cronbach-Mesbah para la prueba",
+        "o subconjuntos de la prueba", sep = "")
+    cat(" (la cual muestra el valor máximo del coeficiente que se obtiene al
+      eliminar un ítem sucesivamente).")
   }
+
 })

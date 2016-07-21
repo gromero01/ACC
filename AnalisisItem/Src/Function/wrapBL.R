@@ -198,7 +198,8 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
                       logistic = TRUE, kD = NULL, dif = NULL,
                       srcPath = "../src/", binPath = "../bin/", verbose = TRUE,
                       commentFile = NULL,  calibFile = NULL,
-                      runProgram = TRUE, itNumber = NULL, NPArm = 2){
+                      runProgram = TRUE, itNumber = NULL, NPArm = 2, 
+                      thrCorr = 0.05){
 
     # # This function generates a Parscale control file given the options in its
     # # arguments, runs it and reads the item parameters
@@ -461,7 +462,8 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   cat("       CYCLES = 500, \n", file = commandFile, append = TRUE)
   cat("       NEWTON = 30, \n", file = commandFile, append = TRUE)
   cat("       NQPT = ", nQuadPoints, ", \n", sep = "", file = commandFile, append = TRUE)
-  cat("       NOSprior, \n", file = commandFile, append = TRUE)
+  #cat("       NOSprior, \n", file = commandFile, append = TRUE)
+  cat("       TPRIOR, \n", file = commandFile, append = TRUE)
   cat("       DIAGNOSIS = 1, \n", file = commandFile, append = TRUE)
   cat("       CRIT = 0.0001 \n", file = commandFile, append = TRUE)
   cat("       ;\n", file = commandFile, append = TRUE)
@@ -481,9 +483,15 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     file.remove(batDir)
   }
 
+  # # Escribiendo bats
+  cat(paste(gsub("/", "\\\\", file.path(binPath, "BLM1.eje")),
+            " ", runName, " > ", paste0(runName, ".log1"),
+            "\n", sep = ""), file = gsub("\\.bat", "_f1.bat", batDir))
+
   cat(paste(gsub("/", "\\\\", file.path(binPath, "BLM1.eje")),
             " ", runName, " > ", paste0(runName, ".log1"),
             "\n", sep = ""), file = batDir)
+
   cat(paste(gsub("/", "\\\\", file.path(binPath, "BLM2.eje")),
             " ", runName, " > ", paste0(runName, ".log2"),
             "\n", sep = ""), file = batDir,
@@ -493,7 +501,44 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
             "\n", sep = ""), file = batDir,
       append = TRUE)
 
+  # # Exclusión correlación biserial
   setwd(runPath)
+  iiCor <- 1
+  repeat{
+    system("WinXP-RUNBILOG_f1.bat")
+    if (iiCor == 1){
+      file.copy(tctFileName, gsub("\\.TCT", "_ori.TCT", tctFileName))
+    }
+    # # Identificando items malos
+    auxTCT <- ReadBlTCTFile(tctFileName, ".")
+    isBad  <- auxTCT[, "BISERIAL"] < thrCorr
+    isBad  <- which(itemIds %in% auxTCT[isBad, "item"])
+    auxBlm <- readLines(commandFile)
+    linea1 <- grep(pattern = "INUmber", auxBlm)
+    linea2 <- grep(pattern = ">CALIB", auxBlm)
+    
+    # # Construyendo el nuevo archivo
+    auxdata1 <- auxBlm[(linea1 + 1):(linea2 - 3)]
+    auxdata <- unlist(strsplit(paste0(auxdata1, collapse=""), ","))
+    auxdata <- strwrap(paste(subset(auxdata, !(auxdata%in%isBad)), 
+                       collapse = ", "), width = 30)
+    numAux  <- linea2 - linea1 - 3 - length(auxdata)
+    auxdata <- c(auxdata, rep("", numAux))
+    auxBlm[(linea1 + 1):(linea2 - 3)] <- gsub("\\s", "", auxdata)
+
+    # # Cambiar el NITems
+    linea3 <- grep(pattern = "NITems", auxBlm)
+    antNUM <- gsub(".+\\((\\d+)\\).+", "\\1", auxBlm[linea3])
+    nueNUM <- as.character(as.numeric(antNUM) - length(isBad))
+    nueNUM <- gsub("(.+\\()(\\d+)(\\).+)", paste0("\\1", nueNUM, "\\3"), 
+                  auxBlm[linea3])
+    auxBlm[linea3] <- nueNUM
+    cat(auxBlm, sep = "\n", file = commandFile)
+    if(all(auxTCT[, "BISERIAL"] >= thrCorr)){
+      break
+    }
+    iiCor <- iiCor + 1
+  }
   if (runProgram) {
     system("WinXP-RUNBILOG.bat")
   }

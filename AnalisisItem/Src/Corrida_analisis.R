@@ -53,5 +53,5 @@ publishRepo(fileJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1",
 ################################################################################
 # # Depuración metodo 
 ################################################################################
-object <- listTests[[1]]@listAnal[["Filtros"]]
-#outHTML(analisis)
+#prueba0 <- listTests[[1]]
+object  <- listTests[[1]]@listAnal[["IRT"]]

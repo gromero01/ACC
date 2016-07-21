@@ -14,7 +14,7 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
   iniCol  <- x[, lapply(.SD, unique), .SDcols = colsUni, by = c("pba_subCon")]
   iniCol  <- iniCol[!duplicated(pba_subCon), ]
   cols   <- c("alphaTotal", "raw_alpha", "corIt", "corItSub")
-  x[, (cols) := round(.SD,3), .SDcols = cols]
+  x[,  (cols) := round(.SD, 3), .SDcols = cols]
   colMeasure <- c("id", "raw_alpha", "corIt", "corItSub")
   x <- suppressWarnings(melt(data.table(x), id = c("ind_Sub", "pba_subCon"), 
                              measure = colMeasure))
@@ -48,7 +48,7 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
   dcastCont <- data.frame(dcastCont)
   names(dcastCont)[1:4] <- c("Codigo", "subCon", "&alpha;", 
                              "No_Items")
-  dcastCont[, "&alpha;"] <- round(as.numeric(dcastCont[, "&alpha;"], 3))
+  dcastCont[, "&alpha;"] <- round(as.numeric(dcastCont[, "&alpha;"]), 3)
   if (all(as.character(dcastCont$Codigo) == as.character(dcastCont$subCon))) {
     nColIni               <- c(0, 2, 6:(ncol(dcastCont) + 1))  
   } else {
@@ -209,21 +209,23 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
   x <- x[, list(item_blq, item, nAlertas, disc, dif, azar, item_blq,                                   # 2  - 8
                 item, SUBBLOQUE, COMPONENTE, COMPETENCIA, keyItem,                                     # 9  - 13
                 "", TRIED, RIGHT, PCT, "", BISERIAL,                                                   # 14 - 19
-                'disc' = paste0(disc, " (", eedisc, ") "),                                             # 20
-                'dif' = paste0(dif, " (", eedif, ") "), dir_OP, dir_ICC,                               # 21 - 23
+                'disc' = ifelse(is.na(disc), "NA", paste0(disc, " (", eedisc, ") ")),                                             # 20
+                'dif'  = ifelse(is.na(dif), "NA", paste0(dif, " (", eedif, ") ")), dir_OP, dir_ICC,                               # 21 - 23
                 'Mult' = paste0("M: ", round(M_prop * 100, 2), "% (",  round(M_mAbility, 3), ")"),     # 24
                 'Omis' = paste0("O: ", round(O_prop * 100, 2), "% (",  round(O_mAbility, 3), ")"),     # 25
-                'Chis' = paste0(chi2, "(pval = ", p_val_chi2, ") - gl = ", gl_chi2),                   # 26 
+                'Chis' = ifelse(is.na(chi2), "NA", paste0(chi2, "(pval = ", p_val_chi2, ") - gl = ", gl_chi2)),                   # 26 
                 FLAGA, FLAGB, FLAGBISE, FLAGCORR, FLAGINFIT, FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN,   # 27 - 35
                 FLAGOUTFIT, FLAGPROP, FLAGDIFDIS, FLAGAZAR, FLAGCHI2,                                  # 36 - 40
-                'azar' = paste0(azar, " (", eeazar, ") "),                                             # 41
-                'posReporte' = match(x$item, names(itObs)) - 1)]                                       # 42
-  
+                'azar' = ifelse(is.na(azar), "NA", paste0(azar, " (", eeazar, ") ")),                                             # 41
+                'posReporte' = match(x$item, names(itObs)) - 1, diffRescal)]                           # 42 - 43
+
+
   # # Renombrando primeras columnas
   x <- data.frame(x)
   names(x)[1:7] <- c("Nombre", "C&oacute;digo", "Alertas", 
                      "Discriminaci&oacute;n", "Dificultad", 
                      "Azar", "Alertas")
+  x[is.na(x)] <- ""
 
   # # Tablas en Html de los items
   htmlTab1 <- datatable(#filter = 'bottom',
@@ -240,6 +242,15 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
     ),  
     callback = JS(
     paste0("table.column(1).nodes().to$().css({cursor: 'pointer'});    
+    var imprimirImagenes = function(imgOP, imgICC){
+      if(imgICC != '' && imgICC != 'null'){
+        return '<td colspan=\"3\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ imgOP.replace('..', '') +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"'+ imgOP +'\"></a></td>' +
+               '<td colspan=\"4\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ imgICC.replace('..', '') +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"'+ imgICC +'\"></a></td>'
+
+      } {
+        return '<td colspan=\"7\" align=\"center\"><font size=\"43\" color=\"red\"> ITEM SIN ESTIMACION IRT </font></td>'
+      }
+    };
     var imprimirDato = function(x, label, flag){
       
       if ( x != '' && x != 'null') {
@@ -259,21 +270,21 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
       }
     };
     var format = function(d) {
-      current    = d[42]
-      FLAGA      = d[27]
-      FLAGB      = d[28]
-      FLAGBISE   = d[29]
-      FLAGCORR   = d[30]
-      FLAGINFIT  = d[31]
-      FLAGKEY1   = d[32]
-      FLAGKEY2   = d[33]
-      FLAGKEY3   = d[34]
-      FLAGMEAN   = d[35]
-      FLAGOUTFIT = d[36]
-      FLAGPROP   = d[37]
-      FLAGDIFDIS = d[38]
-      FLAGAZAR   = d[39]
-      FLAGCHI2   = d[40]
+      current    = d[42];
+      FLAGA      = d[27];
+      FLAGB      = d[28];
+      FLAGBISE   = d[29];
+      FLAGCORR   = d[30];
+      FLAGINFIT  = d[31];
+      FLAGKEY1   = d[32];
+      FLAGKEY2   = d[33];
+      FLAGKEY3   = d[34];
+      FLAGMEAN   = d[35];
+      FLAGOUTFIT = d[36];
+      FLAGPROP   = d[37];
+      FLAGDIFDIS = d[38];
+      FLAGAZAR   = d[39];
+      FLAGCHI2   = d[40];
       titulos = '<table border=\"0\" cellpadding=\"5\" cellspacing=\"0\" style=\"padding-left:95px;\" width=\"100%\" >'+\n",
               "'<tr>'+
                 '<th>Nombre</th>'+
@@ -300,7 +311,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
                 '<th colspan=\"2\">Estadisticos del &iacute;tem</th>'+
                 '<th colspan=\"1\">Valor</th>'+
                 '<th colspan=\"4\">Distribuci&oacute;n opciones de respuestas</th>'+
-              '</tr>'
+              '</tr>';
               
     return titulos  + 
     '<tr>'+
@@ -310,11 +321,12 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
       '</td>'+
     '</tr>'+
            imprimirDato(d[16], 'Correctas', 0) +
-           imprimirDato(d[17], 'Porcentaje', FLAGMEAN) +           
+           imprimirDato(d[17] + '%', 'Porcentaje', FLAGMEAN) +           
            imprimirDato(d[18], 'Correlaci&oacute;n biserial excluyendo &iacute;tem', FLAGCORR) +           
            imprimirDato(d[19], 'Correlaci&oacute;n biserial', FLAGBISE) +               
            imprimirDato(d[20], 'Discriminaci&oacute;n', FLAGA) +               
            imprimirDato(d[21], 'Dificultad', FLAGB) +
+           imprimirDato(d[43], 'Dificultad Escalada', FLAGB) +
            imprimirDato(d[41], 'Azar', FLAGAZAR) +   
            imprimirDato(d[26], 'estad&iacute;stico chi', FLAGCHI2) +   
     '<tr>'+
@@ -323,8 +335,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
       '<td colspan=\"2\">'+ d[25] +'</td>'+
     '</tr>'+
     '<tr>'+
-      '<td colspan=\"3\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ d[22].replace('..', '') +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"'+ d[22] +'\"></a></td>'+
-      '<td colspan=\"4\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ d[23].replace('..', '') +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"'+ d[23] +'\"></a></td>'+
+     imprimirImagenes(d[22], d[23]) +
     '</tr>'+", "\n'</table>';
     };
     table.on('click', 'td.details-control', function() {

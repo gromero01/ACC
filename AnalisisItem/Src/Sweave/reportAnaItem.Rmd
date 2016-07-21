@@ -35,7 +35,7 @@ if (length(examLabel) == 1){
 </TR>
 </TABLE>
 
-```{r, echo = FALSE, message = F, results = "asis", comment = NA, warning = F}
+```{r, echo = FALSE, message = F, results = "asis", comment = NA, warning = F, out.width = 800, out.height = 120, fig.width=16, fig.height=9}
 for (Test in listTests){
   cat("<h1> Prueba de", Test@nomTest, "</h1> \n ")
   for (analysis in Test@listAnal){

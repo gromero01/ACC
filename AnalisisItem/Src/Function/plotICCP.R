@@ -386,13 +386,13 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
                      geom_ribbon(data = empiricICC[[itName]], aes(ymin = pL,ymax = pU),
                                  linetype = 2, fill = "blue", colour = "blue", alpha = 0.25) +
                      #annotate("rect", xmin = -4.3, xmax = -3, ymin = 0.875, ymax = 1, alpha = .1) +
-                     annotate("text", x = -3.9, y = 0.965, label = paste("alpha (Discriminicación) == ", auxAlp), color = "black", parse = TRUE, size = 6) +
-                     annotate("text", x = -3.9, y = 0.915, label = paste("beta (Dificultadad) == ", auxBet), color = "black", parse = TRUE, size = 6) +
+                     annotate("text", x = -3, y = 0.965, label = paste("alpha (Discriminicación) == ", auxAlp), color = "black", parse = TRUE, size = 6) +
+                     annotate("text", x = -3, y = 0.915, label = paste("beta (Dificultadad) == ", auxBet), color = "black", parse = TRUE, size = 6) +
                      theme(legend.title = element_text(), # switch off the legend title
                           legend.key.size = unit(1.5, "lines"),
                           legend.key = element_rect(fill = "white"))# switch off the rectangle around symbols in the legend)
         if (codModel == "07") {
-          finalPlot <- finalPlot + annotate("text", x = -3.9, y = 0.865, label = paste("c (Azar)== ", auxAza), 
+          finalPlot <- finalPlot + annotate("text", x = -3, y = 0.865, label = paste("c (Azar)== ", auxAza), 
                                             color = "black", parse = TRUE, size = 6)
         }                    
         finalPlot <- finalPlot  + theme_bw(textSize) +  theme(legend.position = "bottom")

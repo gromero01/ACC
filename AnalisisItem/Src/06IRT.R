@@ -64,7 +64,7 @@ IRT <- function(test, paramExp = NULL){
                        flagSubCon = TRUE, orderedDat = FALSE,
                        idNoPKey = c('O', 'M'), constDmodel = 1.7,
                        isCheckKeys = FALSE, kThresItemCorrDic = 0.2,
-                       kThresItemCorrOrd = 0.2)
+                       kThresItemCorrOrd = 0.2, espSd = 1, espMean = 0)
   if (!is.null(paramExp)) {
     isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
     isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
@@ -223,8 +223,8 @@ setMethod("codeAnalysis", "IRT",
                  personIds = as.character(personDataBlo[[1]]), 
                  itemIds = paste0("I", dictVarPrueba$id), binPath = binPath,
                  runPath = file.path(outPath, 'corridas'),
-                 verbose = TRUE, runProgram = TRUE,
-                 commentFile = indexData, NPArm = 3)
+                 verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
+                 commentFile = indexData, NPArm = 3, thrCorr = 0.05)
         
         # Reading results of chi square test 
         itemPH2File <- paste(indexData, ".PH2", sep = "")
@@ -234,9 +234,24 @@ setMethod("codeAnalysis", "IRT",
         itemDiffFile   <- paste("salidas/", indexData, ".PAR", sep = "")
         itemParameters <- try(ReadBlParFile(itemDiffFile, outPath))
 
-        # # Reading TCT results
+        # # Reading TCT results Original
+        itemTCTFile  <- paste("salidas/", indexData, "_ori.TCT", sep = "")
+        tctParam_ORI <- try(ReadBlTCTFile(itemTCTFile, outPath))
+
+        # # Reading TCT results Final
         itemTCTFile <- paste("salidas/", indexData, ".TCT", sep = "")
         tctParam    <- try(ReadBlTCTFile(itemTCTFile, outPath))
+        
+        # # Filtrando datos
+        indexItemsFin <- intersect(indexItems, gsub("^I", "", tctParam[, "item"]))
+
+        # # Ajustando archivo final TCT
+        tctParam    <- merge(tctParam_ORI, tctParam[, c("item", "BISERIAL")], 
+                             by = "item", all.x = TRUE)
+        tctParam[, "BISERIAL"] <- ifelse(is.na(tctParam[, "BISERIAL.y"]), 
+                                         tctParam[, "BISERIAL.x"], 
+                                         tctParam[, "BISERIAL.y"])
+        tctParam[, "BISERIAL.x"] <- tctParam[, "BISERIAL.y"] <- NULL
 
       	# # Resultados estimación de habilidades
         personAbilFile  <- paste("salidas/", indexData, ".SCO", sep = "")
@@ -250,6 +265,8 @@ setMethod("codeAnalysis", "IRT",
         } else {
            load(outFileAbili)
         }
+        meanAbil <- mean(personAbilities$ABILITY)
+        sdAbil   <- sd(personAbilities$ABILITY)
 
         # # Comprobación de errores
         if (class(itemParameters) == "try-error" |
@@ -293,17 +310,18 @@ setMethod("codeAnalysis", "IRT",
         # # ICC curve
         resBlock[,"consLect"]  <- personDataBlo[!isMissingHalf]
         resBlock[, "iSubject"] <- 1:nrow(resBlock)
+        resBlockFin   <- resBlock[, c(indexItemsFin, "consLect", "iSubject"), with = FALSE]
 
         dirPlotICCpng <- paste0("graficos/plotICC-", indexData, ".png")
         dirPlotICCpng <- file.path(outPath, dirPlotICCpng)
 
         cat("......Guardado ICC. \n")  
-        listICC <- plotICCB(itemParameters, resBlock, personAbilities,
+        listICC <- plotICCB(itemParameters, resBlockFin, personAbilities,
                    scaleD = object@param$constDmodel, flagGrSep = TRUE,
                    methodBreaks = "Sturges", namesubCon = subComm,
                    dirPlot = dirPlotICCpng, plotName =
                    paste("ICC para", object@nomPrueba), prueba = kk, 
-                   dirSalida = outPath, indexItems = indexItems, 
+                   dirSalida = outPath, indexItems = indexItemsFin, 
                    codModel = object@test@codMod)
 
         # # Items - Person Curve
@@ -316,7 +334,7 @@ setMethod("codeAnalysis", "IRT",
         itHaMap    <- WrightMapICFES(itemParameters, personAbilities,
                                      "ABILITY", "dif", file = dirPerItem,
                                      Title = gsub("(\\s+)?SABER 3,\\s?5 y 9 ", "", pathGraph))
-
+        listResults[[auxPru]][["itHaMap"]] <- itHaMap
 
         # # Information of block
         if (object@test@exam == "SABER359") {
@@ -337,7 +355,7 @@ setMethod("codeAnalysis", "IRT",
         }
 
         # # Codigos de los subloques
-        itemParameters <- merge(itemParameters, infoBloque, by = "item", all.x = TRUE)
+        itemParameters <- merge(itemParameters, infoBloque, by = "item", all = TRUE)
         setnames(itemParameters, "item_cod", "item_blq")
         selecColTCT    <- names(tctParam)
         tctParam 	     <- merge(tctParam, infoBloque, by = "item", all.x = TRUE)
@@ -360,11 +378,11 @@ setMethod("codeAnalysis", "IRT",
         tablaRep <- melt(tablaRep, id = 1:2, measure = 3:4)
         tablaRep <- dcast.data.table(tablaRep, item ~ categoria + variable, fun = sum,
                                      value.var = c("value"))
-        tablaFin <- merge(merge(ldirOP, ldirICC, by = "item"), tablaRep, by = "item")
-        tablaFin <- merge(tablaFin, itemParameters, by = "item")
-        tablaFin <- merge(tablaFin, tctParam, by = "item")
-        tablaFin <- merge(tablaFin, tablaFlags, by = "item")
-        tablaFin <- merge(tablaFin, itemPH2, by = "item")
+        tablaFin <- merge(merge(ldirOP, ldirICC, by = "item", all = TRUE), tablaRep, by = "item", all = TRUE)
+        tablaFin <- merge(tablaFin, itemParameters, by = "item", all = TRUE)
+        tablaFin <- merge(tablaFin, tctParam, by = "item", all = TRUE)
+        tablaFin <- merge(tablaFin, tablaFlags, by = "item", all = TRUE)
+        tablaFin <- merge(tablaFin, itemPH2, by = "item", all = TRUE)
 
 
         # # Fill other columns in the report
@@ -383,7 +401,12 @@ setMethod("codeAnalysis", "IRT",
         tablaFin[, maxOutms := c(1.3, 1.25, 1.2, 1.1)[indPos]]
 
         # # Compute B rescal
-        #tablaFin[, diffRescal := ((dif -mean(dif))/ sd(dif)) * object@param$espSd + object@param$espMean]
+        #tablaFin[, diffRescal := ((dif - mean(dif, na.rm = TRUE))/ 
+        #                         sd(dif, na.rm = TRUE)) * object@param$espSd 
+        #                         + object@param$espMean]
+
+        tablaFin[, diffRescal := ((dif - meanAbil)/ sdAbil) * object@param$espSd 
+                                 + object@param$espMean]
 
         # # Modifica William 
         tablaFin <- cbind(tablaFin, tablaFin[, list(
@@ -490,8 +513,12 @@ function(object, srcPath){
       } else {
         nomSub <- paste0("An&aacute;lisis para ", nomSub)
       }
-      cat('<h3 id="Exploratory_Header_tab">\n', nomSub, 
-          '</h3>\n\n')
+      cat('<h3 id="IRT_Header_tab"> Mapa Ítems Personas</h3>\n\n')
+      lay  <- rbind(c(1,1,1,1,1,2))
+      pFin <- suppressWarnings(grid.arrange(grobs = list(listResults[[nomAux]][["itHaMap"]][[1]], 
+                               listResults[[nomAux]][["itHaMap"]][[2]]), layout_matrix = lay))
+      suppressWarnings(grid::grid.draw(pFin))
+      cat('<h3 id="IRT_Header_tab">\n', nomSub, '</h3>\n\n')
       reporteItem(listResults[[nomAux]]$tablaFin, idPrueba = nomAux)    
     }    
   }
