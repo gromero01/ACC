@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Análisis de Items</title>
+   <link rel="shortcut icon" href="favicon.ico">
+	<!-- food icons -->
+	<link rel="stylesheet" type="text/css" href="css/organicfoodicons.css" />
+	<!-- demo styles -->
+	<link rel="stylesheet" type="text/css" href="css/demo.css" />
+	<!-- menu styles -->
+	<link rel="stylesheet" type="text/css" href="css/component.css" />
+    <script src="lib/jquery-1.11.1/jquery.min.js"></script>
+	<script src="js/modernizr-custom.js"></script>
+	<script src="index.json"></script>
+</head>
+
+<body>
+	<!-- Main container -->
+	<div class="container">
+		<!-- Blueprint header -->
+	  <header class="bp-header cf">
+			<div class="dummy-logo">
+<img src="img/pencil-160872_640.png" width="72" height="70" alt=""/>
+
+<h2 class="dummy-heading">Análisis de ítems</h2>
+			</div>
+			<div class="bp-header__main">
+			  <img src="img/logo.png" width="220" height="143" alt=""/>
+			  <h1 class="bp-header__title">&nbsp;</h1>
+			</div>
+		</header>
+		<button class="action action--open" aria-label="Open Menu"><span class="icon icon--menu"></span></button>
+		<nav id="ml-menu" class="menu">
+			<button class="action action--close" aria-label="Close Menu"><span class="icon icon--cross"></span></button>
+			<div class="menu__wrap">
+				<ul data-menu="main" class="menu__level">
+					<li class="menu__item"><a class="menu__link" ltest = "SABER359" lyear = "None" lmode = "None" data-submenu="submenu-2" href="#">SABER 3°,5°,7°y9°</a>
+				  <li class="menu__item"><a class="menu__link" ltest = "SABER11" lyear = "None" lmode = "None" data-submenu="submenu-1" href="#">SABER 11</a></li>
+</li>
+					<li class="menu__item"><a class="menu__link" ltest = "SABERTyT" lyear = "None" lmode = "None" data-submenu="submenu-3" href="#">SABER T&amp;T</a></li>
+					<li class="menu__item"><a class="menu__link" ltest = "SABERPRO" lyear = "None" lmode = "None" data-submenu="submenu-4" href="#">SABER PRO</a></li>
+				</ul>
+
+	<p id="submenus"></p>
+<script>
+function buildList(){
+//	alert(indexData["SABERPRO"]["20152"]["Inicial"]["pbaF000301"]);
+	var pmenu;
+	var html;
+    for(tApli in indexData) {
+//		alert(tApli);
+		var day;
+		switch (tApli) {
+			case "SABER359":
+				pmenu = "1";
+				break;
+			case "SABER11":
+				pmenu = "2";
+				break;
+			case "SABERTYT":
+				pmenu = "3";
+				break;
+			case "SABERPRO":
+				pmenu = "4";
+				break;
+		}
+		html += '<ul data-menu="submenu-'+ pmenu +'" class="menu__level">';
+		var subMenu = 0;
+		for(year in indexData[tApli]){
+			subMenu = subMenu + 1;
+			html += '<li class="menu__item"><a class="menu__link" data-submenu="submenu-'+ pmenu +'-'+ subMenu +'" ltest = "'+ tApli + '" lyear = "'+ year + '" lmode = "Menu-Test" href="#">' + year + '</a></li>';
+			html += '</li>';
+			html += '</ul>';
+			html += '<ul data-menu="submenu-'+ pmenu +'-1" class="menu__level">';
+			html += '<li class="menu__item"><a class="menu__link" ltest = "'+ tApli + '" lyear = "'+ year + '" lmode = "Inicial" href="#">Inicial</a></li>';
+			html += '<li class="menu__item"><a class="menu__link" ltest = "'+ tApli + '" lyear = "'+ year + '" lmode = "Calibracion" href="#">Calibración</a></li>';
+			html += '</ul>';
+		}
+		
+	}			  
+    return html;
+}
+document.getElementById("submenus").innerHTML = buildList();
+alert("que pasara")
+</script>                                
+		</div>
+		</nav>
+		<div class="content">
+		  <p class="info"> Por favor elija una examen en el menu de la izquierda</p>
+		  <!-- Ajax loaded content here -->
+		</div>
+	</div>
+	<script src="js/classie.js"></script>
+	<script src="js/dummydata.js"></script>
+	<script src="js/main.js"></script>
+	<script>
+	(function() {
+		var menuEl = document.getElementById('ml-menu'),
+			mlmenu = new MLMenu(menuEl, {
+				// breadcrumbsCtrl : true, // show breadcrumbs
+				// initialBreadcrumb : 'all', // initial breadcrumb text
+				backCtrl : false, // show back button
+				// itemsDelayInterval : 60, // delay between each menu item sliding animation
+				onItemClick: loadDummyData // callback: item that doesn´t have a submenu gets clicked - onItemClick([event], [inner HTML of the clicked item])
+			});
+
+		// mobile menu toggle
+		var openMenuCtrl = document.querySelector('.action--open'),
+			closeMenuCtrl = document.querySelector('.action--close');
+
+		openMenuCtrl.addEventListener('click', openMenu);
+		closeMenuCtrl.addEventListener('click', closeMenu);
+
+		function openMenu() {
+			classie.add(menuEl, 'menu--open');
+		}
+
+		function closeMenu() {
+			classie.remove(menuEl, 'menu--open');
+		}
+
+		// simulate grid content loading
+		var gridWrapper = document.querySelector('.content');
+
+		function loadDummyData(ev, itemName) {
+			ev.preventDefault();
+			closeMenu();
+			gridWrapper.innerHTML = '';
+			var auxDummy;
+			if (itemName[1] != "None" && itemName[2] != "None" && itemName[3] != "None"){
+			   auxDummy = indexData[itemName[1]][itemName[2]][itemName[3]];
+			} else {
+		       auxDummy = null;
+			}
+			if (auxDummy == null){
+ 		      auxDummy = 'No existe información para su selección'
+			} else {
+			  auxHtml = "";
+			  for (page in auxDummy){
+ 				  auxHtml = auxHtml + "<a href = \"" + auxDummy[page] + 
+				             "\"><li class=\"product\"><div class=\"foodicon\" label=\""+ page +"\"></div></li></a>";			              }
+			  auxDummy = auxHtml;
+			}
+			classie.add(gridWrapper, 'content--loading');
+			setTimeout(function() {
+				classie.remove(gridWrapper, 'content--loading');
+				gridWrapper.innerHTML = '<ul class="products">' + auxDummy + '<ul>';
+			}, 700);
+		}
+	})();
+	</script>
+</body>
+
+</html>
