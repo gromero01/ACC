@@ -501,58 +501,62 @@ setGeneric(name = "outHTML", def = function(object, ...){standardGeneric("outHTM
 # # Metodos para correr varias pruebas con varios analisis
 ################################################################################
 
-analyzeTests <- function(fileJson, fUpdate = FALSE){
+analyzeTests <- function(vecJson, anUpdate = NULL){
   # # inicializa la clase Test para cada prueba en la entrada
   # #
   # # Arg:
   # #  fileJson: [character] la ruta del archivo de parametros
-  # #
+  # #  anUpdate: [vector] lista de analisis para correr
   # # Ret:
   # #  listTests: [list-Test] lista con todas las pruebas analizadas
   
   # # Load  scripts
   require(jsonlite)
-  readJson <- fromJSON(fileJson, simplifyVector = TRUE, 
-                       simplifyDataFrame = FALSE, 
-                       simplifyMatrix = FALSE)
   listTests <- list() 
-  # # Comprobando si existe nombre para la salida
-  if (! "labelHtml" %in% names(readJson)){
-    stop('___ERROR___ Se debe definir en el archivo de parametros "labelHtml"')
-  }
-  readJson <- readJson[names(readJson) != "labelHtml"]    
-
-  for (test in names(readJson)){
-    jsonLec   <- readJson[[test]]$paramLect
-    if (!is.null(jsonLec$infoItem) & !is.null(jsonLec$subConInfo)){
-      paramLect <- list(infoItem = jsonLec$infoItem, 
-                        conDirs = jsonLec$conDirs, 
-                        valMUO = jsonLec$valMUO, 
-                        subConInfo = jsonLec$subConInfo)      
-    } else {
-      paramLect <- list(conDirs = jsonLec$conDirs, 
-                        valMUO = jsonLec$valMUO)            
-    }
-    auxTest <- new('Test', path = jsonLec$path, exam = jsonLec$exam, 
-                   codMod = jsonLec$codMod, verInput = jsonLec$verInput, 
-                   periodo = jsonLec$periodo,
-                   nomTest = jsonLec$nomTest, paramLect = paramLect)
-    if ("Filtros" %in% names(readJson[[test]])){
-      auxFiltros <- Filtros(auxTest, readJson[[test]]$Filtros)  
-      auxTest    <- codeAnalysis(auxFiltros)
-    }    
-    auxTest <- runAnalysis(auxTest, jsonTest = readJson[[test]]$Analisis, 
-                         fUpdate = fUpdate)
-    auxTest@listAnal <- c('Filtros' = auxFiltros, 
-                          auxTest@listAnal)
-    listTests[[test]] <- auxTest
+  for (fileJson in vecJson) {
+     readJson <- fromJSON(fileJson, simplifyVector = TRUE, 
+                          simplifyDataFrame = FALSE, 
+                          simplifyMatrix = FALSE)
+     # # Comprobando si existe nombre para la salida
+     if (! "labelHtml" %in% names(readJson)){
+       stop('___ERROR___ Se debe definir en el archivo de parametros "labelHtml"')
+     }
+     readJson <- readJson[names(readJson) != "labelHtml"]    
+   
+     for (test in names(readJson)){
+       jsonLec   <- readJson[[test]]$paramLect
+       if (!is.null(jsonLec$infoItem) & !is.null(jsonLec$subConInfo)){
+         paramLect <- list(infoItem = jsonLec$infoItem, 
+                           conDirs = jsonLec$conDirs, 
+                           valMUO = jsonLec$valMUO, 
+                           subConInfo = jsonLec$subConInfo)      
+       } else {
+         paramLect <- list(conDirs = jsonLec$conDirs, 
+                           valMUO = jsonLec$valMUO)            
+       }
+       auxTest <- new('Test', path = jsonLec$path, exam = jsonLec$exam, 
+                      codMod = jsonLec$codMod, verInput = jsonLec$verInput, 
+                      periodo = jsonLec$periodo,
+                      nomTest = jsonLec$nomTest, paramLect = paramLect)
+       if ("Filtros" %in% names(readJson[[test]])){
+         auxFiltros <- Filtros(auxTest, readJson[[test]]$Filtros)  
+         auxTest    <- codeAnalysis(auxFiltros)
+       }    
+       auxTest <- runAnalysis(auxTest, jsonTest = readJson[[test]]$Analisis, 
+                              anUpdate = anUpdate)
+       auxTest@listAnal <- c('Filtros' = auxFiltros, 
+                             auxTest@listAnal)
+       listTests[[test]] <- auxTest
+       rm(auxTest, auxFiltros)
+       gc(reset = TRUE)
+     }
   }
   return(listTests)
 }
   
 setGeneric(name = "runAnalysis", def = function(object, ...){standardGeneric("runAnalysis")})
 setMethod("runAnalysis", "Test",
-function(object, jsonTest, fUpdate = FALSE){
+function(object, jsonTest, anUpdate = NULL){
   # # Ejecuta los analisis con los parametros del archivo .json
   # #
   # # Arg:
@@ -573,8 +577,13 @@ function(object, jsonTest, fUpdate = FALSE){
      }
           
      # # Corriendo analisis
-     isExecuted <- file.exists(auxAnalysis@outFile$pathRdata)
-     if (fUpdate | !isExecuted){
+     if (file.exists(auxAnalysis@outFile$pathRdata)){
+        load(auxAnalysis@outFile$pathRdata)
+        isExecuted <- all(names(auxAnalysis@datAnalysis) %in% names(listResults))
+     } else {
+        isExecuted <- FALSE
+     }
+     if (analisis %in% anUpdate | (is.null(anUpdate) & !isExecuted)){
          codeAnalysis(auxAnalysis)  
          outXLSX(auxAnalysis, srcPath = ".")
      } else {
@@ -585,7 +594,7 @@ function(object, jsonTest, fUpdate = FALSE){
   return(object)
 })
 
-jointReports <- function(listTests, fileJson, pathJS = 'lib', flagView = FALSE){
+jointReports <- function(listTests, vecJson, pathJS = 'lib', flagView = FALSE){
   # # Crear el reporte html para 1 o varias pruebas
   # #
   # # Arg:
@@ -593,129 +602,125 @@ jointReports <- function(listTests, fileJson, pathJS = 'lib', flagView = FALSE){
   # #
   # # Ret:
   # #  archivos html con el nombre asignado en json$labelHtml
-  options(encoding = "UTF-8")
-  readJson  <- fromJSON(fileJson, simplifyVector = TRUE, 
-                       simplifyDataFrame = FALSE, 
-                       simplifyMatrix = FALSE)
-  if (!file.exists(docPath)) dir.create(docPath)
-  options(encoding = "native.enc")
-  rmarkdown::render('.\\Sweave\\reportAnaItem.Rmd', 'knitrBootstrap::bootstrap_document', 
-                    output_file = readJson$labelHtml[["html"]],  output_dir = docPath, 
-                    encoding = "utf-8")
-  salPathDoc <- file.path(docPath, readJson$labelHtml[["html"]])
-
-  # # Incluyendo archivos .js necesarios para las tablas
-  jsonLib <- c(paste0('  <script src="', pathJS,'/htmlwidgets-0.5/htmlwidgets.js"></script>'),
-               paste0('  <script src="', pathJS,'/jquery-1.11.1/jquery.min.js"></script>'),
-               paste0('  <script src="', pathJS,'/datatables-binding-0.1/datatables.js"></script>'),
-               paste0('  <script src="', pathJS,'/datatables-1.10.7/jquery.dataTables.min.js"></script>'),
-               paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.css"></script>'),
-               paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.js"></script>'),
-               paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.bootstrap3.css"></script>'),
-               paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.min.js"></script>'),               
-               paste0('  <script src="', pathJS,'/popUPGR.js"></script>'),
-  #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoom.js" type="text/javascript"></script>',
-  #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoomHTML.js" type="text/javascript"></script>',
-               paste0('  <link href="', pathJS,'/datatables-default-1.10.7/dataTables.extra.css" rel="stylesheet" />'),
-               paste0('  <link href="', pathJS,'/datatables-default-1.10.7/jquery.dataTables.min.css" rel="stylesheet" />'))
-               
-  archHtml  <- readLines(salPathDoc)
-  archCSS   <- grep("<!-- jQuery -->", archHtml)
-  indCSStab <- grep("/\\* style tables \\*/", archHtml)
-  #archHtml  <- gsub("font-weight: bold;", "font-weight: bold; \n color: red; \n background-image: url(\"FondoPresentacionesICFES01.png\");" , archHtml)
-  archHtml  <- gsub("font-weight: bold;", "font-weight: bold; \n background-image: url(\"../../../../FondoPresentacionesICFES01.png\");" , archHtml)
-  archHtml  <- gsub("<body>", "<body onload=\"setupZoom()\">" , archHtml)  
-  #archHtml  <- archHtml[-seq(indCSStab, indCSStab + 1)]
-  archHtml[indCSStab + 1]  <- "$('table3').addClass('table-bordered table-condensed');"
+  for (fileJson in vecJson){
+    options(encoding = "UTF-8")
+    readJson  <- fromJSON(fileJson, simplifyVector = TRUE, 
+                         simplifyDataFrame = FALSE, 
+                         simplifyMatrix = FALSE)
+    if (!file.exists(docPath)) dir.create(docPath)
+    options(encoding = "native.enc")
+    rmarkdown::render('.\\Sweave\\reportAnaItem.Rmd', 'knitrBootstrap::bootstrap_document', 
+                      output_file = readJson$labelHtml[["html"]],  output_dir = docPath, 
+                      encoding = "utf-8")
+    salPathDoc <- file.path(docPath, readJson$labelHtml[["html"]])
   
-  archHtml <- c(archHtml[1:(archCSS + 2)], jsonLib, archHtml[(archCSS + 3):length(archHtml)])
-  cat(archHtml, file = salPathDoc, sep = "\n")
-  if (flagView) {
-    browseURL(normalizePath(salPathDoc))
+    # # Incluyendo archivos .js necesarios para las tablas
+    jsonLib <- c(paste0('  <script src="', pathJS,'/htmlwidgets-0.5/htmlwidgets.js"></script>'),
+                 paste0('  <script src="', pathJS,'/jquery-1.11.1/jquery.min.js"></script>'),
+                 paste0('  <script src="', pathJS,'/datatables-binding-0.1/datatables.js"></script>'),
+                 paste0('  <script src="', pathJS,'/datatables-1.10.7/jquery.dataTables.min.js"></script>'),
+                 paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.css"></script>'),
+                 paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.js"></script>'),
+                 paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.bootstrap3.css"></script>'),
+                 paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.min.js"></script>'),               
+                 paste0('  <script src="', pathJS,'/popUPGR.js"></script>'),
+    #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoom.js" type="text/javascript"></script>',
+    #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoomHTML.js" type="text/javascript"></script>',
+                 paste0('  <link href="', pathJS,'/datatables-default-1.10.7/dataTables.extra.css" rel="stylesheet" />'),
+                 paste0('  <link href="', pathJS,'/datatables-default-1.10.7/jquery.dataTables.min.css" rel="stylesheet" />'))
+                 
+    archHtml  <- readLines(salPathDoc)
+    archCSS   <- grep("<!-- jQuery -->", archHtml)
+    indCSStab <- grep("/\\* style tables \\*/", archHtml)
+    #archHtml  <- gsub("font-weight: bold;", "font-weight: bold; \n color: red; \n background-image: url(\"FondoPresentacionesICFES01.png\");" , archHtml)
+    archHtml  <- gsub("font-weight: bold;", "font-weight: bold; \n background-image: url(\"../../../../FondoPresentacionesICFES01.png\");" , archHtml)
+    archHtml  <- gsub("<body>", "<body onload=\"setupZoom()\">" , archHtml)  
+    #archHtml  <- archHtml[-seq(indCSStab, indCSStab + 1)]
+    archHtml[indCSStab + 1]  <- "$('table3').addClass('table-bordered table-condensed');"
+    
+    archHtml <- c(archHtml[1:(archCSS + 2)], jsonLib, archHtml[(archCSS + 3):length(archHtml)])
+    cat(archHtml, file = salPathDoc, sep = "\n")
+    if (flagView) {
+      browseURL(normalizePath(salPathDoc))
+    }
+    options(encoding = "UTF-8")
   }
-  options(encoding = "UTF-8")
 }
 
 
-publishRepo <- function(fileJson, pathDest, flagActualizar = FALSE){
-
+publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
   # # Lectura de json 
   options(encoding = "UTF-8")
-  readJson <- jsonlite::fromJSON(fileJson, simplifyVector = TRUE, 
-                       simplifyDataFrame = FALSE, 
-                       simplifyMatrix = FALSE)
-  jsonHtml <- file.path(pathDest, "index.json")
-  if (file.exists(jsonHtml)){
-    ppJson  <- gsub("var indexData\\s+=\\s+", "", readLines(jsonHtml, warn = FALSE))
-    auxJson <- jsonlite::fromJSON(ppJson, simplifyVector = TRUE, 
-                       simplifyDataFrame = FALSE, 
-                       simplifyMatrix = FALSE)
-  } else {
-    auxJson <- list()
+  for(fileJson in vecJson){
+     readJson <- jsonlite::fromJSON(fileJson, simplifyVector = TRUE, 
+                          simplifyDataFrame = FALSE, 
+                          simplifyMatrix = FALSE)
+     jsonHtml <- file.path(pathDest, "index.json")
+     if (file.exists(jsonHtml)){
+       ppJson  <- gsub("var indexData\\s+=\\s+", "", readLines(jsonHtml, warn = FALSE))
+       auxJson <- jsonlite::fromJSON(ppJson, simplifyVector = TRUE, 
+                          simplifyDataFrame = FALSE, 
+                          simplifyMatrix = FALSE)
+     } else {
+       auxJson <- list()
+     }
+     auxJson <- unlist(auxJson)
+     auxJson <- sapply(auxJson, function(x) basename(x))
+   
+     # # Creando estructura de Json
+     outExam  <- unlist(sapply(readJson, function(x) x$paramLect$exam))
+     outYear  <- rep(readJson$labelHtml[["year"]], length(outExam))
+     outStage <- rep(readJson$labelHtml[["mode"]], length(outExam))
+     outName  <- unlist(sapply(readJson, function(x) x$paramLect$nomTest))
+     outName  <- gsub(".+\\((.+)\\)", "\\1", outName)
+     outList  <- rep(readJson$labelHtml[["html"]], length(outExam))
+     names(outList) <- paste(outExam, outYear, outStage, outName, sep = ".")
+   
+     for (value in names(unlist(outList))){
+       auxJson[value] <- unlist(outList)[value]
+     }
+   
+     # # Creación de carpetas
+     foldIni <- unique(file.path(pathDest, outExam, outYear, outStage))  
+     for (folder in foldIni){
+       dir.create(folder, recursive = TRUE, showWarnings = FALSE)
+       foldOut <- file.path(folder, c("Doc", "Output"))
+       for (out in foldOut){
+         dir.create(out, recursive = TRUE, showWarnings = FALSE)      
+       }
+       # # Verificando archivos
+       fileOut <- file.path(folder, "Output", list.files(outPath, recursive = TRUE))
+       fileDoc <- file.path(folder, "Doc", list.files(docPath, recursive = TRUE))
+       file.copy(docPath, folder, recursive = TRUE, overwrite = flagActualizar)
+       file.copy(outPath, folder, recursive = TRUE, overwrite = flagActualizar)        
+     }
+      
+     # # Creando Lista 
+     consNode <- function(label, child = list()){
+         nodeAux <- list(jj = child)
+         names(nodeAux) <- label
+         return(nodeAux)
+     }
+   
+     indexJson  <- list()
+     labelList  <- strsplit(names(auxJson), "\\.")
+     finalLabel <- unique(lapply(labelList, function(x) x[-length(x)]))
+     for (list in finalLabel) {
+       nodeList  <- consNode(list[1], consNode(list[2], consNode(list[3])))
+       indexJson <- append(indexJson, nodeList)
+     }
+   
+     # # llenando lista
+     for (ii in 1:length(auxJson)){
+       list    <- labelList[[ii]]
+       auxHtml <- file.path(list[1], list[2], list[3], "Doc", auxJson[[ii]]) 
+       indexJson[[list[1]]][[list[2]]][[list[3]]][[list[4]]] <- auxHtml
+     }
+     # # Imprimir lista
+     cat(jsonlite::toJSON(indexJson, pretty = TRUE), file = jsonHtml)
+     ppJson    <- readLines(jsonHtml, warn = FALSE)
+     ppJson[1] <- paste0("var indexData = ", ppJson[1]) 
+     cat(ppJson, file = jsonHtml, sep = "\n")
   }
-  auxJson <- unlist(auxJson)
-
-  # # Creando estructura de Json
-  outExam  <- unlist(sapply(readJson, function(x) x$paramLect$exam))
-  outYear  <- rep(readJson$labelHtml[["year"]], length(outExam))
-  outStage <- rep(readJson$labelHtml[["mode"]], length(outExam))
-  outName  <- unlist(sapply(readJson, function(x) x$paramLect$nomTest))
-  outName  <- gsub(".+\\((.+)\\)", "\\1", outName)
-  outList  <- rep(readJson$labelHtml[["html"]], length(outExam))
-  names(outList) <- paste(outExam, outYear, outStage, outName, sep = ".")
-
-  for (value in names(unlist(outList))){
-    auxJson[value] <- unlist(outList)[value]
-  }
-
-  # # Creación de carpetas
-  foldIni <- unique(file.path(pathDest, outExam, outYear, outStage))  
-  for (folder in foldIni){
-    dir.create(folder, recursive = TRUE, showWarnings = FALSE)
-    foldOut <- file.path(folder, c("Doc", "Output"))
-    for (out in foldOut){
-      dir.create(out, recursive = TRUE, showWarnings = FALSE)      
-    }
-    # # Verificando archivos
-    fileOut <- file.path(folder, "Output", list.files(outPath, recursive = TRUE))
-    fileDoc <- file.path(folder, "Doc", list.files(docPath, recursive = TRUE))
-    if (!flagActualizar){
-      if (any(file.exists(c(fileOut, fileDoc)))){
-        stop("---------------- Ya existen los archivos, no se creara el indice ni se copiaran (Si lo desea cambiar parametros flagActualizar = TRUE)-----------------")
-      }
-    }
-    # # Copiando archivos
-    file.copy(docPath, folder, recursive = TRUE)
-    file.copy(outPath, folder, recursive = TRUE)
-  }
-
- 
-  # # Creando Lista 
-  consNode <- function(label, child = list()){
-      nodeAux <- list(jj = child)
-      names(nodeAux) <- label
-      return(nodeAux)
-  }
-
-  indexJson  <- list()
-  labelList  <- strsplit(names(auxJson), "\\.")
-  finalLabel <- unique(lapply(labelList, function(x) x[-length(x)]))
-  for (list in finalLabel) {
-    nodeList  <- consNode(list[1], consNode(list[2], consNode(list[3])))
-    indexJson <- append(indexJson, nodeList)
-  }
-
-  # # llenando lista
-  for (ii in 1:length(auxJson)){
-    list    <- labelList[[ii]]
-    auxHtml <- file.path(list[1], list[2], list[3], "Doc", auxJson[[ii]]) 
-    indexJson[[list[1]]][[list[2]]][[list[3]]][[list[4]]] <- auxHtml
-  }
-  # # Imprimir lista
-  cat(jsonlite::toJSON(indexJson, pretty = TRUE), file = jsonHtml)
-  ppJson    <- readLines(jsonHtml, warn = FALSE)
-  ppJson[1] <- paste0("var indexData = ", ppJson[1]) 
-  cat(ppJson, file = jsonHtml, sep = "\n")
-
 }
 

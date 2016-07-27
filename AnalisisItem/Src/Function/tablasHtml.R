@@ -16,6 +16,11 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
   cols   <- c("alphaTotal", "raw_alpha", "corIt", "corItSub")
   x[,  (cols) := round(.SD, 3), .SDcols = cols]
   colMeasure <- c("id", "raw_alpha", "corIt", "corItSub")
+  isTest <- x[, all(corIt == corItSub)] # Si por subconjunto y glogal se la misma confiabilidad
+  if (isTest){
+    x[, corItSub := NULL]
+    colMeasure <- colMeasure[colMeasure != "corItSub"]
+  }
   x <- suppressWarnings(melt(data.table(x), id = c("ind_Sub", "pba_subCon"), 
                              measure = colMeasure))
   
@@ -29,7 +34,7 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
   dcastCont[, pba_subCon := NULL]
   
   # # Ordenando columnas
-  colName <- lapply(1:maxItems, function(x) paste0(x,"_", colMeasure))
+  colName <- lapply(1:maxItems, function(x) paste0(x, "_", colMeasure))
   names(colName) <- as.character(1:maxItems)
   colPos   <- lapply(colName, function(x) sapply(x, function(z) which(z == names(dcastCont))))
   finTable <- ""
@@ -56,10 +61,12 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
   }
   linkExcel <- ''
   if (!is.null(pathExcel)){
-    linkExcel <- paste0('<td colspan="5"><li class="linkxlscol"><a href="', pathExcel, 
-                 '"> Descargar <br> informe Excel </a></li></td>')
+    linkExcel <- paste0('<td colspan="3"><li class="linkxlscol"><a href="', pathExcel, 
+                 '"> Descargar <br> informe Excel </a></li></td>', 
+                 '<td colspan="2"><li class="linkxlscol"><a href="../../../../Manuales/01_EsquemadeAnalisis.docx">', 
+                 '<b> Manual de <br> interpretación </b></a></li></td>')
   }
-
+  save(dcastCont, file = "dcastCont.Rdata")
   # # Tablas en Html de los items
   htmlTab1 <- datatable(cbind(' ' = '', dcastCont), escape = FALSE,
     options = list(
@@ -81,10 +88,10 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
               "'<tr>' + 
     '<th>Id</th>' + 
     '<th>Item</th>' + 
-    '<th>&Delta; &alpha;</th>' + 
-    '<th>Correlaci&oacute;n<br>- Bloque</th>' + 
-    '<th>Correlaci&oacute;n<br>- &Iacute;ndice</th>' + 
-    '<th  colspan=\"4\" rowspan=\"", length(colPos), 
+    '<th>&alpha; - <br>Excluyendo el ítem</th>' +", 
+    "'<th>Correlaci&oacute;n<br>- Bloque</th>' + ", 
+    ifelse(isTest, "", "'<th>Correlaci&oacute;n<br>- &Iacute;ndice</th>' + "),
+    "'<th  colspan=\"4\" rowspan=\"", length(colPos), 
     "\" align = \"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\'' + d[6].replace('..', '') +'\\')\">",
     "<img align=\"middle\" style=\"width:660px;height:550px;\" src=\"'+ 
     d[6] + '\"></a></th>' + auxTable + '", linkExcel, "</tr></table>'};
@@ -97,6 +104,7 @@ reportTCT <-  function(x, codPrueba, subPrueba = "SubConjunto", pathExcel = NULL
             // This row is already open - close it
             row.child.hide();
             tr.removeClass('shown');
+            table.fnAdjustColumnSizing();
         }
         else {
             
@@ -194,9 +202,9 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
   cat("<script type=\"text/javascript\" src=\"https://www.google.com/jsapi?callback=displayChart", chartID,"\"></script>\n", sep = "")  # # Numero total de alertas
 
   # # Numero total de alertas
-  x[, nAlertas := sum(FLAGA, FLAGB, FLAGBISE, FLAGCORR,  
-          FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN, FLAGPROP, FLAGDIFDIS,
-          FLAGDIFDIS, FLAGAZAR, na.rm = TRUE), by = "item"]
+  x[, nAlertas := sum(FLAGA, FLAGB, FLAGBISE, FLAGCORR, FLAGCHI2,
+                      FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN, FLAGDIFDIS,
+                      FLAGAZAR, na.rm = TRUE), by = "item"]
   if (x[, unique(codMOD)] == "07") {
     initCol <- 8
   }
@@ -205,7 +213,12 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
     initCol <- 7
   }
   
-  # # Ordenando columnas
+  # # Redondeando 3 decimales
+  cols <- c("dif", "eedif", "disc", "eedisc", "azar", "eeazar")
+  x[,  (cols) := round(.SD, 3), .SDcols = cols]
+
+  
+  # # Ordenando columnas 
   x <- x[, list(item_blq, item, nAlertas, disc, dif, azar, item_blq,                                   # 2  - 8
                 item, SUBBLOQUE, COMPONENTE, COMPETENCIA, keyItem,                                     # 9  - 13
                 "", TRIED, RIGHT, PCT, "", BISERIAL,                                                   # 14 - 19
@@ -217,7 +230,8 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
                 FLAGA, FLAGB, FLAGBISE, FLAGCORR, FLAGINFIT, FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN,   # 27 - 35
                 FLAGOUTFIT, FLAGPROP, FLAGDIFDIS, FLAGAZAR, FLAGCHI2,                                  # 36 - 40
                 'azar' = ifelse(is.na(azar), "NA", paste0(azar, " (", eeazar, ") ")),                                             # 41
-                'posReporte' = match(x$item, names(itObs)) - 1, diffRescal)]                           # 42 - 43
+                'posReporte' = match(x$item, names(itObs)) - 1)]                                       # 42
+                #'diffRescal' = ifelse(is.na(diffRescal), "NA", paste0(diffRescal, " (", eediffRescal, ") ")))]  # 43
 
 
   # # Renombrando primeras columnas
@@ -321,14 +335,13 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
       '</td>'+
     '</tr>'+
            imprimirDato(d[16], 'Correctas', 0) +
-           imprimirDato(d[17] + '%', 'Porcentaje', FLAGMEAN) +           
+           imprimirDato(d[17] + '%', 'Porcentaje de aciertos', FLAGMEAN) +           
            imprimirDato(d[18], 'Correlaci&oacute;n biserial excluyendo &iacute;tem', FLAGCORR) +           
            imprimirDato(d[19], 'Correlaci&oacute;n biserial', FLAGBISE) +               
            imprimirDato(d[20], 'Discriminaci&oacute;n', FLAGA) +               
            imprimirDato(d[21], 'Dificultad', FLAGB) +
-           imprimirDato(d[43], 'Dificultad Escalada', FLAGB) +
            imprimirDato(d[41], 'Azar', FLAGAZAR) +   
-           imprimirDato(d[26], 'estad&iacute;stico chi', FLAGCHI2) +   
+           imprimirDato(d[26], 'estad&iacute;stico &Chi;<sup>2</sup>', FLAGCHI2) +   
     '<tr>'+
       '<td colspan=\"3\">  </td>'+
       '<td colspan=\"2\">'+ d[24] +'</td>'+

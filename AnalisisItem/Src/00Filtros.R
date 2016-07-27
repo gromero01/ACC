@@ -68,6 +68,7 @@ setMethod("codeAnalysis", "Filtros",
     sospechosos <- read.delim(pathCopy, sep ="\t", header=TRUE, 
                               colClasses = "character")
     sospechosos[,"APLICACION"]<- substr(sospechosos[,"SNP"],1,7)
+
     sospechosos[,"SNP1"]<- substr(sospechosos[,"SNP"],8,15)
 
     # # Lectura de Individual Basicos
@@ -84,6 +85,10 @@ setMethod("codeAnalysis", "Filtros",
       load(infoINR)
     }
 
+    if (nrow(datInfo) == 0) {
+      stop("-----ERROR-LECTURA----- Cambiar Encoding a UTF-8 o revisar archivo:\n", pathInfo)
+    }
+
     # # Extrae info sobre grado and test   
     for (kk in pruebasRead) {
       datSblq       <- object@test@datBlock[[kk]]$oriBlock 
@@ -96,8 +101,8 @@ setMethod("codeAnalysis", "Filtros",
 
       # # Seleccion copia
       auxForma <- gsub("(pba|PBA|UOF|pba)", "", gsub("\\.con", "", kk))
-	  sospPrueb <- subset(sospechosos, PRUE_CODIGOICFES == auxForma & 
-	  	                         APLICACION == "EK20152")#object@test@periodo)
+	    sospPrueb <- subset(sospechosos, PRUE_CODIGOICFES == auxForma & 
+	  	                    APLICACION == object@test@periodo)
       datSblq[!SNP %in% sospPrueb[,"SNP1"], indCopia := 0]
       datSblq[SNP %in% sospPrueb[,"SNP1"], indCopia := 1]
       
@@ -212,8 +217,9 @@ function(object, srcPath = "."){
   require(xtable)
   require(DT)
   load(file.path(srcPath, object@outFile$pathRdata)) # load listResults
-  for (kk in listResults) {
-  	cat(kk[["parrafo"]], "<br><br>")
+  nomPrueba <- object@test@paramLect$conDirs  
+  for (kk in nomPrueba) {
+  	cat(listResults[[kk]][["parrafo"]], "<br><br>")
   	# # Estilo de la tabla
     cat("<style>",
     "#conteos {",
@@ -243,27 +249,27 @@ function(object, srcPath = "."){
    
    bold.somerows <- function(x) gsub('BOLD\\((.*)\\)',paste('<b> \\1 <\\b>'),x)
 
-    for(ii in 1:nrow(kk[["tabla"]])){
-       auxLabel <- kk[["tabla"]][ii, "Descripción"]
+    for(ii in 1:nrow(listResults[[kk]][["tabla"]])){
+       auxLabel <- listResults[[kk]][["tabla"]][ii, "Descripción"]
        isTotal  <- grepl("Total.+", auxLabel)
        #auxColor <- ifelse(isTotal, "bgcolor = \"81A5C8\"", "")
        auxNegrita <- ifelse(!isTotal, "", 'BOLD(')
        auxFin     <- ifelse(!isTotal, "", ')')
-       kk[["tabla"]][ii, "Descripción"] <- paste0(auxNegrita, auxLabel, auxFin)
-       kk[["tabla"]][ii, "Cantidad"]    <- paste0(auxNegrita, kk[["tabla"]][ii, "Cantidad"], auxFin)
+       listResults[[kk]][["tabla"]][ii, "Descripción"] <- paste0(auxNegrita, auxLabel, auxFin)
+       listResults[[kk]][["tabla"]][ii, "Cantidad"]    <- paste0(auxNegrita, listResults[[kk]][["tabla"]][ii, "Cantidad"], auxFin)
     }
 
-    kk[["tabla"]][, "Cantidad"] <- as.character(kk[["tabla"]][, "Cantidad"])
-    tableHtml <- xtable(kk[["tabla"]], caption = "Tabla 1: Distribución de Exclusiones")
+    listResults[[kk]][["tabla"]][, "Cantidad"] <- as.character(listResults[[kk]][["tabla"]][, "Cantidad"])
+    tableHtml <- xtable(listResults[[kk]][["tabla"]], caption = "Tabla 1: Distribución de Exclusiones")
     print(tableHtml, type = "html", html.table.attributes = "id=\"conteos\" style=\"width:65%;\"", 
           include.rownames = FALSE, sanitize.text.function = bold.somerows)    
 	  cat("</tbody></table>")
     cat("</center>\n", "<br><br>")  
 
     if (object@test@exam %in% c("SABERPRO", "SABERTyT")){
-      htlmTab <- datatable(kk[["tablaGRRE"]], caption = "Tabla 2: Distribución de registros por grupo de referencia", 
+      htlmTab <- datatable(listResults[[kk]][["tablaGRRE"]], caption = "Tabla 2: Distribución de registros por grupo de referencia", 
                            rownames = FALSE)    
-      cat(kk[["parrafo2"]], "<br><br>")
+      cat(listResults[[kk]][["parrafo2"]], "<br><br>")
       cat(as.character(htmltools::tagList(htlmTab)))
     }
 

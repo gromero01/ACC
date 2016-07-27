@@ -281,7 +281,7 @@ function(object, srcPath = "."){
 
   # # Juntando subConjunto de una prueba
   listResults <- lapply(names(listResults), function(x){ 
-  return(cbind('pba_subCon' = x, listResults[[x]]$resulTCT))})
+                        return(cbind('pba_subCon' = x, listResults[[x]]$resulTCT))})
   names(listResults) <- auxNombres
   listResults <- lapply(auxPru, function(x) do.call(rbind, listResults[x]))
   cat("<h2> An&aacute;lisis TCT de la prueba:", object@test@nomTest, "</h2>") 
@@ -309,9 +309,9 @@ function(object, srcPath = "."){
     #x = listResults[[result]]; codPrueba = result; pathExcel = listXLSX[[result]]
     reportTCT(listResults[[result]], codPrueba = result, pathExcel = listXLSX[[result]])
     totAlpha <- unique(listResults[[result]][, "alphaTotal"])
-    cat("El coeficiente &alpha; de Cronbach (KR-20) para el total de preguntas de la prueba es de ", 
+    cat("<b>El coeficiente &alpha; de Cronbach (KR-20) para el total de preguntas de la prueba es de ", 
         round(totAlpha, 2), ".", sep = "")
-    cat("Las figuras presentadas anteriormente corresponden", 
+    cat("</b>Las figuras presentadas anteriormente corresponden", 
         "a la(s) curva(s) de Cronbach-Mesbah para la prueba",
         "o subconjuntos de la prueba", sep = "")
     cat(" (la cual muestra el valor máximo del coeficiente que se obtiene al

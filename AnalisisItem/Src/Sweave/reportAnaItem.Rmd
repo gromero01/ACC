@@ -21,7 +21,12 @@ td.details-control {
 <BR>
 <TABLE bgcolor="#FFFFFF" BORDER="0" CELLPADDING="2" CELLSPACING="2" WIDTH="100%">
 <TR>
-<TD WIDTH="80%"><center><font size="26"><B>An&aacute;lisis de &iacute;tems  
+<TD WIDTH="5%">
+<a href = "../../../../index.html">
+<img src="../../../../logo_regresar.png" title="Logo regresar" alt="alt text" style="width:75px;height:75px;"/>
+</a>
+</TD>
+<TD WIDTH="75%"><center><font size="26"><B>An&aacute;lisis de &iacute;tems  
 
 ```{r, echo = FALSE, message = F, results = "asis", comment = NA, warning = F}
 examLabel <- sapply(listTests, function(x) gsub("SABER", "", x@exam))

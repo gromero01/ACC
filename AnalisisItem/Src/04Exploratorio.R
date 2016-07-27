@@ -112,7 +112,7 @@ function(object){
     outPath  <- file.path(outPath, "04Exploratorio")
     if(dir.exists(outPath)){
     	cat("OJO-------> ya tenia el directorio 04Exploratorio creado\n")
-    	unlink(outPath, recursive = TRUE)
+    	#unlink(outPath, recursive = TRUE)
     	dir.create(outPath, showWarnings = FALSE)
 	}
 
@@ -140,6 +140,14 @@ function(object){
 	################################################################################
 	# # Analisis de Dimensionalidad
 	################################################################################
+    auxRdata <- object@outFile$pathRdata
+    if (file.exists(auxRdata)){
+      load(auxRdata)   	
+      readyList <- unlist(lapply(listResults, names))
+      readyList <- paste0(names(readyList), readyList)
+    } else {
+      readyList <- NULL
+    }
 
 	# # create list to save results
 	listResults <- list()
@@ -182,67 +190,71 @@ function(object){
 	  ###################################################
 	  ### Obtain parallel analysis with exploratory data
 	  ##################################################
-	  paBlock <- PA(expkkBlock, percentiles = 0.95,
-	                nReplicates = nReplicatesExp, type = "ordered",
-	                use = useCorExp, algorithm = 'polychoric')
-	  nFactors <- CountEigen.PA(paBlock)
-  	  listResults[[auxPru]][["paBlock"]]  <- paBlock
-  	  listResults[[auxPru]][["nFactors"]] <- nFactors
-	  ###################################################
-	  ### # # Obtain parallel analysis plot
-	  ###################################################
-  
-	  paPlotFile <- file.path(outPath, 'graficas', paste("paParalel_", auxPru, "_V",
-	                          versionOutput, ".png", sep = ""))
-	  paPlot <- plot(paBlock, groupLabel = "",
-	                 observed = "Observados",
-	                 percentile = " percentil",
-	                 xlab = "Eigenvalores ordenados",
-	                 ylab = "Eigenvalores", main = "")
-	  ggsave(paPlotFile)
-	  listResults[[auxPru]][["paPlotFile"]] <- paPlotFile
-  	    
-	  ###################################################
-	  ### code chunk number 7: optionalMultExpl
-	  ###################################################
-  
-	  # # Sugerido por los eigenvalues
-	  if(!flagUser){
-	  	 cat('---------"seqFactors"... Analisis Paralelo\n')
-	     if(nFactors == 1){
-	        seqFactors <- c(nFactors, nFactors + 1)
-	        resultsExp <- lapply(seqFactors, function(x)
-	                          MakeExploratory(x, object@param$rotation,
-	                        				  dictVarPrueba, corExpBlock))
-	     } else{	     	
-	        seqFactors <- c(nFactors - 1, nFactors, nFactors + 1)
-	        resultsExp <- lapply(seqFactors, function(x)
-	                          MakeExploratory(x, object@param$rotation,
-	                        				  dictVarPrueba, corExpBlock))
-	     }
-	     names(resultsExp) <- paste(seqFactors, 'Factores')
-	  }
+      if (!paste0(auxPru, "paBlock") %in% readyList) {
+	    paBlock <- PA(expkkBlock, percentiles = 0.95,
+	                  nReplicates = nReplicatesExp, type = "ordered",
+	                  use = useCorExp, algorithm = 'polychoric')
+	    nFactors <- CountEigen.PA(paBlock)
+  	    listResults[[auxPru]][["paBlock"]]  <- paBlock
+  	    listResults[[auxPru]][["nFactors"]] <- nFactors
 
-	  # Las dimensiones que quiera explorar el usuario
-	  if(flagUser){
-	  	cat('---------"seqFactors"... Definidos por el Usuario\n')
-	    if(nFactors == 1){
-	       resultsExp <- lapply(seqFactors, function(x) 
-	     					  MakeExploratory(x, object@param$rotation,
-	     									  dictVarPrueba, corExpBlock) )
-	    } else{
-	      resultsExp <- lapply(seqFactors, function(x)
-	                          MakeExploratory(x, object@param$rotation,
-	                        				  dictVarPrueba, corExpBlock) )
+	    ###################################################
+	    ### # # Obtain parallel analysis plot
+	    ###################################################
+    
+	    paPlotFile <- file.path(outPath, 'graficas', paste("paParalel_", auxPru, "_V",
+	                            versionOutput, ".png", sep = ""))
+	    paPlot <- plot(paBlock, groupLabel = "",
+	                   observed = "Observados",
+	                   percentile = " percentil",
+	                   xlab = "Eigenvalores ordenados",
+	                   ylab = "Eigenvalores", main = "")
+        auxLabel    <- c(1:nFactors, rep("", 2 * ncol(expkkBlock) - nFactors))
+	    paPlot$data <- cbind(paPlot$data, label = auxLabel)
+	    paPlot <- paPlot + geom_text(aes(label = label), size = 2)
+	    ggsave(paPlotFile)
+	    listResults[[auxPru]][["paPlotFile"]] <- paPlotFile
+    	    
+	    ###################################################
+	    ### code chunk number 7: optionalMultExpl
+	    ###################################################
+    
+	    # # Sugerido por los eigenvalues
+	    if(!flagUser){
+	  	   cat('---------"seqFactors"... Analisis Paralelo\n')
+	       if(nFactors == 1){
+	          seqFactors <- c(nFactors, nFactors + 1)
+	          resultsExp <- lapply(seqFactors, function(x)
+	                            MakeExploratory(x, object@param$rotation,
+	                        				    dictVarPrueba, corExpBlock))
+	       } else{	     	
+	          seqFactors <- c(nFactors - 1, nFactors, nFactors + 1)
+	          resultsExp <- lapply(seqFactors, function(x)
+	                            MakeExploratory(x, object@param$rotation,
+	                        				    dictVarPrueba, corExpBlock))
+	       }
+	       names(resultsExp) <- paste(seqFactors, 'Factores')
 	    }
-	  }
-	  listResults[[auxPru]][["resultsExp"]] <- resultsExp
-	  listResults[[auxPru]][["seqFactors"]] <- seqFactors
-	}
-	
-	# # Guardando resultados 
-    saveResult(object, listResults)
-
+  
+	    # Las dimensiones que quiera explorar el usuario
+	    if(flagUser){
+	  	  cat('---------"seqFactors"... Definidos por el Usuario\n')
+	      if(nFactors == 1){
+	         resultsExp <- lapply(seqFactors, function(x) 
+	     					    MakeExploratory(x, object@param$rotation,
+	     									    dictVarPrueba, corExpBlock) )
+	      } else{
+	        resultsExp <- lapply(seqFactors, function(x)
+	                            MakeExploratory(x, object@param$rotation,
+	                        				    dictVarPrueba, corExpBlock) )
+	      }
+	    }
+	    listResults[[auxPru]][["resultsExp"]] <- resultsExp
+	    listResults[[auxPru]][["seqFactors"]] <- seqFactors
+	   } 	
+	   # # Guardando resultados 
+       saveResult(object, listResults)
+     }
 })
 ################################################################################
 # # Definition of output files
@@ -907,9 +919,9 @@ function(object, srcPath = "."){
 	                             ".xlsx", sep = ''))
 	  xlsx::saveWorkbook(wb, file = outFile)
 	  listResults[[auxPru]]$fileXLSX <- outFile
-	  saveResult(object, listResults, srcPath)
 	  cat("Termino Salida: ", outFile, "\n")
 	}
+    saveResult(object, listResults, srcPath)
 })
 
 
@@ -923,11 +935,11 @@ function(object, srcPath = "."){
 
 	cat("A continuación se muestra(n) el(los) gráfico(s) de sedimentación
       para las correlaciones (tetracóricas) de la prueba, así como los
-      percentiles 99 estimados mediante análisis paralelo.\n", sep = "")
+      percentiles 95 estimados mediante análisis paralelo.\n", sep = "")
  
   	cat("El gráfico de sedimentación presenta los valores propios asociados a
       la matriz de correlaciones estimada de los ítems de la prueba, y el
-      percentil 99 de los valores propios correspondientes a matrices de
+      percentil 95 de los valores propios correspondientes a matrices de
       correlación del mismo tipo de la prueba, pero en
       donde los ítems no se relacionan entre sí.\n\n",
       sep  = "")
@@ -950,12 +962,19 @@ function(object, srcPath = "."){
      
      for(ii in nomSubPru){
      	
-	     nomAux <- gsub("::|\\s", "_", ii) 
-	     pathImg <- listResults[[nomAux]]$paPlotFile
-	     nomSub  <- gsub("^(.+)(::)(.+)", "\\3", ii)
-	     nFactors<- listResults[[nomAux]]$nFactors
+	     nomAux   <- gsub("::|\\s", "_", ii) 
+	     pathImg  <- listResults[[nomAux]]$paPlotFile
+	     nomSub   <- gsub("^(.+)(::)(.+)", "\\3", ii)
+	     nFactors <- listResults[[nomAux]]$nFactors
 	     nFactAux <- paste(nFactors,"Factores")
-	     expVar1 <- listResults[[nomAux]]$resultsExp[[nFactAux]]$VarExplained[,2]
+	     expVar1  <- listResults[[nomAux]]$resultsExp[[nFactAux]]$VarExplained[,2]
+    
+    simpleCap <- function(x) {
+      s <- strsplit(x, " ")[[1]]
+      paste(toupper(substring(s, 1,1)), substring(s, 2),
+          sep="", collapse=" ")
+    }
+
     cat("<tr>",
         "<td width=\"80%\">",	     
         "<center>",
@@ -967,9 +986,9 @@ function(object, srcPath = "."){
          cat('<tr>')    
          cat('<td width="100%">')
 		 cat("Al realizar un análisis factorial exploratorio se encontró que los primeros ",
-             nFactors, " componentes recogen el ", round(100 * expVar1, 1), "% de la varianza. \n", sep = "")
+             nFactors, " dimensiones recogen el ", round(100 * expVar1, 1), "% de la varianza. \n", sep = "")
          
-         cat("Se realizo una rotación Varimax, la cual redistribuye la varianza explicada por cada dimensión
+         cat("Se realizo una rotación ", simpleCap(object@param$rotation), ", la cual redistribuye la varianza explicada por cada dimensión
              buscando que cada ítem pese fuertemente en una sola de las dimensiones
              conservadas, con lo cual se facilita la interpretación de las mismas.\n", sep = "")
 
@@ -978,7 +997,10 @@ function(object, srcPath = "."){
 		 	 pathImg,'" alt="alt text" style = "width:472px;height:450px"></a>
 		     </center></td>', sep = "")		 
 		 cat(paste0('<td> <li class="linkxlscol"><a href="', listResults[[nomAux]]$fileXLSX, 
-		 	        '"> Descargar <br> informe Excel </a></li></td>'))
+		 	        '"> Descargar <br> informe Excel </a></li>', 
+                    '<li class="linkxlscol"><a href="../../../../Manuales/02_AnalisisDimensionalidad.docx">', 
+                    '<b> Manual de <br> interpretación </b></a></li>',
+		 	        '</td>'))
 	     cat('</tr>\n')
      
      }

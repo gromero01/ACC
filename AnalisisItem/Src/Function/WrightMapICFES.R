@@ -49,12 +49,13 @@ WrightMapICFES <- function(infoItem, infoCal, colHab, colDiff,
   medias  <- tapply(measure, grupos, mean)
   medias  <- data.frame(t(medias), 'PERS2'=pg[1], 'ITEM2' = pg[2])
   
-  p <- p + scale_y_continuous(breaks = seq(-1, 1, length=length(secu)), labels= as.character(secu), limits = c(pg[1], pg[2]))
+  p <- p + scale_y_continuous(breaks = seq(-1, 1, length=length(secu)), labels= as.character(secu), 
+                              limits = c(pg[1], pg[2]))
   p <- p + geom_segment(data = medias, aes(y = PERS2, x = PERS, xend= PERS, fill = "PERS", yend =0), linetype="dashed", size=0.7, colour=4)
   p <- p + geom_segment(data = medias, aes(y = 0, x = ITEM, xend= ITEM, fill = "ITEM", yend = ITEM2), linetype="dashed", size=0.7, colour="red")
   
   # # Personalización del grafico
-  p <- p + theme_bw() + scale_colour_brewer(palette="Set1") + xlab("Medida") + ylab("Densidad") 
+  p <- p + theme_bw() + scale_colour_brewer(palette="Set1") + xlab("Habilidad") + ylab("Densidad") 
   p <- p + theme(legend.position="top")
   if (!is.null(Title)){ 
     p <- p + ggtitle(paste0("Mapa Items-Personas ", Title, ""))

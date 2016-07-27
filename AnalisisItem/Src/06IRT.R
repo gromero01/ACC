@@ -80,6 +80,28 @@ IRT <- function(test, paramExp = NULL){
 }
 
 ################################################################################
+# # Función escalamiento 
+################################################################################
+
+funRescal <- function(datFrame, colName, meanHab = 0, sdHab = 1, meanFin = 0, 
+                      sdFin = 1, flagIverse = FALSE, flagEE = FALSE){ 
+  if (!flagIverse){
+     if (!flagEE) {
+       datFrame[, colName] <- ((datFrame[, colName] - meanHab) / sdHab) * sdFin + meanFin
+     } else {
+       datFrame[, colName] <- (sdFin / sdHab) * (datFrame[, colName])
+     }
+  } else {
+    if (!flagEE) {
+       datFrame[, colName] <- ((datFrame[, colName] - meanFin) / sdFin) * sdHab + meanHab
+    } else {
+       datFrame[, colName] <- (sdHab / sdFin) * (datFrame[, colName])
+    }
+  }
+  return(datFrame)
+}
+
+################################################################################
 # # Definition of codeAnalysis Method
 ################################################################################
 
@@ -185,7 +207,7 @@ setMethod("codeAnalysis", "IRT",
          dataCor <- dataCor[, orderSB[order(orderSB$SUBBLOQUE), "id"], with = FALSE]         
       }
 
-      if (object@test@exam %in% c("SABER359", "SABERPRO", "SABER11")) {
+      if (object@test@exam %in% c("SABER359", "SABERPRO", "SABER11", "SABERTYT")) {
         isMissingHalf <- rep(FALSE, nrow(dataCor))
         indexData     <- paste(auxPru, "_V", versionOutput, sep = "")
       }
@@ -212,9 +234,14 @@ setMethod("codeAnalysis", "IRT",
         # #     #### OJO HASTA AQUI VA RASH
         # #     ##################
       }
-      if(unique(codModels) %in% "07"){
+      auxCodModel <- unique(codModels)
+      if (auxCodModel %in% c("05", "06", "07")){
         auxPath <- getwd()
         runPath <- file.path(outPath, 'corridas')
+
+        auxNPAR <- ifelse(auxCodModel == "05", 1, 
+                          ifelse(auxCodModel == "06", 2, 3))
+        
         # # Create .blm and .dat file
         personDataBlo <- personDataBlo[!isMissingHalf]        
         RunBilog(responseMatrix = resBlock,
@@ -224,7 +251,7 @@ setMethod("codeAnalysis", "IRT",
                  itemIds = paste0("I", dictVarPrueba$id), binPath = binPath,
                  runPath = file.path(outPath, 'corridas'),
                  verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
-                 commentFile = indexData, NPArm = 3, thrCorr = 0.05)
+                 commentFile = indexData, NPArm = auxNPAR, thrCorr = 0.05)
         
         # Reading results of chi square test 
         itemPH2File <- paste(indexData, ".PH2", sep = "")
@@ -265,8 +292,28 @@ setMethod("codeAnalysis", "IRT",
         } else {
            load(outFileAbili)
         }
+ 
+        # # Transformando dificultad y habilidad
         meanAbil <- mean(personAbilities$ABILITY)
         sdAbil   <- sd(personAbilities$ABILITY)
+        personAbilities[, "ABILITY_NEW"] <- personAbilities[, "ABILITY"]
+        itemParameters[, "dif_NEW"]      <- itemParameters[, "dif"]
+
+        if (all(c("espMean", "espSd") %in% names(object@param))){
+          personAbilities <- funRescal(personAbilities, "ABILITY_NEW", meanHab = meanAbil, 
+                                       sdHab = sdAbil, meanFin = object@param$espMean, 
+                                       sdFin =  object@param$espSd, flagEE = FALSE)
+          itemParameters  <- funRescal(itemParameters, "dif_NEW", meanHab = meanAbil, 
+                                       sdHab = sdAbil, meanFin = object@param$espMean, 
+                                       sdFin =  object@param$espSd, flagEE = FALSE)
+          itemParameters  <- funRescal(itemParameters, "eedif", meanHab = meanAbil, 
+                                       sdHab = sdAbil, meanFin = object@param$espMean, 
+                                       sdFin =  object@param$espSd, flagEE = TRUE)
+        } else {
+          cat(">>>>> No se especifico Media y Varianza Esperada NO se hizo tranformación")
+          meanAbil <- 0
+          sdAbil   <- 1
+        }
 
         # # Comprobación de errores
         if (class(itemParameters) == "try-error" |
@@ -316,13 +363,16 @@ setMethod("codeAnalysis", "IRT",
         dirPlotICCpng <- file.path(outPath, dirPlotICCpng)
 
         cat("......Guardado ICC. \n")  
+        source(file.path(funPath, "plotICCP.R"))
         listICC <- plotICCB(itemParameters, resBlockFin, personAbilities,
                    scaleD = object@param$constDmodel, flagGrSep = TRUE,
                    methodBreaks = "Sturges", namesubCon = subComm,
                    dirPlot = dirPlotICCpng, plotName =
                    paste("ICC para", object@nomPrueba), prueba = kk, 
                    dirSalida = outPath, indexItems = indexItemsFin, 
-                   codModel = object@test@codMod)
+                   codModel = object@test@codMod, meanHab = meanAbil, 
+                   sdHab = sdAbil, meanFin = object@param$espMean, 
+                   sdFin =  object@param$espSd, flagEE = FALSE)
 
         # # Items - Person Curve
         dirPerItem <- paste0("graficos/personItem-", indexData, ".png")                                	
@@ -332,7 +382,7 @@ setMethod("codeAnalysis", "IRT",
 
         cat("......Guardado WrightMap. \n")
         itHaMap    <- WrightMapICFES(itemParameters, personAbilities,
-                                     "ABILITY", "dif", file = dirPerItem,
+                                     "ABILITY_NEW", "dif_NEW", file = dirPerItem,
                                      Title = gsub("(\\s+)?SABER 3,\\s?5 y 9 ", "", pathGraph))
         listResults[[auxPru]][["itHaMap"]] <- itHaMap
 
@@ -400,14 +450,6 @@ setMethod("codeAnalysis", "IRT",
         tablaFin[, minOutms := c(0.7, 0.75, 0.8, 0.9)[indPos]]
         tablaFin[, maxOutms := c(1.3, 1.25, 1.2, 1.1)[indPos]]
 
-        # # Compute B rescal
-        #tablaFin[, diffRescal := ((dif - mean(dif, na.rm = TRUE))/ 
-        #                         sd(dif, na.rm = TRUE)) * object@param$espSd 
-        #                         + object@param$espMean]
-
-        tablaFin[, diffRescal := ((dif - meanAbil)/ sdAbil) * object@param$espSd 
-                                 + object@param$espMean]
-
         # # Modifica William 
         tablaFin <- cbind(tablaFin, tablaFin[, list(
                           'codMOD' = unique(codModels),
@@ -440,6 +482,7 @@ function(object, srcPath = "."){
 
 setMethod("outHTML", "IRT", 
 function(object, srcPath){
+  require(gridExtra)
   source(file.path(srcPath, "Function", "gvisUtils.R"))
   load(file.path(srcPath, object@outFile$pathRdata)) # load listResults
   nomPrueba <- object@test@nomTest

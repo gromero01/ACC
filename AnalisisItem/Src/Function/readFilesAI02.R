@@ -202,13 +202,11 @@ function(object, desElim = NULL){
       rnColum  <- controlAnal$infoItem
       infoItem <- setnames(infoItem, rnColum, names(rnColum))      
 
-      if (object@exam == "SABERPRO") {
-        #infoItem <- infoItem[toupper(infoItem[, "prueba"]) ==
-        #                     toupper(gsub("(\\.con|pba|PBA)", "", nameCon)), ]
-        if ("subCon" %in% names(rnColum)) {
-          infoItem[, "etiqu"]   <- gsub("^\\s?(\\d{1}\\..+)", "\\1", infoItem[, "subCon"])
-          infoItem[, "subCon"]  <- gsub("^\\s?((\\d|\\.)+)(\\s+)?(\\w.+)", "AFIRM\\1", infoItem[, "subCon"])
-        }
+      #infoItem <- infoItem[toupper(infoItem[, "prueba"]) ==
+      #                     toupper(gsub("(\\.con|pba|PBA)", "", nameCon)), ]
+      if ("subCon" %in% names(rnColum)) {
+        infoItem[, "etiqu"]   <- gsub("^\\s?(\\d{1}\\..+)", "\\1", infoItem[, "subCon"])
+        infoItem[, "subCon"]  <- gsub("^\\s?((\\d|\\.)+)(\\s+)?(\\w.+)", "AFIRM\\1", infoItem[, "subCon"])
       }
 
       infoCon  <- merge(infoCon, infoItem[, c(names(rnColum), 'etiqu' = 'etiqu')], by = "id", all.x = TRUE)
@@ -262,7 +260,7 @@ function(object, desElim = NULL){
   dictionary$variables <- finVariables
   dictionary$desElim   <- desElim
   dictionary$model <- data.frame('codMod' = c("00", "01", "02", "03", "04", "05", "06", "07"),
-                                 'model' = c("noModel", "PCM", "RSM", "GRM", "MRD", "2PL", "1PL", "3PL"))
+                                 'model' = c("noModel", "PCM", "RSM", "GRM", "MRD", "1PL", "2PL", "3PL"))
 
   # # delete line break
   dictionary$variables[, ]  <- lapply(dictionary$variables,
@@ -381,7 +379,7 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
 
     items <- substr(conInfo[nSItem:nEItem, "V1"], 1, 7)
 
-    if (!object@exam %in% c("SABERPRO")) {
+    if (!object@exam %in% c("SABERPRO", "SABERTYT", "SABER11")) {
       if (all(order(items) != seq(length(items)))) {
         stop("Disorder of the items in the .com file")
       }
@@ -429,7 +427,7 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
       anchos  <- anchos[-1]; anchos[1] <- anchos[1] + 1
       nombres <- nombres[-1]
     }
-    if (object@exam %in% c("SABERPRO")) {
+    if (object@exam %in% c("SABERPRO", "SABERTYT", "SABER11")) {
       anchos    <- anchos[-1]
       nombres   <- nombres[-1]
     }
