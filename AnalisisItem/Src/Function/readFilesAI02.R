@@ -439,7 +439,7 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
  
     # # comparision of the number if items in dictionary and in the input file
     areItems   <- dict$variables[, 'id'] %in% items
-    areItems   <- areItems & dict$variables[, 'codigo_prueba'] == prueba
+    areItems   <- areItems & toupper(dict$variables[, 'codigo_prueba']) == toupper(prueba)
     filDict    <- dict$variables[areItems, ]
     items      <- filDict[, 'id']
     itemsBlock <- dict$variables[areItems, "id"]
@@ -563,9 +563,11 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
 
           if (multiMarkOmiss) {
             calItem <- ifelse(souItem == keyItem, 1, 0)
+            calItem <- ifelse(souItem == "", NA, calItem)
             calItem[souItem %in% missingValues] <- valMUO
           } else {
             calItem <- ifelse(souItem == keyItem, 1, 0)
+            calItem <- ifelse(souItem == "", NA, calItem)
           }
 
           # # if typeItem Ordinal imposed the order of categories,

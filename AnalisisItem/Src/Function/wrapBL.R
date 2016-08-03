@@ -462,10 +462,10 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   cat("       CYCLES = 500, \n", file = commandFile, append = TRUE)
   cat("       NEWTON = 30, \n", file = commandFile, append = TRUE)
   cat("       NQPT = ", nQuadPoints, ", \n", sep = "", file = commandFile, append = TRUE)
-  #cat("       NOSprior, \n", file = commandFile, append = TRUE)
-  cat("       TPRIOR, \n", file = commandFile, append = TRUE)
+  cat("       NOSprior, \n", file = commandFile, append = TRUE)
+  #cat("       TPRIOR, \n", file = commandFile, append = TRUE)
   cat("       DIAGNOSIS = 1, \n", file = commandFile, append = TRUE)
-  cat("       CRIT = 0.0001 \n", file = commandFile, append = TRUE)
+  cat("       CRIT = 0.001 \n", file = commandFile, append = TRUE)
   cat("       ;\n", file = commandFile, append = TRUE)
 
   # # SCORE
@@ -525,6 +525,12 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     numAux  <- linea2 - linea1 - 3 - length(auxdata)
     auxdata <- c(auxdata, rep("", numAux))
     auxBlm[(linea1 + 1):(linea2 - 3)] <- gsub("\\s", "", auxdata)
+    isBlanck <- grep("^$", auxBlm)
+    isBlanck <- isBlanck[isBlanck > linea1 + 1 & isBlanck < linea2 - 3]
+    if (length(isBlanck) > 0) {
+      auxBlm   <- auxBlm[-isBlanck]  
+    }
+    
 
     # # Cambiar el NITems
     linea3 <- grep(pattern = "NITems", auxBlm)

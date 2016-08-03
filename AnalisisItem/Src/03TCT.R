@@ -119,8 +119,8 @@ function(object){
 
       # # Graph CM Curve from source plotCMC.R
       outPathGraph <- file.path(outPathPba, "graficos")
-      plotCMC(dataCor, outPathGraph, auxPru)
-      exGraphPath <- grep(paste0("(.+CMC-", auxPru, "\\.png)"),
+      textoAlerta  <- unique(plotCMC(dataCor, outPathGraph, auxPru))
+      exGraphPath  <- grep(paste0("(.+CMC-", auxPru, "\\.png)"),
                           list.files(outPathGraph, full.names = TRUE),
                           value=TRUE)
   
@@ -132,7 +132,6 @@ function(object){
                              estIndItems <- data.frame(estIndex$item.stats,
                                                        estIndex$alpha.drop)
         # #                  names(estIndItems)[4] <- "corItIn"
-  
                              estIndItems[, 'id'] <- rownames(estIndItems)
                              varKeep <- c('id', 'r.drop', 'raw_alpha')#,
                                            #'G6.smc')
@@ -166,8 +165,9 @@ function(object){
       if (all(corItemIndex[, "subCon"] == corItemIndex[, "etiqu"])){
         corItemIndex[, "etiqu"] <- NULL
       }        
-      listResults[[auxPru]]$resulTCT <- cbind(corItemIndex, 'pathCMC' = exGraphPath)
-      listResults[[auxPru]]$nObs     <- ncol(dataCor)
+      listResults[[auxPru]]$resulTCT  <- cbind(corItemIndex, 'pathCMC' = exGraphPath)
+      listResults[[auxPru]]$nObs      <- ncol(dataCor)
+      listResults[[auxPru]]$txtAlerta <- textoAlerta
     }
    # # Guardando
    saveResult(object, listResults)
@@ -222,6 +222,7 @@ function(object, srcPath = "."){
        namesSheet   <- auxPru
        corItemIndex <- listResults[[auxPru]][["resulTCT"]]
        exGraphPath  <- unique(as.character(corItemIndex[, "pathCMC"]))
+       textoAlerta  <- listResults[[auxPru]]$txtAlerta
        exGraphPath  <- file.path(srcPath, exGraphPath)
        assign(namesSheet, xlsx::createSheet(wb, sheetName = auxPru))
      
@@ -276,8 +277,8 @@ function(object, srcPath = "."){
   auxNombres  <- names(listResults)
 
   # # Identificando archivos en excel
-  listXLSX <- lapply(listResults, function(x) x$fileXLSX)
-  listXLSX <- lapply(auxPru, function(x) unique(unlist(listXLSX[x])))
+  listXLSX  <- lapply(listResults, function(x) x$fileXLSX)
+  listXLSX  <- lapply(auxPru, function(x) unique(unlist(listXLSX[x])))
   listALERT <- lapply(listResults, function(x) x$txtAlerta)  
 
   # # Juntando subConjunto de una prueba
@@ -308,8 +309,13 @@ function(object, srcPath = "."){
 
   for (result in names(listResults)){
     #x = listResults[[result]]; codPrueba = result; pathExcel = listXLSX[[result]]
-    reportTCT(listResults[[result]], codPrueba = result, pathExcel = listXLSX[[result]])
-    totAlpha <- unique(listResults[[result]][, "alphaTotal"])
+    textoAlerta <- listALERT[[result]]
+    tabHtml <- reportTCT(listResults[[result]], codPrueba = result, pathExcel = listXLSX[[result]], 
+                         alertText = textoAlerta)
+    cat(as.character(htmltools::tagList(tabHtml)))
+    totAlpha    <- unique(listResults[[result]][, "alphaTotal"])
+    
+
     cat("<b>El coeficiente &alpha; de Cronbach (KR-20) para el total de preguntas de la prueba es de ", 
         round(totAlpha, 2), ".", sep = "")
     cat("</b>Las figuras presentadas anteriormente corresponden", 

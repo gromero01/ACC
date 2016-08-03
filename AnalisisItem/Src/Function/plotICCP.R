@@ -237,9 +237,10 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
       }
     }
 
-    curves   <- NULL
+    curves  <- NULL
+    listGGp <- list()
     # Curves theoretical ICC
-
+    infTest  <- rep(0, length(limX))
     for (zz  in names(paramICC)) {
       nameCategory       <- paramICC[[zz]][, "category"]
       itemICC            <- as.data.frame(t(paramICC[[zz]]))
@@ -256,7 +257,10 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
                           cj  <- as.numeric(as.character(z["azar"]))
                           bjk <- as.numeric(as.character(z["Location"]))
                           aj  <- as.numeric(as.character(z["discrimination"]))
-                          irt.4PM.Info(limX, c(aj, bjk, cj))})      
+                          irt.4PM.Info(limX, c(aj, bjk, cj))})
+      # # Guardando información y maximo de informacion
+      infTest  <- infTest + plotINFO[[1]]
+      listGGp[[zz]] <- list('maxINFO' = max(plotINFO[[1]]))
       x         <- rep(limX, length(nameCategory))
       categoria <- rep(nameCategory, sapply(itemICC, length))
       y         <- unlist(itemICC)
@@ -266,7 +270,7 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
                               categoria, curva = "INFO") 
       curves    <- rbind(curves, itemICC, plotINFO)
     }
-
+    infTest <- data.frame('x' = limX, 'y' = infTest)
     curves[, 'categoria'] <- factor(curves[, 'categoria'])
 
     ntheDiff <- length(unique(personAbilities[, "ABILITY"]))
@@ -331,8 +335,6 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
     empiricICC <- rbindlist(abiliBlock)
     rm(abiliBlock, resBlock)
     empiricICC[, categoria := as.factor(empiricICC$categoria)]
-    listGGp    <- list()
-
     curves     <- funRescal(curves, "x", ...)
     empiricICC <- funRescal(data.frame(empiricICC), "x", ...)
     empiricICC <- data.table(empiricICC)
@@ -347,7 +349,8 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
                    geom_ribbon(data = empiricICC,
                               aes(ymin = pL,ymax = pU),alpha=0.3) +
                    theme_bw()
-      listGGp[[itName]] <- list('graph' = finalPlot, 'dir' = dirPlot)
+      listGGp[[itName]] <- c(listGGp[[itName]], list('graph' = finalPlot, 
+                             'dir' = dirPlot))
       sapply(dirPlot, function(x) ggsave(x, width = 10))
     } else {
       itemCurve  <- split(curves, f = curves$item)
@@ -391,11 +394,11 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
         arrangeFinal <- ggplot_dual_axis(finalPlot, infoPlt)
         dirAux <- sapply(dirPlot, function(x) gsub("(_V.+\\.png)",
                          paste0("_", itName, "\\1"), x))
-        listGGp[[itName]] <- list('graph' = arrangeFinal, 'dir' = dirAux)
+        listGGp[[itName]] <- c(listGGp[[itName]], list('graph' = arrangeFinal, 'dir' = dirAux))
         sapply(dirAux, function(x) ggsave(file = x, plot = arrangeFinal, width = 410, height = 297, units = "mm"))
       }
     }
-    return(listGGp)
+    return(list(listGGp, infTest))
 }
 
 plotICCP <- function (itemParameters, resBlock, personAbilities,

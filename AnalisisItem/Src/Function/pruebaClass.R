@@ -179,7 +179,7 @@ setMethod("initialize", "Test", function(.Object, ..., test) {
     if(missing(test)){
     	if (length(.Object@path) != 0){
     		if (length(.Object@dictionaryList) == 0 & length(.Object@datBlock) == 0){
-          		.Object <- readSupplies(.Object)
+          .Object <- readSupplies(.Object)
     		}    	
     	}
     }
@@ -544,8 +544,10 @@ analyzeTests <- function(vecJson, anUpdate = NULL){
        }    
        auxTest <- runAnalysis(auxTest, jsonTest = readJson[[test]]$Analisis, 
                               anUpdate = anUpdate)
-       auxTest@listAnal <- c('Filtros' = auxFiltros, 
-                             auxTest@listAnal)
+       if ("Filtros" %in% names(readJson[[test]])){
+         auxTest@listAnal <- c('Filtros' = auxFiltros, 
+                               auxTest@listAnal)
+       }
        listTests[[test]] <- auxTest
        rm(auxTest, auxFiltros)
        gc(reset = TRUE)
@@ -615,17 +617,17 @@ jointReports <- function(listTests, vecJson, pathJS = 'lib', flagView = FALSE){
     salPathDoc <- file.path(docPath, readJson$labelHtml[["html"]])
   
     # # Incluyendo archivos .js necesarios para las tablas
-    jsonLib <- c(paste0('  <script src="', pathJS,'/htmlwidgets-0.5/htmlwidgets.js"></script>'),
-                 paste0('  <script src="', pathJS,'/jquery-1.11.1/jquery.min.js"></script>'),
-                 paste0('  <script src="', pathJS,'/datatables-binding-0.1/datatables.js"></script>'),
-                 paste0('  <script src="', pathJS,'/datatables-1.10.7/jquery.dataTables.min.js"></script>'),
+    jsonLib <- c(paste0('  <script src="', pathJS,'/htmlwidgets-0.5/htmlwidgets.jsp"></script>'),
+                 paste0('  <script src="', pathJS,'/jquery-1.11.1/jquery.min.jsp"></script>'),
+                 paste0('  <script src="', pathJS,'/datatables-binding-0.1/datatables.jsp"></script>'),
+                 paste0('  <script src="', pathJS,'/datatables-1.10.7/jquery.dataTables.min.jsp"></script>'),
                  paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.css"></script>'),
-                 paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.js"></script>'),
+                 paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.jsp"></script>'),
                  paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.bootstrap3.css"></script>'),
-                 paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.min.js"></script>'),               
-                 paste0('  <script src="', pathJS,'/popUPGR.js"></script>'),
-    #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoom.js" type="text/javascript"></script>',
-    #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoomHTML.js" type="text/javascript"></script>',
+                 paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.min.jsp"></script>'),               
+                 paste0('  <script src="', pathJS,'/popUPGR.jsp"></script>'),
+    #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoom.jsp" type="text/javascript"></script>',
+    #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoomHTML.jsp" type="text/javascript"></script>',
                  paste0('  <link href="', pathJS,'/datatables-default-1.10.7/dataTables.extra.css" rel="stylesheet" />'),
                  paste0('  <link href="', pathJS,'/datatables-default-1.10.7/jquery.dataTables.min.css" rel="stylesheet" />'))
                  

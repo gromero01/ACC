@@ -169,7 +169,7 @@ setMethod("codeAnalysis", "Filtros",
                          "muestra la cantidad de registros por grupo de referencia.")
 
       # # Conteos por grupo de referecia (TyT Pro)
-      if (object@test@exam %in% c("SABERPRO", "SABERTyT")){
+      if (object@test@exam %in% c("SABERPRO", "SABERTYT")){
         datSblq <- merge(datSblq, datInfo, by = "SNP", all.x = TRUE)
         datSblq[is.na(GRRE_NOMBRE), GRRE_NOMBRE := "SIN GRUPO DE REFERENCIA"]
         tabResumen2 <- datSblq[, sum(indTodo), by = c("GRRE_NOMBRE", "indInclu")]      
@@ -266,7 +266,7 @@ function(object, srcPath = "."){
 	  cat("</tbody></table>")
     cat("</center>\n", "<br><br>")  
 
-    if (object@test@exam %in% c("SABERPRO", "SABERTyT")){
+    if (object@test@exam %in% c("SABERPRO", "SABERTYT")){
       htlmTab <- datatable(listResults[[kk]][["tablaGRRE"]], caption = "Tabla 2: Distribución de registros por grupo de referencia", 
                            rownames = FALSE)    
       cat(listResults[[kk]][["parrafo2"]], "<br><br>")

@@ -45,9 +45,9 @@ WrightMapICFES <- function(infoItem, infoCal, colHab, colDiff,
   p <- p + geom_density(data = subset(data, grupos == "ITEM"), aes(y = ..density..), alpha = 0.1)
   
   # # Calcular las medias, minimo, maximo en Y
-  pg <- suppressWarnings(ggplot_build(p)$panel$ranges[[1]]$x.range)
-  medias  <- tapply(measure, grupos, mean)
-  medias  <- data.frame(t(medias), 'PERS2'=pg[1], 'ITEM2' = pg[2])
+  pg     <- suppressWarnings(ggplot_build(p)$panel$ranges[[1]]$x.range)
+  medias <- tapply(measure, grupos, mean)
+  medias <- data.frame(t(medias), 'PERS2'=pg[1], 'ITEM2' = pg[2])
   
   p <- p + scale_y_continuous(breaks = seq(-1, 1, length=length(secu)), labels= as.character(secu), 
                               limits = c(pg[1], pg[2]))
@@ -55,7 +55,7 @@ WrightMapICFES <- function(infoItem, infoCal, colHab, colDiff,
   p <- p + geom_segment(data = medias, aes(y = 0, x = ITEM, xend= ITEM, fill = "ITEM", yend = ITEM2), linetype="dashed", size=0.7, colour="red")
   
   # # Personalización del grafico
-  p <- p + theme_bw() + scale_colour_brewer(palette="Set1") + xlab("Habilidad") + ylab("Densidad") 
+  p <- p + theme_bw() + scale_colour_brewer(palette = "Set1") + xlab("Habilidad") + ylab("Densidad") 
   p <- p + theme(legend.position="top")
   if (!is.null(Title)){ 
     p <- p + ggtitle(paste0("Mapa Items-Personas ", Title, ""))
@@ -77,7 +77,7 @@ WrightMapICFES <- function(infoItem, infoCal, colHab, colDiff,
   infoItem[["Sort"]] <- order(infoItem[[colDiff]])
 
   #infoItem[["hj"]] <- rep(c(-0.3, -0.2), length.out=nrow(infoItem))
-  p2    <- ggplot(infoItem, aes(x = dif, y = Sort, label = ITEM)) + geom_point() 
+  p2    <- ggplot(infoItem, aes(x = dif_NEW, y = Sort, label = ITEM)) + geom_point() 
   p2    <- p2 + geom_text(aes(labe = ITEM, vjust = vj), size = 2.6, angle = 90) + theme_bw()
   p2    <- p2 + geom_vline(xintercept = medias[1, "ITEM"]) + coord_flip() + xlab("") + ylab("Orden")
   

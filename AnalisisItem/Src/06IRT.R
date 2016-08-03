@@ -298,6 +298,7 @@ setMethod("codeAnalysis", "IRT",
         sdAbil   <- sd(personAbilities$ABILITY)
         personAbilities[, "ABILITY_NEW"] <- personAbilities[, "ABILITY"]
         itemParameters[, "dif_NEW"]      <- itemParameters[, "dif"]
+        itemParameters[, "eedif_NEW"]    <- itemParameters[, "eedif"]
 
         if (all(c("espMean", "espSd") %in% names(object@param))){
           personAbilities <- funRescal(personAbilities, "ABILITY_NEW", meanHab = meanAbil, 
@@ -306,7 +307,7 @@ setMethod("codeAnalysis", "IRT",
           itemParameters  <- funRescal(itemParameters, "dif_NEW", meanHab = meanAbil, 
                                        sdHab = sdAbil, meanFin = object@param$espMean, 
                                        sdFin =  object@param$espSd, flagEE = FALSE)
-          itemParameters  <- funRescal(itemParameters, "eedif", meanHab = meanAbil, 
+          itemParameters  <- funRescal(itemParameters, "eedif_NEW", meanHab = meanAbil, 
                                        sdHab = sdAbil, meanFin = object@param$espMean, 
                                        sdFin =  object@param$espSd, flagEE = TRUE)
         } else {
@@ -363,7 +364,7 @@ setMethod("codeAnalysis", "IRT",
         dirPlotICCpng <- file.path(outPath, dirPlotICCpng)
 
         cat("......Guardado ICC. \n")  
-        source(file.path(funPath, "plotICCP.R"))
+        #source(file.path(funPath, "plotICCP.R"))
         listICC <- plotICCB(itemParameters, resBlockFin, personAbilities,
                    scaleD = object@param$constDmodel, flagGrSep = TRUE,
                    methodBreaks = "Sturges", namesubCon = subComm,
@@ -373,8 +374,14 @@ setMethod("codeAnalysis", "IRT",
                    codModel = object@test@codMod, meanHab = meanAbil, 
                    sdHab = sdAbil, meanFin = object@param$espMean, 
                    sdFin =  object@param$espSd, flagEE = FALSE)
-
-        # # Items - Person Curve
+        infTest <- listICC[[2]]
+        listICC <- listICC[[1]]        
+        if (all(c("espMean", "espSd") %in% names(object@param))){
+          infTest <- funRescal(infTest, "x", meanHab = meanAbil, 
+                               sdHab = sdAbil, meanFin = object@param$espMean, 
+                               sdFin =  object@param$espSd, flagEE = FALSE)
+        }
+        # # Items - Person Curve and Test Information Curve
         dirPerItem <- paste0("graficos/personItem-", indexData, ".png")                                	
         dirPerItem <- file.path(outPath, dirPerItem)
         pathGraph  <- object@test@nomTest
@@ -383,8 +390,9 @@ setMethod("codeAnalysis", "IRT",
         cat("......Guardado WrightMap. \n")
         itHaMap    <- WrightMapICFES(itemParameters, personAbilities,
                                      "ABILITY_NEW", "dif_NEW", file = dirPerItem,
-                                     Title = gsub("(\\s+)?SABER 3,\\s?5 y 9 ", "", pathGraph))
-        listResults[[auxPru]][["itHaMap"]] <- itHaMap
+                                     Title = gsub("(\\s+)?SABER 3,\\s?5 y 9 ", "", pathGraph))       
+        listResults[[auxPru]][["itHaMap"]]  <- itHaMap
+        listResults[[auxPru]][["plotInfo"]] <- infTest
 
         # # Information of block
         if (object@test@exam == "SABER359") {
@@ -424,7 +432,8 @@ setMethod("codeAnalysis", "IRT",
 
         # # Construct Data Consolidation
         ldirOP   <- data.table('item' = paste0("I", names(listOP)), 'dir_OP' = sapply(listOP, function(x) x$dir))
-        ldirICC  <- data.table('item' = paste0("I", names(listICC)), 'dir_ICC' = sapply(listICC, function(x) x$dir))
+        ldirICC  <- data.table('item' = paste0("I", names(listICC)), 'dir_ICC' = sapply(listICC, function(x) x$dir), 
+                               'maxINFO' = sapply(listICC, function(x) x$maxINFO))
         tablaRep <- melt(tablaRep, id = 1:2, measure = 3:4)
         tablaRep <- dcast.data.table(tablaRep, item ~ categoria + variable, fun = sum,
                                      value.var = c("value"))
@@ -450,21 +459,27 @@ setMethod("codeAnalysis", "IRT",
         tablaFin[, minOutms := c(0.7, 0.75, 0.8, 0.9)[indPos]]
         tablaFin[, maxOutms := c(1.3, 1.25, 1.2, 1.1)[indPos]]
 
-        # # Modifica William 
+        # # Cambio en el se de la dificultad
+        tablaFin[, eedif_NEW := eedif_NEW / abs(dif_NEW) * 100]
+
+        # # Alertas
         tablaFin <- cbind(tablaFin, tablaFin[, list(
                           'codMOD' = unique(codModels),
                           'FLAGMEAN' = ifelse((PCT >90) | (PCT < 10), 1, 0),
                           'FLAGCORR' = ifelse(CORRELACION < 0.1, 1, 0),
                           'FLAGA'    = ifelse(disc < 0.5 , 1, 0),
-                          'FLAGB'    = ifelse(dif > 3, 1, 0),
+                          'FLAGB'    = ifelse(dif > 3 & dif < -3, 1, 0),
                           'FLAGBISE' = ifelse(BISERIAL < 0.1, 1, 0), 
                           'FLAGINFIT' = ifelse((INFIT < minOutms[indPos]) | (INFIT > maxOutms[indPos]), 1, 0),
                           'FLAGOUTFIT' = ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
                           'FLAGKEY1' = 0, 'FLAGKEY3' = 0,
                           'FLAGDIFDIS' = ifelse(dif < -3 & disc > 0.5, 1, 0),
                           'FLAGAZAR'  = ifelse(azar > 0.25 | eeazar > 0.15, 1, 0), 
-                          'FLAGCHI2' = ifelse(p_val_chi2 > 0.1, 1, 0))])
-			  listResults[[auxPru]][["tablaFin"]] <- tablaFin
+                          'FLAGCHI2' = ifelse(p_val_chi2 > 0.1, 1, 0), 
+                          'FLAGINFO' = ifelse(max(maxINFO, na.rm = TRUE) == maxINFO, 1, 0), 
+                          'FLAGCV' = ifelse(eedif_NEW > 30, 1, 0))])
+        tablaFin[, eedif_NEW := paste0(sprintf("%.2f", eedif_NEW), "%")]
+        listResults[[auxPru]][["tablaFin"]] <- tablaFin
       }
       outPath <- auxOutPath
   }
@@ -483,6 +498,7 @@ function(object, srcPath = "."){
 setMethod("outHTML", "IRT", 
 function(object, srcPath){
   require(gridExtra)
+  require(ggplot2)
   source(file.path(srcPath, "Function", "gvisUtils.R"))
   load(file.path(srcPath, object@outFile$pathRdata)) # load listResults
   nomPrueba <- object@test@nomTest
@@ -496,7 +512,9 @@ function(object, srcPath){
       Además, la gráfica de la curva característica del ítem (ICC) y la gráfica de opciones.</p>')
   cat('<p>Se definieron señales de aviso que indican mal funcionamiento del ítem en cuanto a dificultad, 
       correlación, porcentaje, infit, outfit, pendiente de la clave y promedio de habilidad de la clave.</p>')
-
+  
+  liDiff <- object@param$espMean - 3 * object@param$espSd  # -3
+  lsDiff <- object@param$espMean + 3 * object@param$espSd  # 3
   cat("<p>Las señales generadas fueron las siguientes:</p>",
        "<center>",
        "<table style=\"width:83%;\">",
@@ -533,7 +551,7 @@ function(object, srcPath){
        "</tr>",
        "<tr role=\"row\" class=\"odd\">",
        "<td align=\"left\">6</td>",
-       "<td align=\"left\">La dificultad del ítem, bajo Rasch, es menor a -3 o mayor a 3.</td>",
+       "<td align=\"left\">La dificultad del ítem, bajo el modelo, es aproximadamente menor a ", liDiff, " o mayor a ", lsDiff, "</td>",
        "</tr>",
        "<tr role=\"row\" class=\"even\">",
        "<td align=\"left\">7</td>",
@@ -561,8 +579,19 @@ function(object, srcPath){
       pFin <- suppressWarnings(grid.arrange(grobs = list(listResults[[nomAux]][["itHaMap"]][[1]], 
                                listResults[[nomAux]][["itHaMap"]][[2]]), layout_matrix = lay))
       suppressWarnings(grid::grid.draw(pFin))
+      pathGraph  <- object@test@nomTest
+      pathGraph  <- gsub("\\)", paste0(" - ", nomSub, ")"), pathGraph)      
+      plotInfo <- ggplot(listResults[[nomAux]][["plotInfo"]], aes(x = x, y = y)) + geom_blank() + 
+                  geom_line(colour = "red") +
+                  ggtitle(paste0("Curva de Información ", 
+                            gsub("(\\s+)?SABER 3,\\s?5 y 9 ", "", 
+                            pathGraph), "")) +
+                  ylab("Información") + xlab("Habilidad") +
+                  theme_bw(base_size = 12) 
+      plot(plotInfo)
       cat('<h3 id="IRT_Header_tab">\n', nomSub, '</h3>\n\n')
-      reporteItem(listResults[[nomAux]]$tablaFin, idPrueba = nomAux)    
+      tabHtml <- reporteItem(listResults[[nomAux]]$tablaFin, idPrueba = nomAux)    
+      cat(as.character(htmltools::tagList(tabHtml)))
     }    
   }
 })
