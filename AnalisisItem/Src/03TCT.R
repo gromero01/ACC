@@ -278,6 +278,7 @@ function(object, srcPath = "."){
   # # Identificando archivos en excel
   listXLSX <- lapply(listResults, function(x) x$fileXLSX)
   listXLSX <- lapply(auxPru, function(x) unique(unlist(listXLSX[x])))
+  listALERT <- lapply(listResults, function(x) x$txtAlerta)  
 
   # # Juntando subConjunto de una prueba
   listResults <- lapply(names(listResults), function(x){ 
