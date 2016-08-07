@@ -64,7 +64,8 @@ IRT <- function(test, paramExp = NULL){
                        flagSubCon = TRUE, orderedDat = FALSE,
                        idNoPKey = c('O', 'M'), constDmodel = 1.7,
                        isCheckKeys = FALSE, kThresItemCorrDic = 0.2,
-                       kThresItemCorrOrd = 0.2, espSd = 1, espMean = 0)
+                       kThresItemCorrOrd = 0.2, espSd = 1, espMean = 0, 
+                       AnclaRdata = NULL)
   if (!is.null(paramExp)) {
     isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
     isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
@@ -152,6 +153,18 @@ setMethod("codeAnalysis", "IRT",
 	# # create list to save results
 	listResults <- list()
 	pruebasRead <- names(object@datAnalysis)
+
+  # # Cargando archivo de anclas
+  if (!is.null(object@param$AnclaRdata)) {
+     fileAncla <- object@param$AnclaRdata
+     load(fileAncla)
+     listResultsAN <- listResults
+     rm(listResults)
+     listResultsAN <- lapply(listResultsAN, function(x) x$tablaFin)
+  } else {
+     listResultsAN <- NULL
+  }
+
 
 	for (kk in pruebasRead) {	
       cat(".... Ejecutando estimación para -->", kk, "\n")
@@ -251,7 +264,8 @@ setMethod("codeAnalysis", "IRT",
                  itemIds = paste0("I", dictVarPrueba$id), binPath = binPath,
                  runPath = file.path(outPath, 'corridas'),
                  verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
-                 commentFile = indexData, NPArm = auxNPAR, thrCorr = 0.05)
+                 commentFile = indexData, NPArm = auxNPAR, thrCorr = 0.05, 
+                 datAnclas = listResultsAN[[auxPru]])
         
         # Reading results of chi square test 
         itemPH2File <- paste(indexData, ".PH2", sep = "")
@@ -288,7 +302,9 @@ setMethod("codeAnalysis", "IRT",
         if (!file.exists(outFileAbili)) {
            personAbilities <- try(ReadBlScoFile(personAbilFile, outPath,
                                   lengthIds = nchar(personDataBlo[1])))
-           save(personAbilities, file = outFileAbili)
+           if (nrow(personAbilities) > 0) {
+             save(personAbilities, file = outFileAbili)
+           }
         } else {
            load(outFileAbili)
         }
@@ -468,7 +484,7 @@ setMethod("codeAnalysis", "IRT",
                           'FLAGMEAN' = ifelse((PCT >90) | (PCT < 10), 1, 0),
                           'FLAGCORR' = ifelse(CORRELACION < 0.1, 1, 0),
                           'FLAGA'    = ifelse(disc < 0.5 , 1, 0),
-                          'FLAGB'    = ifelse(dif > 3 & dif < -3, 1, 0),
+                          'FLAGB'    = ifelse(dif > 3 | dif < -3, 1, 0),
                           'FLAGBISE' = ifelse(BISERIAL < 0.1, 1, 0), 
                           'FLAGINFIT' = ifelse((INFIT < minOutms[indPos]) | (INFIT > maxOutms[indPos]), 1, 0),
                           'FLAGOUTFIT' = ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
@@ -513,8 +529,10 @@ function(object, srcPath){
   cat('<p>Se definieron señales de aviso que indican mal funcionamiento del ítem en cuanto a dificultad, 
       correlación, porcentaje, infit, outfit, pendiente de la clave y promedio de habilidad de la clave.</p>')
   
-  liDiff <- object@param$espMean - 3 * object@param$espSd  # -3
-  lsDiff <- object@param$espMean + 3 * object@param$espSd  # 3
+  # # Cargando parametros
+  liDiff    <- object@param$espMean - 3 * object@param$espSd  # -3
+  lsDiff    <- object@param$espMean + 3 * object@param$espSd  # 3
+
   cat("<p>Las señales generadas fueron las siguientes:</p>",
        "<center>",
        "<table style=\"width:83%;\">",

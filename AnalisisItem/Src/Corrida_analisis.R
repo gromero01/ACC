@@ -43,25 +43,26 @@ dirPandoc <- file.path(Sys.getenv("APPDATA"), "..", "Local\\Pandoc")
 Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
 #Sys.setenv(RSTUDIO_PANDOC = "C:\\Program Files (x86)\\Pandoc")
 
-vecJson  <- c("../Input/parameters_EN.json", "../Input/parameters_MA.json", 
-              "../Input/parameters_PR.json","../Input/parameters_CC.json",
+vecJson  <- c(#"../Input/parameters_EN.json", "../Input/parameters_MA.json", 
+              #"../Input/parameters_PR.json",
+              "../Input/parameters_CC.json",
               "../Input/parameters_RC.json","../Input/parameters_LC.json", 
               "../Input/parameters_IN.json")
 
 for (fileJson in vecJson){
   listTests <- analyzeTests(fileJson, anUpdate = "IRT")
   jointReports(listTests, fileJson, pathJS = "../../../../lib", 
-  	           flagView = FALSE)
-}
+   	           flagView = FALSE)
+} 
 
-#publishRepo(vecJson, pathDest = "\\\\icfesserv5\\Analisisitems$", 
-            #flagActualizar = FALSE)
+publishRepo(vecJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 
+            flagActualizar = FALSE)
 
 ################################################################################
 # # Depuración metodo 
 ################################################################################
 #prueba0 <- listTests[[1]]
-#object  <- listTests[[4]]@listAnal[["IRT"]]
+#object  <- listTests[[1]]@listAnal[["Filtros"]]
 #codeAnalysis(object)
 #outHTML(object)
 # prueba0 <- new('Test', path = "JUNTURAS/EK20161/exam717/PBAF000401JN", 

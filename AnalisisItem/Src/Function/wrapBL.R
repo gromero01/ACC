@@ -199,7 +199,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
                       srcPath = "../src/", binPath = "../bin/", verbose = TRUE,
                       commentFile = NULL,  calibFile = NULL,
                       runProgram = TRUE, itNumber = NULL, NPArm = 2, 
-                      thrCorr = 0.05){
+                      thrCorr = 0.05, datAnclas = NULL){
 
     # # This function generates a Parscale control file given the options in its
     # # arguments, runs it and reads the item parameters
@@ -228,6 +228,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     # #  calibFile: file name with the Parameter Calibration
     # #  runProgram:
     # #  NPArm: Number of parameters of the model
+    # #  datAnclas: Data Frame with items parameters to estimate
     # # Ret:
     # #  iPar: returns the estimated item parameters
     ################################################################################
@@ -256,6 +257,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   ################################################################################
   # # General variables and filenames
   ################################################################################
+
   # # Responses dimensions and category information
   nItems           <- ncol(responseMatrix)
   nObservations    <- nrow(responseMatrix)
@@ -264,9 +266,9 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   binPath <- file.path(srcPath, binPath)
   runPath <- file.path(srcPath, runPath)
 
-
   # # Files used by Bilog
   dataFileName    <- paste(runName, ".dat.cal", sep = "")
+  prFileName      <- paste(runName, ".prm", sep = "")
   omitkeyFileName <- paste(runName, ".om", sep = "")
   keyFileName     <- paste(runName, ".key", sep = "")
   notpresFileName <- paste(runName, ".np", sep = "")
@@ -282,6 +284,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   # # With paths for the ones where data is written
   commandFile <- file.path(runPath, paste(runName, ".blm", sep = ""))
   dataFile    <- file.path(runPath, dataFileName)
+  prFile      <- file.path(runPath, prFileName)
   keyFile     <- file.path(runPath, keyFileName)
   omitkeyFile <- file.path(runPath, omitkeyFileName)
   notpresFile <- file.path(runPath, notpresFileName)
@@ -378,24 +381,66 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   # # FILES
   cat(">GLOBAL DFNAME = '", dataFileName, "', \n", sep = "", file = commandFile,
       append = TRUE)
+  
   if (!is.null(calibFile)) {
     cat("       IFNAME = '", calibFile, "', \n", sep = "",
         file = commandFile, append = TRUE)
   }
-  cat("        NPArm = ", NPArm, ",\n", sep = "", file = commandFile, append = TRUE)
+  
+  if (!is.null(datAnclas)) {
+    cat("        PRNAME = '", prFileName, "', \n", sep = "",
+        file = commandFile, append = TRUE)
+    
+    # # Position and code of items
+    indPosi <- data.frame(item = itemIds,
+                          pos  = seq(1, length(itemIds)))
+    datAnclas <- subset(datAnclas, select = c("item", "dif", "disc", "azar"))
+    indPosi   <- merge(indPosi, datAnclas, by = "item", all.x = TRUE)
+    indPosi   <- cbind(indPosi, 'Fix' = ifelse(is.na(indPosi$dif), 0, 1))
+    indPosi   <- indPosi[order(indPosi$pos), ]
+    
+    # # Construct PRM
+    writePRM <- function(indPosi, prFile, isBad = NULL) {      
+      if (!is.null(isBad)) {
+        isElim  <- any(isBad %in% indPosi[["pos"]])
+        if (isElim) {
+          indPosi <- indPosi[-isBad, ]
+          indPosi$pos <- 1:nrow(indPosi)
+        }
+      }
+      prmDAT <- subset(indPosi, !is.na(dif), 
+                      select = c("pos", "disc", "dif", "azar"))
+
+      # # format and run
+      cols   <- c("dif", "disc", "azar")
+      for (jj in cols){
+        prmDAT[[jj]] <- sprintf("%.6f", prmDAT[[jj]])
+      }      
+      # # output file
+      write(nrow(prmDAT), file = prFile)
+      write.table(prmDAT, file = prFile, append = TRUE, sep = "\t",
+                  row.names = FALSE, na = " ", col.names = FALSE, 
+                  quote = FALSE)
+      if (verbose) cat("Prm file prepared\n")
+    }
+    writePRM(indPosi, prFile)
+  }
+ 
+  cat("        NPArm = ", NPArm, ",\n", sep = "", file = commandFile, 
+      append = TRUE)
   cat("        NTEST = 1,\n", file = commandFile, append = TRUE)
   cat("        SAVE;\n", sep = "", file = commandFile, append = TRUE)
 
   # # SAVE
-# #   cat(">SAVE PARM = '", toupper(gsub("/", "\\\\", itemFileName)),
-# #       "', \n", sep = "", file = commandFile, append = TRUE)
-# #   cat("      SCORE = '", toupper(gsub("/", "\\\\", scoreFileName)),
-# #       "', \n", sep = "", file = commandFile, append = TRUE)
-# #   cat("      INFORMATION = '", toupper(gsub("/", "\\\\", infoFileName)),
-# #       "', \n", sep = "", file = commandFile, append = TRUE)
-# #   cat("      FIT = '", toupper(gsub("/", "\\\\", fitFileName)),
-# #       "';\n", sep = "", file = commandFile, append = TRUE)
-# #
+  # #   cat(">SAVE PARM = '", toupper(gsub("/", "\\\\", itemFileName)),
+  # #       "', \n", sep = "", file = commandFile, append = TRUE)
+  # #   cat("      SCORE = '", toupper(gsub("/", "\\\\", scoreFileName)),
+  # #       "', \n", sep = "", file = commandFile, append = TRUE)
+  # #   cat("      INFORMATION = '", toupper(gsub("/", "\\\\", infoFileName)),
+  # #       "', \n", sep = "", file = commandFile, append = TRUE)
+  # #   cat("      FIT = '", toupper(gsub("/", "\\\\", fitFileName)),
+  # #       "';\n", sep = "", file = commandFile, append = TRUE)
+  # #
   cat(">SAVE PARM = '", toupper(itemFileName),
       "', \n", sep = "", file = commandFile, append = TRUE)
   cat("      ISTAT = '", toupper(tctFileName),
@@ -432,7 +477,19 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   cat("                );\n", sep = "", file = commandFile, append = TRUE)
 
   # # TEST
-  cat(">TEST \n      TNAME = '", substr(gsub("_V.+", "", runName), 1, 8), "', \n",
+  cat(">TEST \n", file = commandFile, append = TRUE)
+  printFix <- function(vecFix, commandFile){  
+      cat("      FIX = (\n", file = commandFile, append = TRUE)
+      auxFix <- strwrap(paste(vecFix, collapse = ", "), width = 30)
+      cat(gsub("\\s", "", auxFix), sep = "\n", file = commandFile, append = TRUE)
+      cat("                ),\n", file = commandFile, append = TRUE)
+  }
+
+  if (!is.null(datAnclas)) {
+    printFix(vecFix = indPosi$Fix, commandFile)
+  }
+  
+  cat("      TNAME = '", substr(gsub("_V.+", "", runName), 1, 8), "', \n",
     sep = "", file = commandFile, append = TRUE)
   cat("      INUmber = (\n", file = commandFile, append = TRUE)
   if (is.null(itNumber)){
@@ -443,7 +500,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     auxItems <- strwrap(paste(itNumber, collapse = ", "),  width = 30)
     cat(gsub("\\s", "", auxItems), sep = "\n", file = commandFile, append = TRUE)
   }
-  cat("                );\n", sep = "", file = commandFile, append = TRUE)
+  cat("                );\n", file = commandFile, append = TRUE)
 
   # # (variable format statement)
   if (!is.null(dif) & !is.null(weights)) {
@@ -509,6 +566,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     if (iiCor == 1){
       file.copy(tctFileName, gsub("\\.TCT", "_ori.TCT", tctFileName))
     }
+
     # # Identificando items malos
     auxTCT <- ReadBlTCTFile(tctFileName, ".")
     isBad  <- auxTCT[, "BISERIAL"] < thrCorr
@@ -516,6 +574,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     auxBlm <- readLines(commandFile)
     linea1 <- grep(pattern = "INUmber", auxBlm)
     linea2 <- grep(pattern = ">CALIB", auxBlm)
+    linea4 <- grep(pattern = ">TEST", auxBlm)
     
     # # Construyendo el nuevo archivo
     auxdata1 <- auxBlm[(linea1 + 1):(linea2 - 3)]
@@ -531,7 +590,6 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
       auxBlm   <- auxBlm[-isBlanck]  
     }
     
-
     # # Cambiar el NITems
     linea3 <- grep(pattern = "NITems", auxBlm)
     antNUM <- gsub(".+\\((\\d+)\\).+", "\\1", auxBlm[linea3])
@@ -539,7 +597,24 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     nueNUM <- gsub("(.+\\()(\\d+)(\\).+)", paste0("\\1", nueNUM, "\\3"), 
                   auxBlm[linea3])
     auxBlm[linea3] <- nueNUM
-    cat(auxBlm, sep = "\n", file = commandFile)
+    if (!is.null(datAnclas) & length(isBad) > 0) {
+      # # Ajustando campo Fix
+      cat(auxBlm[1:linea4], sep = "\n", file = commandFile)  
+      #print(indPosi$Fix)
+      cat("Eliminando items ...... \n")
+      cat(isBad)
+      #print(indPosi$Fix[-isBad])
+      printFix(vecFix = indPosi$Fix[-isBad], commandFile)
+      cat(auxBlm[(linea1 - 1):length(auxBlm)], sep = "\n", 
+          file = commandFile, append = TRUE)
+
+      # # Ajustando archivo PRM
+      writePRM(indPosi, prFile, isBad = isBad)
+
+    } else {
+      cat(auxBlm, sep = "\n", file = commandFile)  
+    }
+
     if(all(auxTCT[, "BISERIAL"] >= thrCorr)){
       break
     }
