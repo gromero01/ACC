@@ -31,7 +31,8 @@ setMethod("initialize", "Filtros", function(.Object, ..., param) {
 Filtros <- function(test, paramExp = NULL){
   paramDefault <- list(fileCopy = NULL, 
   	                   indiInfo = NULL, 
-  	                   kOmissionThreshold = 0.5) 
+  	                   kOmissionThreshold = 0.5, 
+                       flagConjunta = FALSE) 
   if (!is.null(paramExp)) {
     isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
     isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
@@ -99,34 +100,44 @@ setMethod("codeAnalysis", "Filtros",
   	  varId <- dictVarPrueba[, "id"]
       varId <- intersect(names(datSblq), varId)
 
+      # # Parametro de conjunta
+      flagConjunta <- object@param$flagConjunta
+
       # # Seleccion copia
       auxForma <- gsub("(pba|PBA|UOF|pba)", "", gsub("\\.con", "", kk))
-	    sospPrueb <- subset(sospechosos, PRUE_CODIGOICFES == auxForma & 
+      if (flagConjunta){
+        baseName <- strsplit(gsub("(.+)(JN)$", "\\1", auxForma), "")[[1]]
+        baseName <- paste(baseName[1:(length(baseName)-2)], collapse = "")
+        auxForma <- paste0(baseName, ".+")
+      } 
+
+	    sospPrueb <- subset(sospechosos, PRUE_CODIGOICFES %like% auxForma & 
 	  	                    APLICACION == object@test@periodo)
       datSblq[!SNP %in% sospPrueb[,"SNP1"], indCopia := 0]
       datSblq[SNP %in% sospPrueb[,"SNP1"], indCopia := 1]
-      
+     
+      errBaseCop <- sospPrueb[,"SNP1"][!sospPrueb[,"SNP1"] %in% datSblq[, SNP]] 
+
       # # Seleccion No estudiante
-   	  datSblq[, indNE := ifelse(Tipo_de_Evaluado == "1", 0, 1)]
-
+   	  datSblq[, indNE := ifelse(Tipo_de_Evaluado != "1" & !flagConjunta, 1, 0)]
       # # Seleccion No presentes
-   	  datSblq[, indNP := ifelse(!Estado_Final %in% c("1", "8"), 1, 0)]
+   	  datSblq[, indNP := ifelse(!Estado_Final %in% c("1", "8") & !flagConjunta, 1, 0)]
 	
-	  # # Seleccion de Omisiones
-	  koPram <- object@param$kOmissionThreshold
-	  indOmi <- rowMeans(datSblq[, varId, with= FALSE] == "O") > koPram
-	  datSblq[, indOMI := ifelse(indOmi, 1, 0)]
-
-	  # # Seleccion No estudiante No presentes
-      datSblq[, indNENP := ifelse(Tipo_de_Evaluado != "1" & indNP == 1, 1, 0)]
+      # # Seleccion de Omisiones
+      koPram <- object@param$kOmissionThreshold
+      indOmi <- rowMeans(datSblq[, varId, with= FALSE] == "O") > koPram
+      datSblq[, indOMI := ifelse(indOmi & !flagConjunta, 1, 0)]
+    
+	    # # Seleccion No estudiante No presentes
+      datSblq[, indNENP := ifelse(Tipo_de_Evaluado != "1" & indNP == 1 & !flagConjunta, 1, 0)]
 
       # # Extremos Inferiores
-      indExtL <- rowMeans(datSblqCal[, varId, with= FALSE]) == 0
+      indExtL <- rowMeans(datSblqCal[, varId, with= FALSE], na.rm = TRUE) == 0
       indExtL <- indExtL & !indOmi
       datSblq[, indEXTI := ifelse(indExtL == 1, 1, 0)]
 
       # # Extremos Superiores
-      indExtS <- rowMeans(datSblqCal[, varId, with= FALSE]) == 1
+      indExtS <- rowMeans(datSblqCal[, varId, with= FALSE], na.rm = TRUE) == 1
       datSblq[, indEXTS := ifelse(indExtS, 1, 0)]
 
       # # Indicadora global
@@ -153,9 +164,10 @@ setMethod("codeAnalysis", "Filtros",
                       "Total de evaluados incluidos en el análisis",
                       "Total de evaluados en la prueba"), 
                       "Cantidad" = tabResumen[, 1], stringsAsFactors = FALSE)
-
+      
       totalEvaluados <- tabResumen[nrow(tabResumen), "Cantidad"]
       totalAnalisis  <- tabResumen[nrow(tabResumen) - 1, "Cantidad"]
+
       # # Carreta del inicio
       nomPrueba <- gsub(".+\\((.+)\\)", "\\1", object@test@nomTest)
       nomPrueba <- gsub("(\\(|\\))", "", nomPrueba)
