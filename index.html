@@ -13,14 +13,14 @@
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
 
-    <title>Acc by SUB-ESTADISTICA-ICFES</title>
+    <title>Análisis de Item by SUB-ESTADISTICA-ICFES</title>
   </head>
 
   <body>
     <header>
       <div class="inner">
-        <h1>Acc</h1>
-        <h2>Códigos relacionados con la prueba de Acciones y Actitudes Ciudadanas</h2>
+        <h1>Análisis de Item</h1>
+        <h2>Clases S4 para la construcción de análisis.</h2>
         <a href="https://github.com/SUB-ESTADISTICA-ICFES/ACC" class="button"><small>View project on</small> GitHub</a>
       </div>
     </header>
@@ -28,28 +28,48 @@
     <div id="content-wrapper">
       <div class="inner clearfix">
         <section id="main-content">
-          <h3>
-<a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
+          <h2>
+<a id="tutorial-análisis-de-ítem" class="anchor" href="#tutorial-an%C3%A1lisis-de-%C3%ADtem" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Tutorial análisis de ítem</h2>
 
-<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here <a href="https://guides.github.com/features/mastering-markdown/">using GitHub Flavored Markdown</a>, select a template crafted by a designer, and publish. After your page is generated, you can check out the new <code>gh-pages</code> branch locally. If you’re using GitHub Desktop, simply sync your repository and you’ll see the new branch.</p>
+<p>Este corto tutorial tiene el fin de introducir el diseño de clases realizado por la Subdirección de estadística para estandarizar la construcción de los análisis que requiere las pruebas que aplican el ICFES.</p>
+
+<h2>
+<a id="diagrama-de-clases" class="anchor" href="#diagrama-de-clases" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Diagrama de clases</h2>
+
+<p>El siguiente diagrama presenta, el conjunto de atributos y métodos que están relacionados con las diferentes clases del análisis de ítems. En el diagrama se presentan en verde las análisis que ya se tienen adelantados, en amarillo aquellos análisis en los cuales hace falta complementar el código y en rojo aquellos que no se ha iniciado la implementación de las clases.</p>
+
+<p><img src="https://raw.githubusercontent.com/SUB-ESTADISTICA-ICFES/ACC/master/mapa_clases.png" alt="img1"></p>
+
+<h2>
+<a id="ejemplo-de-inicialización-de-una-clase-test" class="anchor" href="#ejemplo-de-inicializaci%C3%B3n-de-una-clase-test" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Ejemplo de inicialización de una clase "Test"</h2>
+
+<p>Como un pequeño ejemplo correremos el análisi de teoria de respuesta al ítem para la prueba de "Mantenimiento e Instalación de Software y Hardware" de SABER TyT de la aplicación 2016-1.</p>
+
+<ol>
+<li>Descargar o clonar el repositorio "" </li>
+<li>Descargar el conjunto de datos que tienen </li>
+<li>
+<p>Inicialización de la clase "Test"</p>
+
+<h1>
+<a id="let-me-re-iterate-" class="anchor" href="#let-me-re-iterate-" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Let me re-iterate ...</h1>
+
+<p>for i in 1 .. 10 { do-something(i) }</p>
+</li>
+</ol>
 
 <h3>
-<a id="designer-templates" class="anchor" href="#designer-templates" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Designer Templates</h3>
-
-<p>We’ve crafted some handsome templates for you to use. Go ahead and click 'Continue to layouts' to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved.</p>
-
-<h3>
-<a id="creating-pages-manually" class="anchor" href="#creating-pages-manually" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Creating pages manually</h3>
-
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
-
-<h3>
-<a id="authors-and-contributors" class="anchor" href="#authors-and-contributors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Authors and Contributors</h3>
+<a id="ejecución-de-análisis-irt" class="anchor" href="#ejecuci%C3%B3n-de-an%C3%A1lisis-irt" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Ejecución de análisis IRT</h3>
 
 <p>You can @mention a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor’s GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
 
-<h3>
-<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Support or Contact</h3>
+<h2>
+<a id="métodos-de-la-clase-analysis" class="anchor" href="#m%C3%A9todos-de-la-clase-analysis" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Métodos de la clase "Analysis"</h2>
+
+<p>Having trouble with Pages? Check out our <a href="https://help.github.com/pages">documentation</a> or <a href="https://github.com/contact">contact support</a> and we’ll help you sort it out.</p>
+
+<h2>
+<a id="construcción-nuevo-método" class="anchor" href="#construcci%C3%B3n-nuevo-m%C3%A9todo" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Construcción nuevo Método.</h2>
 
 <p>Having trouble with Pages? Check out our <a href="https://help.github.com/pages">documentation</a> or <a href="https://github.com/contact">contact support</a> and we’ll help you sort it out.</p>
         </section>
