@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <title>Análisis de Item by SUB-ESTADISTICA-ICFES</title>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <h1>Análisis de Item</h1>
+        <h2>Clases S4 para la construcción de análisis.</h2>
+        <a href="https://github.com/SUB-ESTADISTICA-ICFES/ACC" class="button"><small>View project on</small> GitHub</a>
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h2>
+<a id="tutorial-análisis-de-ítem" class="anchor" href="#tutorial-an%C3%A1lisis-de-%C3%ADtem" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Tutorial análisis de ítem</h2>
+
+<p>Este corto tutorial tiene el fin de introducir el diseño de clases realizado por la Subdirección de estadística para estandarizar la construcción de los análisis que requiere las pruebas que aplican el ICFES.</p>
+
+<h2>
+<a id="diagrama-de-clases" class="anchor" href="#diagrama-de-clases" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Diagrama de clases</h2>
+
+<p>El siguiente diagrama presenta el conjunto de atributos y métodos que están relacionados con las diferentes clases del análisis de ítems. En el diagrama se muestran en verde los análisis que ya se tienen adelantados, en amarillo aquellos análisis hace falta alguna implementación del código y en rojo aquellos que no se han iniciado.</p>
+
+<p><img src="https://raw.githubusercontent.com/SUB-ESTADISTICA-ICFES/ACC/master/mapa_clases.png" alt="img1"></p>
+
+<h2>
+<a id="ejemplo-de-inicialización-de-una-clase-test" class="anchor" href="#ejemplo-de-inicializaci%C3%B3n-de-una-clase-test" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Ejemplo de inicialización de una clase "Test"</h2>
+
+<p>Como un pequeño ejemplo correremos el análisis de teoría de respuesta al ítem para la prueba de "Mantenimiento e Instalación de Software y Hardware" de SABER TyT de la aplicación 2016-1.</p>
+
+<ol>
+<li>Descargar o clonar el repositorio <a href="https://github.com/SUB-ESTADISTICA-ICFES/ACC/tree/new_Prueba_Class">GitHub</a>.</li>
+<li>Descargar el conjunto de datos del siguiente <a href="https://drive.google.com/open?id=0B9JWP21TLaLQbTFoTW9BZ3ZpRm8">enlace</a>.</li>
+<li>Poner la carpeta "Ma" al interior de la carpeta <strong>Input</strong>.</li>
+<li>Inicialización de la clase "Test", el siguiente código debe ser ejecutado desde la carpeta que se creo con anterioridad, cambiando adecuadamente la ruta de trabajo en R. </li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-c">################################################################################</span>
+<span class="pl-c"># # Directorios globales</span>
+<span class="pl-c">################################################################################</span>
+<span class="pl-smi">inPath</span>  <span class="pl-k">&lt;-</span> file.path(<span class="pl-s"><span class="pl-pds">"</span>..<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>Input<span class="pl-pds">"</span></span>)
+<span class="pl-smi">srcPath</span> <span class="pl-k">&lt;-</span> file.path(<span class="pl-s"><span class="pl-pds">"</span>..<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>Src<span class="pl-pds">"</span></span>)
+<span class="pl-smi">funPath</span> <span class="pl-k">&lt;-</span> file.path(<span class="pl-s"><span class="pl-pds">"</span>Function<span class="pl-pds">"</span></span>)
+<span class="pl-smi">outPath</span> <span class="pl-k">&lt;-</span> file.path(<span class="pl-s"><span class="pl-pds">"</span>..<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>Output<span class="pl-pds">"</span></span>)
+<span class="pl-smi">logPath</span> <span class="pl-k">&lt;-</span> file.path(<span class="pl-s"><span class="pl-pds">"</span>..<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>Log<span class="pl-pds">"</span></span>)
+<span class="pl-c">################################################################################</span>
+
+<span class="pl-c"># # Carga de funciones y parámetros</span>
+<span class="pl-smi">pathExpeci</span> <span class="pl-k">&lt;-</span> file.path(<span class="pl-smi">inPath</span>, <span class="pl-s"><span class="pl-pds">"</span>Especificaciones1.xlsx<span class="pl-pds">"</span></span>)
+<span class="pl-smi">pathExam</span>   <span class="pl-k">&lt;-</span> <span class="pl-s"><span class="pl-pds">"</span>MA/EK20161/exam717/pbaF500301<span class="pl-pds">"</span></span>
+source(file.path(<span class="pl-s"><span class="pl-pds">"</span>Function<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>pruebaClass.R<span class="pl-pds">"</span></span>))
+
+<span class="pl-c"># # Inicializacion de análisis</span>
+<span class="pl-smi">paramLect</span> <span class="pl-k">&lt;-</span> <span class="pl-k">list</span>(<span class="pl-v">conDirs</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>pbaF500301.con<span class="pl-pds">"</span></span>, <span class="pl-v">valMUO</span> <span class="pl-k">=</span> <span class="pl-c1">NA</span>)
+<span class="pl-smi">prueba0</span>   <span class="pl-k">&lt;-</span> new(<span class="pl-s"><span class="pl-pds">'</span>Test<span class="pl-pds">'</span></span>, <span class="pl-v">path</span> <span class="pl-k">=</span> paste0(<span class="pl-smi">pathExam</span>, <span class="pl-s"><span class="pl-pds">"</span>/pbaF500301<span class="pl-pds">"</span></span>), 
+               <span class="pl-v">exam</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>SABERTYT<span class="pl-pds">"</span></span>, <span class="pl-v">codMod</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>07<span class="pl-pds">"</span></span>,
+               <span class="pl-v">verInput</span> <span class="pl-k">=</span> <span class="pl-c1">1</span>, <span class="pl-v">nomTest</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>SABER T&amp;T(Mantenimiento e Instalación de Software y Hardware F1)<span class="pl-pds">"</span></span>, 
+               <span class="pl-v">paramLect</span> <span class="pl-k">=</span> <span class="pl-smi">paramLect</span>) </pre></div>
+
+<p>Ver la estructura de la variable prueba0 que contiene la clase análisis.</p>
+
+<div class="highlight highlight-source-r"><pre>str(<span class="pl-smi">prueba0</span>)</pre></div>
+
+<h3>
+<a id="definición-del-análisis-irt" class="anchor" href="#definici%C3%B3n-del-an%C3%A1lisis-irt" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Definición del análisis IRT</h3>
+
+<p>Con relación al análisis de IRT se construyo el "06IRT.R", que contiene todos los análisis, este programa se encuentra en la carpeta del repositorio de Github. Para correr este análisis se deben seguir los siguientes pasos.</p>
+
+<ol>
+<li>Incluir en la carga de funciones y parámetros el siguiente llamado.</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre>source(<span class="pl-s"><span class="pl-pds">"</span>06IRT.R<span class="pl-pds">"</span></span>)</pre></div>
+
+<ol>
+<li>Inicializar el análisis IRT con la función creada para tal fin, ¿Qué se observa?.</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">codeana1</span> <span class="pl-k">&lt;-</span> IRT(<span class="pl-v">test</span> <span class="pl-k">=</span> <span class="pl-smi">prueba0</span>, <span class="pl-k">list</span>(<span class="pl-v">kOmissionThreshold</span> <span class="pl-k">=</span> <span class="pl-c1">1</span>))</pre></div>
+
+<h2>
+<a id="métodos-de-la-clase-analysis" class="anchor" href="#m%C3%A9todos-de-la-clase-analysis" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Métodos de la clase "Analysis"</h2>
+
+<p>Siguiendo con el ejemplo :</p>
+
+<ol>
+<li>Correr "codeAnalysis", ¿Qué se observa?.</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre>codeAnalysis(<span class="pl-smi">codeana1</span>)</pre></div>
+
+<ol>
+<li>Correr "outXLSX", ¿Qué se observa?.</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre>outXLSX(<span class="pl-smi">codeana1</span>)</pre></div>
+
+<ol>
+<li>Correr "outHTML", ¿Qué se observa?.</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre>outHTML(<span class="pl-smi">codeana1</span>)</pre></div>
+
+<h2>
+<a id="construcción-de-nuevo-análisis" class="anchor" href="#construcci%C3%B3n-de-nuevo-an%C3%A1lisis" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Construcción de nuevo Análisis.</h2>
+
+<p>Como ejercicio construiremos un análisis que contabilice el numero de respuestas incorrectas de los individuos que presentaron la prueba mencionada con anterioridad. Para tal fin se debe hacer la definición de la clase y las salidas en xlsx. Los pasos que seguiremos son los siguientes.</p>
+
+<ol>
+<li>Definición de la clase "conteoIncorrectos" que herede de la clase análisis, es aconsejable construir un archivo por cada una de las clases que se definan.</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-c">################################################################################</span>
+<span class="pl-c"># # XXconteoIncorrectos.R</span>
+<span class="pl-c"># # R Versions: R version 3....</span>
+<span class="pl-c"># #</span>
+<span class="pl-c"># # Author(s): xxxxxxx</span>
+<span class="pl-c"># #</span>
+<span class="pl-c"># # SABER ICFES</span>
+<span class="pl-c"># #</span>
+<span class="pl-c"># # Inputs: Dictionary and list of data.frames with data from</span>
+<span class="pl-c"># #         00CrearRdata.R</span>
+<span class="pl-c"># #</span>
+<span class="pl-c"># # Outputs: .......</span>
+<span class="pl-c"># #</span>
+<span class="pl-c"># # File history:</span>
+<span class="pl-c"># #   20160809: Creation</span>
+<span class="pl-c">################################################################################</span>
+
+<span class="pl-c">################################################################################</span>
+<span class="pl-c"># # Definition of class and parameters</span>
+<span class="pl-c">################################################################################</span>
+
+<span class="pl-c"># # Heritage class Analysis</span>
+<span class="pl-smi">conteoIncorrectos</span><span class="pl-k">&lt;-</span> <span class="pl-ent">setClass</span>("<span class="pl-en">conteoIncorrectos</span>", contains = "Analysis")
+<span class="pl-ent">setMethod</span>("<span class="pl-en">initialize</span>", "conteoIncorrectos", function(.Object, ..., param) {
+  .<span class="pl-smi">Object</span><span class="pl-k">@</span><span class="pl-smi">outFile</span><span class="pl-k">$</span><span class="pl-smi">pathRdata</span> <span class="pl-k">&lt;-</span> <span class="pl-s"><span class="pl-pds">"</span>../Output/XXINCORRECTOS/outList_INCORRECTOS.Rdata<span class="pl-pds">"</span></span>
+  .<span class="pl-smi">Object</span> <span class="pl-k">&lt;-</span> callNextMethod()
+})</pre></div>
+
+<ol>
+<li>Definición de una función "Incorrectos" que cree un objecto de la clase "conteoIncorrectos".</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-en">Incorrectos</span><span class="pl-k">&lt;-</span> <span class="pl-k">function</span>(<span class="pl-smi">test</span>, <span class="pl-v">paramExp</span> <span class="pl-k">=</span> <span class="pl-c1">NULL</span>){
+  <span class="pl-smi">object</span> <span class="pl-k">&lt;-</span> new(<span class="pl-s"><span class="pl-pds">"</span>conteoIncorrectos<span class="pl-pds">"</span></span>, <span class="pl-v">test</span> <span class="pl-k">=</span> <span class="pl-smi">test</span>, <span class="pl-v">param</span> <span class="pl-k">=</span> <span class="pl-smi">paramExp</span>)
+  <span class="pl-k">return</span>(<span class="pl-smi">object</span>)
+}</pre></div>
+
+<ol>
+<li>Definición y parametrización de la función "Incorrectos".</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-en">Incorrectos</span><span class="pl-k">&lt;-</span> <span class="pl-k">function</span>(<span class="pl-smi">test</span>, <span class="pl-v">paramExp</span> <span class="pl-k">=</span> <span class="pl-c1">NULL</span>){
+  <span class="pl-smi">paramDefault</span> <span class="pl-k">&lt;-</span> <span class="pl-k">list</span>(<span class="pl-v">kOmissionThreshold</span> <span class="pl-k">=</span> <span class="pl-c1">1</span>,
+                       <span class="pl-v">flagOri</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>, <span class="pl-v">flagTotal</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>,
+                       <span class="pl-v">flagSubCon</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>, <span class="pl-v">orderedDat</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>)
+  <span class="pl-c"># # Include paramExp</span>
+  <span class="pl-k">if</span> (<span class="pl-k">!</span>is.null(<span class="pl-smi">paramExp</span>)) {
+    <span class="pl-smi">isNew</span>     <span class="pl-k">&lt;-</span> names(<span class="pl-smi">paramExp</span>)[names(<span class="pl-smi">paramExp</span>) <span class="pl-k">%in%</span> names(<span class="pl-smi">paramDefault</span>)]
+    <span class="pl-smi">isDefault</span> <span class="pl-k">&lt;-</span> names(<span class="pl-smi">paramDefault</span>)[<span class="pl-k">!</span>names(<span class="pl-smi">paramDefault</span>) <span class="pl-k">%in%</span> names(<span class="pl-smi">paramExp</span>)]
+    <span class="pl-smi">paramExp</span>  <span class="pl-k">&lt;-</span> c(<span class="pl-smi">paramExp</span>[<span class="pl-smi">isNew</span>], <span class="pl-smi">paramDefault</span>[<span class="pl-smi">isDefault</span>])
+  } <span class="pl-k">else</span> {
+    <span class="pl-smi">paramExp</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">paramDefault</span>
+  }
+  <span class="pl-smi">object</span> <span class="pl-k">&lt;-</span> new(<span class="pl-s"><span class="pl-pds">"</span>conteoIncorrectos<span class="pl-pds">"</span></span>, <span class="pl-v">test</span> <span class="pl-k">=</span> <span class="pl-smi">test</span>, <span class="pl-v">param</span> <span class="pl-k">=</span> <span class="pl-smi">paramExp</span>)
+  <span class="pl-smi">object</span> <span class="pl-k">&lt;-</span> filterAnalysis(<span class="pl-smi">object</span>)
+  <span class="pl-k">return</span>(<span class="pl-smi">object</span>)
+}</pre></div>
+
+<ol>
+<li>Llamado de la función "Incorrectos". ¿Qué se observa?.</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">codeana2</span> <span class="pl-k">&lt;-</span> Incorrectos(<span class="pl-v">test</span> <span class="pl-k">=</span> <span class="pl-smi">prueba0</span>, <span class="pl-v">paramExp</span> <span class="pl-k">=</span> <span class="pl-c1">NULL</span>)</pre></div>
+
+<ol>
+<li>Creación de los métodos de la clase "conteoIncorrectos".</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-ent">setMethod</span>("<span class="pl-en">codeAnalysis</span>", "conteoIncorrectos", 
+<span class="pl-k">function</span>(<span class="pl-smi">object</span>){
+  print(<span class="pl-s"><span class="pl-pds">"</span>en construcción codeAnalysis.<span class="pl-pds">"</span></span>)
+})
+
+<span class="pl-ent">setMethod</span>("<span class="pl-en">outXLSX</span>", "conteoIncorrectos", 
+<span class="pl-k">function</span>(<span class="pl-smi">object</span>, <span class="pl-v">srcPath</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>.<span class="pl-pds">"</span></span>){
+  print(<span class="pl-s"><span class="pl-pds">"</span>en construcción outXLSX para conteoIncorrectos<span class="pl-pds">"</span></span>)
+})
+
+<span class="pl-ent">setMethod</span>("<span class="pl-en">outHTML</span>", "conteoIncorrectos", 
+<span class="pl-k">function</span>(<span class="pl-smi">object</span>, <span class="pl-smi">srcPath</span>){
+  print(<span class="pl-s"><span class="pl-pds">"</span>en construcción outHTML para conteoIncorrectos<span class="pl-pds">"</span></span>)
+})</pre></div>
+
+<ol>
+<li>Llamado de la función "Incorrectos". ¿Qué se observa?.</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">codeana2</span> <span class="pl-k">&lt;-</span> Incorrectos(<span class="pl-v">test</span> <span class="pl-k">=</span> <span class="pl-smi">prueba0</span>, <span class="pl-v">paramExp</span> <span class="pl-k">=</span> <span class="pl-c1">NULL</span>)</pre></div>
+
+<ol>
+<li>Cambiar la función "codeAnalysis" con los requerimientos.</li>
+</ol>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-ent">setMethod</span>("<span class="pl-en">codeAnalysis</span>", "conteoIncorrectos", 
+<span class="pl-k">function</span>(<span class="pl-smi">object</span>){
+  <span class="pl-c"># # Load libraries and create folders</span>
+  <span class="pl-smi">outPath</span> <span class="pl-k">&lt;-</span> file.path(<span class="pl-smi">outPath</span>, <span class="pl-s"><span class="pl-pds">"</span>XXINCORRECTOS<span class="pl-pds">"</span></span>)
+  dir.create(<span class="pl-smi">outPath</span>, <span class="pl-v">recursive</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>, <span class="pl-v">showWarnings</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>)    
+  require(<span class="pl-smi">data.table</span>)
+
+  <span class="pl-c"># # create list to save results</span>
+  <span class="pl-smi">listResults</span> <span class="pl-k">&lt;-</span> <span class="pl-k">list</span>()
+  <span class="pl-smi">pruebasRead</span> <span class="pl-k">&lt;-</span> names(<span class="pl-smi">object</span><span class="pl-k">@</span><span class="pl-smi">datAnalysis</span>)
+  <span class="pl-k">for</span> (<span class="pl-smi">kk</span> <span class="pl-k">in</span> <span class="pl-smi">pruebasRead</span>) { 
+      cat(<span class="pl-s"><span class="pl-pds">"</span>.... Ejecutando para --&gt;<span class="pl-pds">"</span></span>, <span class="pl-smi">kk</span>, <span class="pl-s"><span class="pl-pds">"</span><span class="pl-cce">\n</span><span class="pl-pds">"</span></span>)
+      <span class="pl-c"># # Define Dictionary</span>
+      <span class="pl-smi">dictVarPrueba</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">object</span><span class="pl-k">@</span><span class="pl-smi">datAnalysis</span>[[<span class="pl-smi">kk</span>]]<span class="pl-k">$</span><span class="pl-smi">dictionary</span>
+
+      <span class="pl-c"># # item that are part of the index</span>
+      <span class="pl-smi">indexItems</span>    <span class="pl-k">&lt;-</span> <span class="pl-smi">dictVarPrueba</span>[, <span class="pl-s"><span class="pl-pds">'</span>id<span class="pl-pds">'</span></span>]
+      <span class="pl-smi">dataCor</span>       <span class="pl-k">&lt;-</span> <span class="pl-smi">object</span><span class="pl-k">@</span><span class="pl-smi">datAnalysis</span>[[<span class="pl-smi">kk</span>]]<span class="pl-k">$</span><span class="pl-smi">datos</span>[, <span class="pl-smi">indexItems</span>, <span class="pl-v">with</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>]
+
+      <span class="pl-c"># # count mistakes</span>
+      <span class="pl-smi">countIncorrec</span> <span class="pl-k">&lt;-</span> rowSums(<span class="pl-smi">dataCor</span> <span class="pl-k">==</span> <span class="pl-c1">0</span>)
+      print(summary(<span class="pl-smi">countIncorrec</span>))
+      cat(<span class="pl-s"><span class="pl-pds">"</span>El total de respuestas incorrectas es de :<span class="pl-pds">"</span></span>, <span class="pl-smi">countIncorrec</span>)
+  }
+
+})</pre></div>
+        </section>
+
+        <aside id="sidebar">
+          <a href="https://github.com/SUB-ESTADISTICA-ICFES/ACC/zipball/master" class="button">
+            <small>Download</small>
+            .zip file
+          </a>
+          <a href="https://github.com/SUB-ESTADISTICA-ICFES/ACC/tarball/master" class="button">
+            <small>Download</small>
+            .tar.gz file
+          </a>
+
+          <p class="repo-owner"><a href="https://github.com/SUB-ESTADISTICA-ICFES/ACC"></a> is maintained by <a href="https://github.com/SUB-ESTADISTICA-ICFES">SUB-ESTADISTICA-ICFES</a>.</p>
+
+          <p>This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
+        </aside>
+      </div>
+    </div>
+
+  
+  </body>
+</html>

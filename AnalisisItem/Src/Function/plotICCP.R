@@ -2,7 +2,7 @@
 # # MantelLI.R
 # # R Versions: 2.15.0
 # #
-# # Author(s): Jorge Marop Carrasco Ortiz
+# # Author(s): Jorge Mario Carrasco Ortiz
 # #
 # # Description: Displays the empiric ICC vs theorical ICC for all
 # #
@@ -17,12 +17,45 @@
 # #   20151210: - Adapt to run ICC plots from information of Bilog
 # #             - Adapt to save a plot for each item in a Index
 ################################################################################
+
+irt.4PM.Info <- function(theta, item.par, D = 1.7) {
+   # This function calculates the Fisher information for
+   # Four Parameter Model, given item parameters and ABILITY.
+   #
+   # item.par should be a matrix with four columns:
+   # Each row represents an item,
+   # first column represents a parameters (item discrimination)
+   # second column represents b parameters (item difficulty)
+   # third column represents c parameters(pseudo-guessing parameter)
+   # fourth column represents d parameters (upper asymptote)
+   # theta can be a single number or a vector.
+
+if (length(item.par) < 4) {
+   item.par[4] = 1
+}
+
+if (length(item.par) < 3) {
+   item.par[3] = 0
+}
+
+if (length(item.par) < 2) {
+   item.par[2] = 1
+}
+
+return(((D * item.par[1])^2 * (item.par[4] - item.par[3]) ^ 2) /
+         ((item.par[3] + item.par[4] *
+           exp(D*item.par[1] * (theta - item.par[2]))) *
+         (1 - item.par[3] + (1-item.par[4]) *
+           exp(D*item.par[1] * (theta-item.par[2]))) *
+         (1 + exp(-D * item.par[1] * (theta - item.par[2])))^2) )
+}
+
 responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges",
                           dirPlot = "ICCexample.eps", plotName  = "Opciones de respuesta",
                           xlabel = "Habilidad", ylabel = "Proporción",
                           legendName = "Categorías", keyData = keyData,
-                          dirCatFreq = "catFreq.Rdata") {
-  # # This function reads person ability estimates from Bilog
+                          dirCatFreq = "catFreq.Rdata", indexItems) {
+  # # This function reads person ABILITY estimates from Bilog
   # # and construct the Response Curve
   # # Arg:
   # #  resBlock:        Input data matrix or data frame with item responses
@@ -36,36 +69,18 @@ responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges"
   # #  ylabel:          Label the y-axis of the current axes
   # #  legendName:      Label the legend of the current graph
   # #  keyData:         Data frame with the key of the items (id and keyItem)
+  # #  indexItems:      Variable indexItems
   # #
   # # Ret:
   # #     : Graphs in eps and png format
 
-  # # ajustando limites cuando las habilidades estimadas se salen del
-  # intervalo [-4,4]
-  if( any(personAbilities$ABILITY < -4) ) {
-    if( any(personAbilities$ABILITY > 4) ) {
-      limXInf  <- round(min(personAbilities$ABILITY) - 1)
-      limXSup  <- round(max(personAbilities$ABILITY) + 1)
-      limX     <- seq(limXInf, limXSup, length.out = 100)
-    } else{
-      limXInf  <- round(min(personAbilities$ABILITY) - 1)
-      limX     <- seq(limXInf, 4, length.out = 100)
-    }
-  } else {
-    if ( any(personAbilities$ABILITY > 4) ) {
-      limXSup  <- round(max(personAbilities$ABILITY) + 1)
-      limX     <- seq(-4, limXSup, length.out = 100)
-    } else{
-      limX     <- seq(-4, 4, length.out = 100)
-    }
-  }
-
   # # Obtain the abilities and responses of all item
-  abiliBlock <- personAbilities[, c("iSubject", "ABILITY", "SERROR")]
+  abiliBlock <- personAbilities[, c("iSubject", "ABILITY_NEW", "SERROR")]
+  names(abiliBlock)[2] <- "ABILITY"
   abiliBlock <- merge(resBlockOri, abiliBlock, by = "iSubject")
   abiliBlock <- abiliBlock[order(abiliBlock[, ABILITY]),]
 
-  # # Function to find the frequency and average ability
+  # # Function to find the frequency and average ABILITY
   countCategory <- function(x, colTomar, flagAbility = TRUE) {
     colTomar <- colTomar[!grepl("iSubject", colTomar)]
     if (flagAbility) {
@@ -92,7 +107,6 @@ responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges"
 
   tablaRep <- countCategory(abiliBlock, names(resBlockOri))
   save(tablaRep, file = dirCatFreq)
-  cat("Guardado informacion de opciones de respuesta")
   # # Break the intervals of abilities
   breaksAbili <- hist(plot = FALSE, abiliBlock[, ABILITY],
                       breaks = methodBreaks)$breaks
@@ -142,14 +156,14 @@ responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges"
 }
 
 plotICCB <- function (itemParameters, resBlock, personAbilities, 
-                      scaleD    = 1.702, methodBreaks = "Sturges",
-                      dirPlot   = "ICCexample.eps", nameIndice = NULL,
+                      scaleD    = 1.7, methodBreaks = "Sturges",
+                      dirPlot   = "ICCexample.eps", namesubCon = NULL,
                       plotName  = "Curvas ICC", xlabel = "Habilidad",
                       ylabel    = "Probabilidad", legendName = "Categorías",
                       flagGrSep = FALSE, alpha = 0.05, prueba = NULL, 
-                      dirSalida = outPath) {
+                      dirSalida = outPath, indexItems, codModel, ...) {
 
-  # # This function reads person ability estimates from Bilog
+  # # This function reads person ABILITY estimates from Bilog
   # # and construct the ICC graphs
   # # Arg:
   # #  itemParameters:  Item parameters in the format used by
@@ -166,6 +180,7 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
   # #  ylabel:          Label the y-axis of the current axes
   # #  legendName:      Label the legend of the current graph
   # #  alpha:           confidence level to ICC interval
+  # #  indexItems:      variable indexItems
   # #
   # # Ret:
   # #     : Graphs in eps and png format
@@ -198,9 +213,8 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
     if (any(sapply(paramICC, nrow) > 1)) {
       stop("Revisar codigos existen items duplicados")
     }
-
-    # # ajustando limites cuando las habilidades estimadas se salen del
     # intervalo [-4,4]
+    # personAbilities$ABILITY <- personAbilities$ABILITY_NEW
     if( any(personAbilities$ABILITY < -4) ) {
       if( any(personAbilities$ABILITY > 4) ) {
         limXInf  <- round(min(personAbilities$ABILITY) - 1)
@@ -208,44 +222,63 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
         limX     <- seq(limXInf, limXSup, length.out = 100)
       } else{
         limXInf  <- round(min(personAbilities$ABILITY) - 1)
+        limXSup  <- 4  
         limX     <- seq(limXInf, 4, length.out = 100)
       }
     } else {
       if ( any(personAbilities$ABILITY > 4) ) {
-        limXSup  <- round(max(personAbilities$ABILITY) + 1)
-        limX     <- seq(-4, limXSup, length.out = 100)
+        limXInf <- -4
+        limXSup <- round(max(personAbilities$ABILITY) + 1)
+        limX    <- seq(-4, limXSup, length.out = 100)
       } else{
-        limX     <- seq(-4, 4, length.out = 100)
+        limXInf <- -4
+        limXSup <- 4
+        limX    <- seq(-4, 4, length.out = 100)
       }
     }
 
-    curves   <- NULL
+    curves  <- NULL
+    listGGp <- list()
     # Curves theoretical ICC
-
+    infTest  <- rep(0, length(limX))
     for (zz  in names(paramICC)) {
       nameCategory       <- paramICC[[zz]][, "category"]
       itemICC            <- as.data.frame(t(paramICC[[zz]]))
       colnames(itemICC)  <- nameCategory
-      itemICC <- lapply(itemICC, function(z) {
+      auxItemICC <- itemICC
+      itemICC   <- lapply(itemICC, function(z) {
                           cj  <- as.numeric(as.character(z["azar"]))
                           bjk <- as.numeric(as.character(z["Location"]))
                           aj  <- as.numeric(as.character(z["discrimination"]))
                           return(cj + (1 - cj) * plogis(limX, location = bjk,
                                         scale = 1/(scaleD * aj)))
                         })
-      x            <- rep(limX, length(nameCategory))
-      categoria    <- rep(nameCategory, sapply(itemICC, length))
-      y            <- unlist(itemICC)
-      item         <- rep(zz, length(categoria))
-      itemICC <- data.frame(x, y, item, categoria)
-      curves  <- rbind(curves, itemICC)
+      plotINFO <- lapply(auxItemICC, function(z) { 
+                          cj  <- as.numeric(as.character(z["azar"]))
+                          bjk <- as.numeric(as.character(z["Location"]))
+                          aj  <- as.numeric(as.character(z["discrimination"]))
+                          irt.4PM.Info(limX, c(aj, bjk, cj))})
+      # # Guardando información y maximo de informacion
+      infTest  <- infTest + plotINFO[[1]]
+      listGGp[[zz]] <- list('maxINFO' = max(plotINFO[[1]]))
+      x         <- rep(limX, length(nameCategory))
+      categoria <- rep(nameCategory, sapply(itemICC, length))
+      y         <- unlist(itemICC)
+      item      <- rep(zz, length(categoria))
+      itemICC   <- data.frame(x, y, item, categoria, curva = "ICC")
+      plotINFO  <- data.frame(x, 'y' = unlist(plotINFO), item, 
+                              categoria, curva = "INFO") 
+      curves    <- rbind(curves, itemICC, plotINFO)
     }
-
+    infTest <- data.frame('x' = limX, 'y' = infTest)
     curves[, 'categoria'] <- factor(curves[, 'categoria'])
 
     ntheDiff <- length(unique(personAbilities[, "ABILITY"]))
+    if (is.null(namesubCon)){
+      namesubCon <- ""
+    }    
     ntheDiff <- data.frame('Numero_Diferentes' = ntheDiff,
-                           'Indice' = nameIndice, 'Prueba' = prueba)
+                           'Indice' = namesubCon, 'Prueba' = prueba)
 
     fileThetaDif <- file.path(dirSalida, "corridas/thetasDiferentes.txt")
     if (file.exists(fileThetaDif)) {
@@ -277,8 +310,6 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
                    include.lowest = TRUE)
     xempICC <- aggregate(abiliBlock[, ABILITY], by = list(cutOff),
                          FUN = mean)
-
-    abiliBlock <- abiliBlock[, indexItems, with = FALSE]
     abiliBlock <- split(abiliBlock, f = cutOff)
 
     grupMal    <- names(abiliBlock)[unlist(lapply(abiliBlock, nrow)) == 0]
@@ -286,7 +317,7 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
       abiliBlock[[rr]] <- NULL
     }
 
-  # # FALTA definir si se incluyen los de multimarca y omision
+    # # FALTA definir si se incluyen los de multimarca y omision
 
     abiliBlock <- lapply(names(abiliBlock), function(z){
                        acIt <- colSums(abiliBlock[[z]] == 1, na.rm = TRUE)
@@ -304,7 +335,11 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
     empiricICC <- rbindlist(abiliBlock)
     rm(abiliBlock, resBlock)
     empiricICC[, categoria := as.factor(empiricICC$categoria)]
-    listGGp    <- list()
+    curves     <- funRescal(curves, "x", ...)
+    empiricICC <- funRescal(data.frame(empiricICC), "x", ...)
+    empiricICC <- data.table(empiricICC)
+    xText      <- min(curves["x"]) + diff(range(curves["x"])) / 10
+
     if (!flagGrSep) {
       finalPlot <- ggplot(curves, aes(x = x, y = y)) + geom_line() +
                    facet_wrap(~item) + labs(x = xlabel, y = ylabel,
@@ -314,46 +349,66 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
                    geom_ribbon(data = empiricICC,
                               aes(ymin = pL,ymax = pU),alpha=0.3) +
                    theme_bw()
-      listGGp[[itName]] <- list('graph' = finalPlot, 'dir' = dirPlot)
+      listGGp[[itName]] <- c(listGGp[[itName]], list('graph' = finalPlot, 
+                             'dir' = dirPlot))
       sapply(dirPlot, function(x) ggsave(x, width = 10))
     } else {
       itemCurve  <- split(curves, f = curves$item)
       empiricICC <- split(empiricICC, f = empiricICC$item)
       for (itName in names(itemCurve)){
+        paramICC[[itName]] <- funRescal(paramICC[[itName]], "Location", ...)
         auxAlp <- round(paramICC[[itName]]["discrimination"], 3)
         auxBet <- round(paramICC[[itName]]["Location"], 3)
         auxAza <- round(paramICC[[itName]]["azar"], 3)
-        finalPlot <- ggplot(itemCurve[[itName]], aes(x = x, y = y)) + geom_line(size = 0.8) +
+        maxINFO <- max(subset(itemCurve[[itName]], curva == "INFO")$y)
+        facScal <- 1 / maxINFO
+        maxINFO <- ifelse(maxINFO < 1, maxINFO  * facScal, maxINFO)
+        textSize <- 20
+
+        # # Grafico 
+        infoPlt   <- ggplot(subset(itemCurve[[itName]], curva == "INFO"), 
+                            aes(x = x, y = y)) + theme_bw(18) + expand_limits(y = c(0, maxINFO)) + 
+                     geom_line(size = 0.3, linetype = "dashed", colour = "red") + labs(y = "")        
+        finalPlot <- ggplot(subset(itemCurve[[itName]], curva == "ICC"), 
+                            aes(x = x, y = y)) + 
+                     geom_line(aes(linetype = "ICC", colour="ICC"), size = 0.8) + 
                      labs(x = xlabel, y = ylabel) + facet_wrap(~item) +
-                     geom_point(data = empiricICC[[itName]], mapping = aes(x = x, y = y), shape = 18) +
-                     geom_line(data = empiricICC[[itName]], mapping = aes(x = x, y = y), linetype = 3, alpha = 0.5, size = 1) +
+                     geom_point(data = empiricICC[[itName]], mapping = aes(x = x, y = y), shape = textSize) +
+                     geom_line(data = empiricICC[[itName]], mapping = aes(x = x, y = y, linetype = "Información", colour="Información"), alpha = 0.5, size = 1) + 
+                     geom_line(data = empiricICC[[itName]], mapping = aes(x = x, y = y, linetype = "Empirica", colour="Empirica"), alpha = 0.5, size = 1) +
+                     scale_colour_manual(name = "", values= c("blue", "black", "red")) + 
+                     scale_linetype_manual(name = "", values=c("dashed", "solid", "dashed")) + 
                      geom_ribbon(data = empiricICC[[itName]], aes(ymin = pL,ymax = pU),
                                  linetype = 2, fill = "blue", colour = "blue", alpha = 0.25) +
                      #annotate("rect", xmin = -4.3, xmax = -3, ymin = 0.875, ymax = 1, alpha = .1) +
-                     annotate("text", x = -3.9, y = 0.965, label = paste("alpha == ", auxAlp), color = "blue", parse = TRUE) +
-                     annotate("text", x = -3.9, y = 0.915, label = paste("beta == ", auxBet), color = "blue", parse = TRUE)
-        if (auxAza != 0) {
-          finalPlot <- finalPlot + annotate("text", x = -3.9, y = 0.865, label = paste("c == ", auxAza), color = "blue", parse = TRUE)
+                     annotate("text", x = xText, y = 0.965, label = paste("alpha (Discriminación) == ", sprintf("%.3f", auxAlp)), color = "black", parse = TRUE, size = 6) +
+                     annotate("text", x = xText, y = 0.915, label = paste("beta (Dificultad) == ", sprintf("%.3f", auxBet)), color = "black", parse = TRUE, size = 6) +
+                     theme(legend.title = element_text(), # switch off the legend title
+                           legend.key.size = unit(1.5, "lines"),
+                           legend.key = element_rect(size = 5, fill = "white"))# switch off the rectangle around symbols in the legend)
+        if (codModel == "07") {
+          finalPlot <- finalPlot + annotate("text", x = xText, y = 0.865, label = paste("c (Azar)== ", sprintf("%.3f", auxAza)), 
+                                            color = "black", parse = TRUE, size = 6)
         }                    
-        finalPlot <- finalPlot  + theme_light()
-
+        finalPlot <- finalPlot  + theme_bw(textSize) +  theme(legend.position = "bottom")
+        arrangeFinal <- ggplot_dual_axis(finalPlot, infoPlt)
         dirAux <- sapply(dirPlot, function(x) gsub("(_V.+\\.png)",
                          paste0("_", itName, "\\1"), x))
-        listGGp[[itName]] <- list('graph' = finalPlot, 'dir' = dirAux)
-        sapply(dirAux, function(x) ggsave(x, width = 10))
+        listGGp[[itName]] <- c(listGGp[[itName]], list('graph' = arrangeFinal, 'dir' = dirAux))
+        sapply(dirAux, function(x) ggsave(file = x, plot = arrangeFinal, width = 410, height = 297, units = "mm"))
       }
     }
-    return(listGGp)
+    return(list(listGGp, infTest))
 }
 
 plotICCP <- function (itemParameters, resBlock, personAbilities,
                       scaleD    = 1.702, methodBreaks = "Sturges",
-                      dirPlot   = "ICCexample.eps", nameIndice = NULL,
+                      dirPlot   = "ICCexample.eps", namesubCon = NULL,
                       plotName  = "Curvas ICC", xlabel = "Habilidad",
                       ylabel    = "Probabilidad", legendName = "Categorías",
                       flagGrSep = FALSE, prueba = NULL, dirSalida = outPath) {
 
-  # # This function reads person ability estimates from Parscale
+  # # This function reads person ABILITY estimates from Parscale
   # #
   # # Arg:
   # #  itemParameters:  Item parameters in the format used by
@@ -402,18 +457,18 @@ plotICCP <- function (itemParameters, resBlock, personAbilities,
 
     # # ajustando limites cuando las habilidades estimadas se salen del
     # intervalo [-4,4]
-    if( any(personAbilities$ability < -4) ) {
-      if( any(personAbilities$ability > 4) ) {
-        limXInf  <- round(min(personAbilities$ability) - 1)
-        limXSup  <- round(max(personAbilities$ability) + 1)
+    if( any(personAbilities$ABILITY < -4) ) {
+      if( any(personAbilities$ABILITY > 4) ) {
+        limXInf  <- round(min(personAbilities$ABILITY) - 1)
+        limXSup  <- round(max(personAbilities$ABILITY) + 1)
         limX     <- seq(limXInf, limXSup, length.out = 100)
       } else{
-        limXInf  <- round(min(personAbilities$ability) - 1)
+        limXInf  <- round(min(personAbilities$ABILITY) - 1)
         limX     <- seq(limXInf, 4, length.out = 100)
       }
     } else {
-      if ( any(personAbilities$ability > 4) ) {
-        limXSup  <- round(max(personAbilities$ability) + 1)
+      if ( any(personAbilities$ABILITY > 4) ) {
+        limXSup  <- round(max(personAbilities$ABILITY) + 1)
         limX     <- seq(-4, limXSup, length.out = 100)
       } else{
         limX     <- seq(-4, 4, length.out = 100)
@@ -444,9 +499,9 @@ plotICCP <- function (itemParameters, resBlock, personAbilities,
 
     curves[, 'categoria'] <- factor(curves[, 'categoria'])
 
-    ntheDiff <- length(unique(personAbilities[, "ability"]))
+    ntheDiff <- length(unique(personAbilities[, "ABILITY"]))
     ntheDiff <- data.frame('Numero_Diferentes' = ntheDiff,
-                           'Indice' = nameIndice, 'Prueba' = prueba)
+                           'Indice' = namesubCon, 'Prueba' = prueba)
 
     fileThetaDif <- file.path(dirSalida, "corridas/thetasDiferentes.txt")
     if (file.exists(fileThetaDif)) {
@@ -461,27 +516,25 @@ plotICCP <- function (itemParameters, resBlock, personAbilities,
                 FALSE)
 
     # # Obtain the abilities and responses of all item
-    abiliBlock <- personAbilities[, c("iSubject", "ability", "seAbility")]
+    abiliBlock <- personAbilities[, c("iSubject", "ABILITY", "seAbility")]
 
     abiliBlock <- merge(resBlock, abiliBlock, by = "iSubject")
-    abiliBlock <- abiliBlock[order(abiliBlock[, "ability"]),]
-    cateName   <- sort(unique(unlist(lapply(abiliBlock[, indexItems], unique))))
+    abiliBlock <- abiliBlock[order(abiliBlock[, "ABILITY"]),]
+    cateName   <- sort(unique(unlist(lapply(abiliBlock, unique))))
     cateName   <- cateName[-1]
 
     # # Building Empiric ICC
 
-    # breaksAbili <- seq(min(abiliBlock[, "ability"]),
-    #                    max(abiliBlock[, "ability"]), length.out = 9)
+    # breaksAbili <- seq(min(abiliBlock[, "ABILITY"]),
+    #                    max(abiliBlock[, "ABILITY"]), length.out = 9)
 
-    breaksAbili <- hist(plot = FALSE, abiliBlock[, "ability"],
+    breaksAbili <- hist(plot = FALSE, abiliBlock[, "ABILITY"],
                         breaks = methodBreaks)$breaks
 
-    cutOff  <- cut(abiliBlock[, "ability"], breaks = breaksAbili,
+    cutOff  <- cut(abiliBlock[, "ABILITY"], breaks = breaksAbili,
                    include.lowest = TRUE)
-    xempICC <- aggregate(abiliBlock[, "ability"], by = list(cutOff),
+    xempICC <- aggregate(abiliBlock[, "ABILITY"], by = list(cutOff),
                          FUN = mean)
-
-    abiliBlock <- abiliBlock[, indexItems]
     abiliBlock <- split(abiliBlock, f = cutOff)
 
     grupMal    <- names(abiliBlock)[unlist(lapply(abiliBlock, nrow)) == 0]
@@ -497,7 +550,7 @@ plotICCP <- function (itemParameters, resBlock, personAbilities,
     if (length(countNA) != 0){
       countNA <- data.frame('Intervalo' = names(countNA),
                             'Item_All_NA' = as.character(countNA),
-                            'Indice' = nameIndice, 'Prueba' = prueba)
+                            'Indice' = namesubCon, 'Prueba' = prueba)
 
       if (file.exists(fileProInt)) {
         counAux  <- read.table(file = fileProInt, header = TRUE, sep = " ")
@@ -581,11 +634,11 @@ plotICCP <- function (itemParameters, resBlock, personAbilities,
 
 plotICCW <- function (itemParameters, resBlock, personAbilities,
                       scaleD = 1, methodBreaks = "Sturges",
-                      dirPlot = "ICCexample.eps", nameIndice = NULL,
+                      dirPlot = "ICCexample.eps", namesubCon = NULL,
                       plotName = "Curvas ICC", xlabel = "Habilidad",
                       ylabel = "Probabilidad") {
 
-  # # This function reads person ability estimates from Parscale
+  # # This function reads person ABILITY estimates from Parscale
   # #
   # # Arg:
   # #  itemParameters:  Item parameters in the format used by
@@ -624,9 +677,12 @@ plotICCW <- function (itemParameters, resBlock, personAbilities,
       curves  <- rbind(curves, itemICC)
     }
 
-    ntheDiff <- length(unique(personAbilities[, "ability"]))
+    ntheDiff <- length(unique(personAbilities[, "ABILITY"]))
+    if (is.null(namesubCon)){
+      namesubCon <- ""
+    }
     ntheDiff <- data.frame('Numero_Diferentes' = ntheDiff,
-                           'Indice' = nameIndice, 'Prueba' = prueba)
+                           'Indice' = namesubCon, 'Prueba' = prueba)
 
     fileThetaDif <- file.path(dirSalida, "corridas/thetasDiferentes.txt")
     if (file.exists(fileThetaDif)) {
@@ -642,24 +698,22 @@ plotICCW <- function (itemParameters, resBlock, personAbilities,
 
     # # Obtain the abilities and responses of all item
 
-    abiliBlock <- personAbilities[, c("personId", "ability", "se")]
+    abiliBlock <- personAbilities[, c("personId", "ABILITY", "se")]
 
     abiliBlock <- merge(resBlock, abiliBlock, by = "personId")
-    abiliBlock <- abiliBlock[order(abiliBlock[, "ability"]),]
-    cateName   <- sort(unique(unlist(lapply(abiliBlock[, indexItems], unique))))
+    abiliBlock <- abiliBlock[order(abiliBlock[, "ABILITY"]),]
+    cateName   <- sort(unique(unlist(lapply(abiliBlock, unique))))
     cateName   <- cateName[-1]
 
     # # Building Empiric ICC
 
-    breaksAbili <- hist(plot = FALSE, abiliBlock[, "ability"],
+    breaksAbili <- hist(plot = FALSE, abiliBlock[, "ABILITY"],
                         breaks = 20)$breaks
 
-    cutOff  <- cut(abiliBlock[, "ability"], breaks = breaksAbili,
+    cutOff  <- cut(abiliBlock[, "ABILITY"], breaks = breaksAbili,
                    include.lowest = TRUE)
-    xempICC <- aggregate(abiliBlock[, "ability"], by = list(cutOff),
+    xempICC <- aggregate(abiliBlock[, "ABILITY"], by = list(cutOff),
                          FUN = mean)
-
-    abiliBlock <- abiliBlock[, indexItems]
     abiliBlock <- split(abiliBlock, f = cutOff)
 
     grupMal    <- names(abiliBlock)[unlist(lapply(abiliBlock, nrow)) == 0]
@@ -675,7 +729,7 @@ plotICCW <- function (itemParameters, resBlock, personAbilities,
     if (length(countNA) != 0){
       countNA <- data.frame('Intervalo' = names(countNA),
                             'Item_All_NA' = as.character(countNA),
-                            'Indice' = nameIndice, 'Prueba' = prueba)
+                            'Indice' = namesubCon, 'Prueba' = prueba)
 
       if (file.exists(fileProInt)) {
         counAux  <- read.table(file = fileProInt, header = TRUE, sep = " ")

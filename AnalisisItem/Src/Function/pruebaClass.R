@@ -2,11 +2,10 @@
 # # pruebaClass.R
 # # R Versions: R version 3.0.0 i386
 # #
-# # Author(s): Jorge Mario Carrasco, Nelson Rodriguez, William Acero, 
-# #            Robert Romero
+# # Author(s): Jorge Mario Carrasco
 # #
 # # SABER 359, SABER PRO, SABER 11 y ACC
-# # Description: Función creada para definar la clase test, la clase análisis y
+# # Description: Función creada para definar la clase Test, la clase Analysis y
 # #              reporte test para las definir las funciones de análisis de item.
 # #
 # # Outputs: Funciones para crear objetos y metodos
@@ -15,9 +14,8 @@
 # #   20150914: Creation
 # #   20160516: Modificación de las clases test y Análisis
 # # ToDo:
-# #       Inclusión de la definición de las clases y los metodos
+# #       Inclución de FlagCensal para el caso de 359 y ACC
 ################################################################################
-<<<<<<< HEAD
 
 ################################################################################
 # # Definición clase Test
@@ -29,10 +27,12 @@ Test <- setClass("Test",
  			        dictionaryList = 'list',		   # Diccionario de variables
  			        datBlock       = 'list',  	   # Datos leidos
  			        exam           = 'character',  # (SABER359, SABER11, SABERPRO)
+              periodo        = 'character',  # (AC20142, EK2015)
 	            verInput       = 'numeric',    # Version con el que se genera diccionarios
 	            nomTest        = 'character',  # Nombre para impresion en los reportes
 	            paramLect      = 'list',       # Parametros de lectura de la prueba
-	            codMod         = 'character'), # Codigos del modelo de la prueba
+	            codMod         = 'character',
+              listAnal       = 'list'), # Codigos del modelo de la prueba
 
  		# # Definir los valores por defecto
  		prototype = list(verInput = 1, path = "", exam = "", codMod = "02",
@@ -82,7 +82,7 @@ function(object){
     if (controlPrueba@path == "" | is.na(controlPrueba@path))
 	    stop("**ERROR** Se debe especificar una ruta para cada prueba")
 	  if (!file.exists(file.path(inPath, controlPrueba@path)))
-		  stop("**ERROR** El directorio de la prueba no existe")
+		  stop("**ERROR** El directorio de la prueba no existe:", file.path(inPath, controlPrueba@path))
     if (is.na(controlPrueba@verInput))
 	    stop("**ERROR** Se debe especificar la versión de entrada")
     if (!"conDirs" %in% names(controlAnal))
@@ -145,7 +145,7 @@ function(object){
 		   	load(datDictionary)
 		  } 
 		  datBlock <- ReadDataAI(folderName = inFolder, dict = dictionaryList,
-	                           multiMarkOmiss = TRUE, verbose = TRUE,
+	                           multiMarkOmiss = FALSE, verbose = TRUE,
 	                           eliminatedVars = FALSE)
 		  save(datBlock, file = datReadBlock)
     } else {
@@ -161,8 +161,9 @@ function(object){
       # # Reading the DB using generic dictionary (only for dichotomous items)
       if (is.null(object@paramLect$valMUO))
         object@paramLect$valMUO <- 9
-	    datBlock <- ReadGeneric(object, dict = dictionaryList, verbose =  FALSE, 
-                              valMUO = object@paramLect$valMUO, eliminatedVars = FALSE)
+	      datBlock <- ReadGeneric(object, dict = dictionaryList, verbose =  FALSE, 
+                                valMUO = object@paramLect$valMUO, 
+                                eliminatedVars = FALSE, multiMarkOmiss = FALSE)
 	    save(datBlock, file = datReadBlock)
     }    
     # # Save directions of Rdata and datDictionary    
@@ -178,7 +179,7 @@ setMethod("initialize", "Test", function(.Object, ..., test) {
     if(missing(test)){
     	if (length(.Object@path) != 0){
     		if (length(.Object@dictionaryList) == 0 & length(.Object@datBlock) == 0){
-          		.Object <- readSupplies(.Object)
+          .Object <- readSupplies(.Object)
     		}    	
     	}
     }
@@ -198,7 +199,8 @@ Analysis <- setClass("Analysis",
  					  	   inputFile   = 'list',
  					  	   outFile     = 'list', 
  					  	   verSalida   = 'numeric', 
-                 pathCor     = 'character'),  					  
+                 pathCor     = 'character', 
+                 funVirtual  = 'character'),  					  
  					    # # Definir los valores por defecto
  					    prototype = list(test = NULL, scripName = "", param = list(), 
  					                    inputFile = list(), outFile = list(pathRdata = "")), 
@@ -232,26 +234,6 @@ setMethod("initialize", "Analysis", function(.Object, ..., test, param, verSalid
     .Object
   })
 
-=======
-Analisis <- setClass("Analisis",  					  
- 					  # # Definir la estructura
- 					  slots = c(
- 					  	scripName = 'character',
- 					  	param     = 'list', 
- 					  	inputFile = 'list',
- 					  	outPath   = 'character'), 
- 					  
- 					  # # Definir los valores por defecto
- 					  prototype = list(scripName = "", param = list(), inputFile = list(), outPath = ""), 
- 					  validity  = function(object){ 					  	
- 					  	if (object@scripName == "") return("Error el Analisis debe tener un scripName")
- 					  	if (object@scripName == "00CrearRdata" & length(object@inputFile) == 0) 
- 					  		return("Para el paso de CrearRdata se debe tener inputFile")
- 					    if (object@outPath == "") 
- 					    	return("Error, no hay directorio de salida")
- 					    return(TRUE)	
- 					  })
->>>>>>> 98c0444b6b0a27e1b6b1e246cd890c5896760e06
 # # Metodos de la clase Análisis
 setGeneric(name = "getParams", def = function(object){standardGeneric("getParams")})
 setMethod("getParams", "Analysis", function(object){return(object@param)})
@@ -260,7 +242,6 @@ setGeneric(name = "getInput", def = function(object){standardGeneric("getInput")
 setMethod("getInput", "Analysis", function(object){return(object@inputFile)})
 
 setGeneric(name = "getOutput", def = function(object){standardGeneric("getOutput")})
-<<<<<<< HEAD
 setMethod("getOutput", "Analysis", function(object){return(object@outFile)})
 
 setGeneric(name = "filterSubsets", 
@@ -462,7 +443,7 @@ setMethod("buildSubsets", "Analysis",
 				    'datos'      = object@test@datBlock[iiTest][[1]][[auxParGet]],
 				    'dictionary' = filConP)
         }
-        if(flagSubCon) {
+        if(flagSubCon & length(unique(filConP$subCon)) > 1) {
           for(jjSubCon in unique(filConP$subCon)){             
              filterDict <- subset(filConP, subCon == jjSubCon)
              colGet     <- names(object@test@datBlock[iiTest][[1]][[auxParGet]])
@@ -495,83 +476,253 @@ setMethod("filterAnalysis", "Analysis",
             do.call(buildSubsets, c(list(object), auxParam[allParams]))
           })
 
+# # Save result of Analysis
+setGeneric(name = "saveResult", def = function(object, ...){standardGeneric("saveResult")})
+setMethod("saveResult", "Analysis", function(object, listResults, srcPath = "."){
+     outRdata <- file.path(srcPath, object@outFile$pathRdata)
+     if (!file.exists(outRdata)){
+       save(listResults, file = outRdata)
+     } else {
+       auxResult <- listResults
+       load(file = outRdata)
+       for (resul in names(auxResult)){
+         listResults[[resul]] <- auxResult[[resul]]
+       }     
+       save(listResults, file = outRdata)
+     }
+})
+
+# # Definición Metodos necesarios para definir una clase
+setGeneric(name = "codeAnalysis", def = function(object, ...){standardGeneric("codeAnalysis")})
+setGeneric(name = "outXLSX", def = function(object, ...){standardGeneric("outXLSX")})
+setGeneric(name = "outHTML", def = function(object, ...){standardGeneric("outHTML")})
+
 ################################################################################
-# # Definición Clase FactorClass
+# # Metodos para correr varias pruebas con varios analisis
 ################################################################################
-=======
-setMethod("getOutput", "Analisis", function(object){return(object@outPath)})
 
-setGeneric(name = "runSource", def = function(object){standardGeneric("runSource")})
-setMethod("runSource", "Analisis", function(object){return(object@outPath)})
+analyzeTests <- function(vecJson, anUpdate = NULL){
+  # # inicializa la clase Test para cada prueba en la entrada
+  # #
+  # # Arg:
+  # #  fileJson: [character] la ruta del archivo de parametros
+  # #  anUpdate: [vector] lista de analisis para correr
+  # # Ret:
+  # #  listTests: [list-Test] lista con todas las pruebas analizadas
+  
+  # # Load  scripts
+  require(jsonlite)
+  listTests <- list() 
+  for (fileJson in vecJson) {
+     readJson <- fromJSON(fileJson, simplifyVector = TRUE, 
+                          simplifyDataFrame = FALSE, 
+                          simplifyMatrix = FALSE)
+     # # Comprobando si existe nombre para la salida
+     if (! "labelHtml" %in% names(readJson)){
+       stop('___ERROR___ Se debe definir en el archivo de parametros "labelHtml"')
+     }
+     readJson <- readJson[names(readJson) != "labelHtml"]    
+   
+     for (test in names(readJson)){
+       jsonLec   <- readJson[[test]]$paramLect
+       if (!is.null(jsonLec$infoItem) & !is.null(jsonLec$subConInfo)){
+         paramLect <- list(infoItem = jsonLec$infoItem, 
+                           conDirs = jsonLec$conDirs, 
+                           valMUO = jsonLec$valMUO, 
+                           subConInfo = jsonLec$subConInfo)      
+       } else {
+         paramLect <- list(conDirs = jsonLec$conDirs, 
+                           valMUO = jsonLec$valMUO)            
+       }
+       auxTest <- new('Test', path = jsonLec$path, exam = jsonLec$exam, 
+                      codMod = jsonLec$codMod, verInput = jsonLec$verInput, 
+                      periodo = jsonLec$periodo,
+                      nomTest = jsonLec$nomTest, paramLect = paramLect)
+       if ("Filtros" %in% names(readJson[[test]])){
+         auxFiltros <- Filtros(auxTest, readJson[[test]]$Filtros)  
+         auxTest    <- codeAnalysis(auxFiltros)
+       }    
+       auxTest <- runAnalysis(auxTest, jsonTest = readJson[[test]]$Analisis, 
+                              anUpdate = anUpdate)
+       if ("Filtros" %in% names(readJson[[test]])){
+         auxTest@listAnal <- c('Filtros' = auxFiltros, 
+                               auxTest@listAnal)
+       }
+       listTests[[test]] <- auxTest
+       rm(auxTest, auxFiltros)
+       gc(reset = TRUE)
+     }
+  }
+  return(listTests)
+}
+  
+setGeneric(name = "runAnalysis", def = function(object, ...){standardGeneric("runAnalysis")})
+setMethod("runAnalysis", "Test",
+function(object, jsonTest, anUpdate = NULL){
+  # # Ejecuta los analisis con los parametros del archivo .json
+  # #
+  # # Arg:
+  # #  jsonTest: [list] filtro del archivo con los parametros de la prueba
+  # #
+  # # Ret:
+  # #  object: [Analysis] objecto prueba guardando todos los analisis
+  for(ii in 1:length(jsonTest)){
+     # # Verificando si codeAnalysis existe para ese analisis
+     analisis  <- names(jsonTest[[ii]])
+     
+     # # Definiendo analisis
+     exprAnalysis <- paste0(analisis, "(test = object, paramExp = jsonTest[[ii]][[1]])")
+     auxAnalysis  <- try(eval(parse(text = exprAnalysis)))
+     if (class(auxAnalysis) != "try-error"){
+       object@listAnal <- c(object@listAnal, auxAnalysis)
+       names(object@listAnal)[length(object@listAnal)] <- analisis
+     }
+          
+     # # Corriendo analisis
+     if (file.exists(auxAnalysis@outFile$pathRdata)){
+        load(auxAnalysis@outFile$pathRdata)
+        isExecuted <- all(names(auxAnalysis@datAnalysis) %in% names(listResults))
+     } else {
+        isExecuted <- FALSE
+     }
+     if (analisis %in% anUpdate | (is.null(anUpdate) & !isExecuted)){
+         codeAnalysis(auxAnalysis)  
+         outXLSX(auxAnalysis, srcPath = ".")
+     } else {
+         cat("-----> Cargando los resultados de la clase '", analisis, "'\n")
+     }
+     
+  }
+  return(object)
+})
 
-#setGeneric(name = "leer", def = function(object){standardGeneric("leer")})
-#source("Function/00CrearRdata.R")
+jointReports <- function(listTests, vecJson, pathJS = 'lib', flagView = FALSE){
+  # # Crear el reporte html para 1 o varias pruebas
+  # #
+  # # Arg:
+  # #  listTests: [list-Test] lista con todas las pruebas analizadas
+  # #
+  # # Ret:
+  # #  archivos html con el nombre asignado en json$labelHtml
+  for (fileJson in vecJson){
+    options(encoding = "UTF-8")
+    readJson  <- fromJSON(fileJson, simplifyVector = TRUE, 
+                         simplifyDataFrame = FALSE, 
+                         simplifyMatrix = FALSE)
+    if (!file.exists(docPath)) dir.create(docPath)
+    options(encoding = "native.enc")
+    rmarkdown::render('.\\Sweave\\reportAnaItem.Rmd', 'knitrBootstrap::bootstrap_document', 
+                      output_file = readJson$labelHtml[["html"]],  output_dir = docPath, 
+                      encoding = "utf-8")
+    salPathDoc <- file.path(docPath, readJson$labelHtml[["html"]])
+  
+    # # Incluyendo archivos .js necesarios para las tablas
+    jsonLib <- c(paste0('  <script src="', pathJS,'/htmlwidgets-0.5/htmlwidgets.jsp"></script>'),
+                 paste0('  <script src="', pathJS,'/jquery-1.11.1/jquery.min.jsp"></script>'),
+                 paste0('  <script src="', pathJS,'/datatables-binding-0.1/datatables.jsp"></script>'),
+                 paste0('  <script src="', pathJS,'/datatables-1.10.7/jquery.dataTables.min.jsp"></script>'),
+                 paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.css"></script>'),
+                 paste0('  <script src="', pathJS,'/nouislider-7.0.10/jquery.nouislider.min.jsp"></script>'),
+                 paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.bootstrap3.css"></script>'),
+                 paste0('  <script src="', pathJS,'/selectize-0.12.0/selectize.min.jsp"></script>'),               
+                 paste0('  <script src="', pathJS,'/popUPGR.jsp"></script>'),
+    #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoom.jsp" type="text/javascript"></script>',
+    #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoomHTML.jsp" type="text/javascript"></script>',
+                 paste0('  <link href="', pathJS,'/datatables-default-1.10.7/dataTables.extra.css" rel="stylesheet" />'),
+                 paste0('  <link href="', pathJS,'/datatables-default-1.10.7/jquery.dataTables.min.css" rel="stylesheet" />'))
+                 
+    archHtml  <- readLines(salPathDoc)
+    archCSS   <- grep("<!-- jQuery -->", archHtml)
+    indCSStab <- grep("/\\* style tables \\*/", archHtml)
+    #archHtml  <- gsub("font-weight: bold;", "font-weight: bold; \n color: red; \n background-image: url(\"FondoPresentacionesICFES01.png\");" , archHtml)
+    archHtml  <- gsub("font-weight: bold;", "font-weight: bold; \n background-image: url(\"../../../../FondoPresentacionesICFES01.png\");" , archHtml)
+    archHtml  <- gsub("<body>", "<body onload=\"setupZoom()\">" , archHtml)  
+    #archHtml  <- archHtml[-seq(indCSStab, indCSStab + 1)]
+    archHtml[indCSStab + 1]  <- "$('table3').addClass('table-bordered table-condensed');"
+    
+    archHtml <- c(archHtml[1:(archCSS + 2)], jsonLib, archHtml[(archCSS + 3):length(archHtml)])
+    cat(archHtml, file = salPathDoc, sep = "\n")
+    if (flagView) {
+      browseURL(normalizePath(salPathDoc))
+    }
+    options(encoding = "UTF-8")
+  }
+}
 
-aTCT <- setClass("TCT",
-					  # # Heredar atributos de la clase Analisis
- 					  contains = "Analisis",
- 					  # # Definir los valores por defecto
- 					  prototype = list(scripName = "03TCT.R", 
- 					  				   param     = list(kApli = c(2, 3, 4, 6), 
- 					  				   					kOmissionThreshold = 0.8, 
- 					  				   					catToNA = c('No Presentado', 'NR', 'Multimarca'),
- 					  				   					kCodNElim = '06', 
- 					  				   					isCheckKeys = FALSE)),
- 					  # # Funciones de validacion
- 					  validity  = function(object){ 	
- 					    object@outPath = file.path(object@outPath, "03TCT")
- 					    print(object)				  	
- 					  	if (object@param$kOmissionThreshold == "") 
- 					  		return("Error, se necesita el parametro del umbral de omisiones")
- 					  	if (object@param$kOmissionThreshold > 1 | object@param$kOmissionThreshold < 0)
- 					  		return("Error, el valor del umbral debe estar entre 0 y 1")
- 					  })
 
-setMethod ("show", "TCT" , 
-  function ( object ){
-                cat (" TCT Parameters \n") 
-                cat (" Script Name :", object@scripName, "\n") 
-                cat (" Omission Threshold :", object@param$kOmissionThreshold , "\n") 
-                cat (" Is considered as NA :", object@param$catToNA, "\n") 
-                cat (" Reverse key items with negative loadings (?psych::alpha) :", object@param$isCheckKeys, "\n") 
-                cat ("\n")
-  }) 
+publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
+  # # Lectura de json 
+  options(encoding = "UTF-8")
+  for(fileJson in vecJson){
+     readJson <- jsonlite::fromJSON(fileJson, simplifyVector = TRUE, 
+                          simplifyDataFrame = FALSE, 
+                          simplifyMatrix = FALSE)
+     jsonHtml <- file.path(pathDest, "index.json")
+     if (file.exists(jsonHtml)){
+       ppJson  <- gsub("var indexData\\s+=\\s+", "", readLines(jsonHtml, warn = FALSE))
+       auxJson <- jsonlite::fromJSON(ppJson, simplifyVector = TRUE, 
+                          simplifyDataFrame = FALSE, 
+                          simplifyMatrix = FALSE)
+     } else {
+       auxJson <- list()
+     }
+     auxJson <- unlist(auxJson)
+     auxJson <- sapply(auxJson, function(x) basename(x))
+   
+     # # Creando estructura de Json
+     outExam  <- unlist(sapply(readJson, function(x) x$paramLect$exam))
+     outYear  <- rep(readJson$labelHtml[["year"]], length(outExam))
+     outStage <- rep(readJson$labelHtml[["mode"]], length(outExam))
+     outName  <- unlist(sapply(readJson, function(x) x$paramLect$nomTest))
+     outName  <- gsub(".+\\((.+)\\)", "\\1", outName)
+     outList  <- rep(readJson$labelHtml[["html"]], length(outExam))
+     names(outList) <- paste(outExam, outYear, outStage, outName, sep = ".")
+   
+     for (value in names(unlist(outList))){
+       auxJson[value] <- unlist(outList)[value]
+     }
+   
+     # # Creación de carpetas
+     foldIni <- unique(file.path(pathDest, outExam, outYear, outStage))  
+     for (folder in foldIni){
+       dir.create(folder, recursive = TRUE, showWarnings = FALSE)
+       foldOut <- file.path(folder, c("Doc", "Output"))
+       for (out in foldOut){
+         dir.create(out, recursive = TRUE, showWarnings = FALSE)      
+       }
+       # # Verificando archivos
+       fileOut <- file.path(folder, "Output", list.files(outPath, recursive = TRUE))
+       fileDoc <- file.path(folder, "Doc", list.files(docPath, recursive = TRUE))
+       file.copy(docPath, folder, recursive = TRUE, overwrite = flagActualizar)
+       file.copy(outPath, folder, recursive = TRUE, overwrite = flagActualizar)        
+     }
+      
+     # # Creando Lista 
+     consNode <- function(label, child = list()){
+         nodeAux <- list(jj = child)
+         names(nodeAux) <- label
+         return(nodeAux)
+     }
+   
+     indexJson  <- list()
+     labelList  <- strsplit(names(auxJson), "\\.")
+     finalLabel <- unique(lapply(labelList, function(x) x[-length(x)]))
+     for (list in finalLabel) {
+       nodeList  <- consNode(list[1], consNode(list[2], consNode(list[3])))
+       indexJson <- append(indexJson, nodeList)
+     }
+   
+     # # llenando lista
+     for (ii in 1:length(auxJson)){
+       list    <- labelList[[ii]]
+       auxHtml <- file.path(list[1], list[2], list[3], "Doc", auxJson[[ii]]) 
+       indexJson[[list[1]]][[list[2]]][[list[3]]][[list[4]]] <- auxHtml
+     }
+     # # Imprimir lista
+     cat(jsonlite::toJSON(indexJson, pretty = TRUE), file = jsonHtml)
+     ppJson    <- readLines(jsonHtml, warn = FALSE)
+     ppJson[1] <- paste0("var indexData = ", ppJson[1]) 
+     cat(ppJson, file = jsonHtml, sep = "\n")
+  }
+}
 
-# paso01	  <- new('TCT', outPath = "../Output")
-
-#setGeneric(name = "correrAnal", def = function(object){standardGeneric("correrAnal")})
-
-Prueba <- setClass("Prueba", 
- 					  # # Definir la estructura
- 					  slots = c(
- 					  	path      = 'character',
- 					  	pathDic   = 'character',
- 					  	pathRdata = 'character', 
- 					  	Analisis  = 'list', 
- 					  	exam    = 'character',
-						verEntrada = 'numeric',						
-						verSalida  = 'numeric', 
-						nomPrueba = 'character'
- 					  	), 
- 					  
- 					  # # Definir los valores por defecto
- 					  prototype = list(path = "", pathDic = "", pathRdata = "", 
- 					  	               Analisis = list(Analisis()), exam = "", 
- 					  	               varEntrada = 1, verSalida = 1, nomPrueba = ""), 
- 					  validity  = function(object){
- 					  	if(object@path == "" | object@exam == "")
- 					  	return(TRUE)
- 					  })
-
-# # Metodos de la clase Prueba
-setGeneric(name = "analizarPru", def = function(object){standardGeneric("analizarPru")})
-setGeneric(name = "AA", def = function(object){standardGeneric("AA")})
-setGeneric(name = "recogerInfo", def = function(object){standardGeneric("recogerInfo")})
-
-setGeneric(name = "omsAnal", def = function(object, ...){standardGeneric("omsAnal")})
-setGeneric(name = "uniAnal", def = function(object, ...){standardGeneric("uniAnal")})
-setGeneric(name = "con2Dict", def = function(object, ...){standardGeneric("con2Dict")})
-setGeneric(name = "tctAnalysis", def = function(object, ...){standardGeneric("tctAnalysis")})
-setGeneric(name = "explorAnalysis", def = function(object, ...){standardGeneric("explorAnalysis")})
-setGeneric(name = "confirmatAnalysis", def = function(object, ...){standardGeneric("confirmatAnalysis")})
->>>>>>> 98c0444b6b0a27e1b6b1e246cd890c5896760e06

@@ -5,7 +5,7 @@
 # #
 # # Author(s): Maria Fernanda Zarate Jimenez
 # #
-# # SABER 5° y 9° Factores Asociados
+# # SABER
 # # Description: Creates Excel outputs of dimensionality exporatory analysis for each
 # #              block of items
 # #
@@ -18,40 +18,11 @@
 # #   20111205: Creation
 # #   20130125: Modification to implement in factors associated
 # #   20140502: Modification to generated Excel outputs
+# #   20160106: Adaptation for S4 Clases (William Acero and Jorge Carrasco) 
 ################################################################################
 # # Definition of input and output paths
 ################################################################################
-options(encoding = "UTF-8")
-
-################################################################################
-# # global paths
-################################################################################
-# inPath        <- file.path("Input")
-# funPath       <- file.path("Src", "Function")
-# outPath       <- file.path("Output", "04Exploratorio")
-# logPath       <- file.path("Log")
-# outPathSamp   <- file.path("Output", "Muestras")
-# inPathSam     <- file.path("Input", "Muestras")
-
-###############################################################################
-# # Load libraries
-################################################################################
-library(xtable)   # # 1.5-6
-library(polycor)  # # 0.7-8
-library(mc2d)     # # 0.1-12
-library(ggplot2)  # # 0.8.9
-library(lavaan)   # # 0.4-10
-library(semTools)
-library(car)
-library(semPlot)  # # 0.2-8
-library(GPArotation)
-library(xlsx)
-library(pcaPA)
-library(reshape)
-library(RColorBrewer) # # 1.0-5
-library(kernlab)
-library(HistogramTools)
-library(cluster)
+#options(encoding = "UTF-8")
 
 ################################################################################
 # # Load sourcefiles
@@ -74,17 +45,23 @@ setMethod("initialize", "Exploratory", function(.Object, ..., param) {
   })
 
 
-Exploratory <- function(test, paramExp = 
-	                    list(kOmissionThreshold = 0.5,
+Exploratory <- function(test, paramExp = NULL) { 
+  paramDefault <-  list(kOmissionThreshold = 0.5,
 						     flagOri = FALSE, flagTotal = TRUE,
 						     flagSubCon = TRUE, orderedDat = TRUE,
 						     catToNA = c('No Presentado', 'NR', 'Multimarca'),
 						     seqFactors = NULL, rotation = 'oblimin',
 						     semilla = format(Sys.time(), "%d%m%Y"),
-						     tamSize = 0.5)){
-  cat("Se correra un analisis exploratorio con los siguientes parametros: \n")
+						     tamSize = 0.5)
+  if (!is.null(paramExp)) {
+    isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
+    isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
+    paramExp  <- c(paramExp[isNew], paramDefault[isDefault])
+  } else {
+  	paramExp <- paramDefault
+  }
+  cat("----->Se correra un analisis exploratorio con los siguientes parametros: \n \n")
   print(paramExp)
-  cat("\n----->")
   object <- new("Exploratory", test = test, param = paramExp)
   object <- filterAnalysis(object)
   return(object)
@@ -110,18 +87,36 @@ kThresholdComInfExp  <<- 0.15
 ###############################################################################
 # # Definition of Analysis
 ################################################################################
-setGeneric(name = "codeAnalysis", def = function(object){standardGeneric("codeAnalysis")})
 setMethod("codeAnalysis", "Exploratory", 
 function(object){
+
+    # # Load libraries
+    require(xtable)   # # 1.5-6
+    require(polycor)  # # 0.7-8
+    require(mc2d)     # # 0.1-12
+    require(ggplot2)  # # 0.8.9
+    require(lavaan)   # # 0.4-10
+    require(semTools)
+    require(car)
+    require(semPlot)  # # 0.2-8
+    require(GPArotation)
+    require(xlsx)
+    require(pcaPA)
+    require(reshape)
+    require(RColorBrewer) # # 1.0-5
+    #require(kernlab)
+    #require(HistogramTools)
+    #require(cluster)
+
 	source(file.path("Function", "exploratoryFunctions.R"))
     outPath  <- file.path(outPath, "04Exploratorio")
     if(dir.exists(outPath)){
     	cat("OJO-------> ya tenia el directorio 04Exploratorio creado\n")
-    	unlink(outPath, recursive = TRUE)
+    	#unlink(outPath, recursive = TRUE)
     	dir.create(outPath, showWarnings = FALSE)
 	}
 
-	# # version with dict V00 and data _2014_01_28_17_10_35
+	# # version with object parameter
 	versionOutput <- object@verSalida
 	versionComment <- paste0("Corrida Análisis Exploratorio --",  object@test@nomTest, "--") 
 
@@ -129,7 +124,8 @@ function(object){
 	verDataIn <- object@test@verInput
 
 	# # Dimensiones que quiere explorar el usuario
-	flagUser <- !is.null(object@param$seqFactors)
+	flagUser <- !is.null(object@param$seqFactors) 
+	flagUser <- flagUser | length(object@param$seqFactors) != 0
 
 
 	################################################################################
@@ -144,6 +140,14 @@ function(object){
 	################################################################################
 	# # Analisis de Dimensionalidad
 	################################################################################
+    auxRdata <- object@outFile$pathRdata
+    if (file.exists(auxRdata)){
+      load(auxRdata)   	
+      readyList <- unlist(lapply(listResults, names))
+      readyList <- paste0(names(readyList), readyList)
+    } else {
+      readyList <- NULL
+    }
 
 	# # create list to save results
 	listResults <- list()
@@ -152,20 +156,15 @@ function(object){
 	for (kk in pruebasRead) {
 	  # # create folder and routes to save results
 	  # #  carpetas por prueba
+
 	  auxPru 	 <- gsub("(::|\\s)","_", kk)
 	  outPathPba <- file.path(outPath, auxPru)
 	  # #  carpetas de muestras por prueba
-	  outPathSamPba <- file.path(outPathSamp, auxPru)
-	
-	  if(!file.exists(outPathSamPba)){
-	     dir.create(outPathSamPba, recursive = TRUE)
-	  }
-	  
+	  outPathSamPba   <- file.path(outPathSamp, auxPru)
 	  outPathPbaGraph <- file.path(outPath, "graficas")
-  	  if (!file.exists(outPathPbaGraph)) {
-         dir.create(outPathPbaGraph, recursive = TRUE)
-      }
-
+	  dir.create(outPathSamPba, recursive = TRUE, showWarnings = FALSE)
+	  dir.create(outPathPbaGraph, recursive = TRUE, showWarnings = FALSE)
+    
 	  # # keep items that aren't eliminated
 	  dictVarPrueba <- object@datAnalysis[[kk]]$dictionary
   	  varId         <- dictVarPrueba[, 'id']
@@ -191,86 +190,92 @@ function(object){
 	  ###################################################
 	  ### Obtain parallel analysis with exploratory data
 	  ##################################################
-	  paBlock <- PA(expkkBlock, percentiles = 0.95,
-	                nReplicates = nReplicatesExp, type = "ordered",
-	                use = useCorExp, algorithm = 'polychoric')
-	  nFactors <- CountEigen.PA(paBlock)
-  	  listResults[[auxPru]][["paBlock"]]  <- paBlock
-  	  listResults[[auxPru]][["nFactors"]] <- nFactors
-	  ###################################################
-	  ### # # Obtain parallel analysis plot
-	  ###################################################
-  
-	  paPlotFile <- file.path(outPath, 'graficas', paste("paParalel_", auxPru, "_V",
-	                          versionOutput, ".png", sep = ""))
-	  paPlot <- plot(paBlock, groupLabel = "",
-	                 observed = "Observados",
-	                 percentile = " percentil",
-	                 xlab = "Eigenvalores ordenados",
-	                 ylab = "Eigenvalores", main = "")
-	  ggsave(paPlotFile)
-	  listResults[[auxPru]][["paPlotFile"]] <- paPlotFile
-  	    
-	  ###################################################
-	  ### code chunk number 7: optionalMultExpl
-	  ###################################################
-  
-	  # # Sugerido por los eigenvalues
-	  if(!flagUser){
-	     if(nFactors == 1){
-	        seqFactors <- c(nFactors, nFactors + 1)
-	        resultsExp <- lapply(seqFactors, function(x)
-	                          MakeExploratory(x, object@param$rotation,
-	                        				  dictVarPrueba, corExpBlock))
-	     } else{
-	        seqFactors <- c(nFactors - 1, nFactors, nFactors + 1)
-	        resultsExp <- lapply(seqFactors, function(x)
-	                          MakeExploratory(x, object@param$rotation,
-	                        				  dictVarPrueba, corExpBlock))
-	     }
-	     names(resultsExp) <- paste(seqFactors, 'Factores')
-	  }
+      if (!paste0(auxPru, "paBlock") %in% readyList) {
+	    paBlock <- PA(expkkBlock, percentiles = 0.95,
+	                  nReplicates = nReplicatesExp, type = "ordered",
+	                  use = useCorExp, algorithm = 'polychoric')
+	    nFactors <- CountEigen.PA(paBlock)
+  	    listResults[[auxPru]][["paBlock"]]  <- paBlock
+  	    listResults[[auxPru]][["nFactors"]] <- nFactors
 
-	  # Las dimensiones que quiera explorar el usuario
-	  if(flagUser){
-	    if(nFactors == 1){
-	       resultsExp <- lapply(seqFactors, function(x) 
-	     					  MakeExploratory(x, object@param$rotation,
-	     									  dictVarPrueba, corExpBlock) )
-	    } else{
-	      resultsExp <- lapply(seqFactors, function(x)
-	                          MakeExploratory(x, object@param$rotation,
-	                        				  dictVarPrueba, corExpBlock) )
+	    ###################################################
+	    ### # # Obtain parallel analysis plot
+	    ###################################################
+    
+	    paPlotFile <- file.path(outPath, 'graficas', paste("paParalel_", auxPru, "_V",
+	                            versionOutput, ".png", sep = ""))
+	    paPlot <- plot(paBlock, groupLabel = "",
+	                   observed = "Observados",
+	                   percentile = " percentil",
+	                   xlab = "Eigenvalores ordenados",
+	                   ylab = "Eigenvalores", main = "")
+        auxLabel    <- c(1:nFactors, rep("", 2 * ncol(expkkBlock) - nFactors))
+	    paPlot$data <- cbind(paPlot$data, label = auxLabel)
+	    paPlot <- paPlot + geom_text(aes(label = label), size = 2)
+	    ggsave(paPlotFile)
+	    listResults[[auxPru]][["paPlotFile"]] <- paPlotFile
+    	    
+	    ###################################################
+	    ### code chunk number 7: optionalMultExpl
+	    ###################################################
+    
+	    # # Sugerido por los eigenvalues
+	    if(!flagUser){
+	  	   cat('---------"seqFactors"... Analisis Paralelo\n')
+	       if(nFactors == 1){
+	          seqFactors <- c(nFactors, nFactors + 1)
+	          resultsExp <- lapply(seqFactors, function(x)
+	                            MakeExploratory(x, object@param$rotation,
+	                        				    dictVarPrueba, corExpBlock))
+	       } else{	     	
+	          seqFactors <- c(nFactors - 1, nFactors, nFactors + 1)
+	          resultsExp <- lapply(seqFactors, function(x)
+	                            MakeExploratory(x, object@param$rotation,
+	                        				    dictVarPrueba, corExpBlock))
+	       }
+	       names(resultsExp) <- paste(seqFactors, 'Factores')
 	    }
-	  }
-	  listResults[[auxPru]][["resultsExp"]] <- resultsExp
-	  listResults[[auxPru]][["seqFactors"]] <- seqFactors
-	}
-	
-	# # Guardando resultados 
-    save(listResults, file = object@outFile$pathRdata)
-
+  
+	    # Las dimensiones que quiera explorar el usuario
+	    if(flagUser){
+	  	  cat('---------"seqFactors"... Definidos por el Usuario\n')
+	      if(nFactors == 1){
+	         resultsExp <- lapply(seqFactors, function(x) 
+	     					    MakeExploratory(x, object@param$rotation,
+	     									    dictVarPrueba, corExpBlock) )
+	      } else{
+	        resultsExp <- lapply(seqFactors, function(x)
+	                            MakeExploratory(x, object@param$rotation,
+	                        				    dictVarPrueba, corExpBlock) )
+	      }
+	    }
+	    listResults[[auxPru]][["resultsExp"]] <- resultsExp
+	    listResults[[auxPru]][["seqFactors"]] <- seqFactors
+	   } 	
+	   # # Guardando resultados 
+       saveResult(object, listResults)
+     }
 })
 ################################################################################
 # # Definition of output files
 ################################################################################
 
-setGeneric(name = "outXLSX", def = function(object, ...){standardGeneric("outXLSX")})
 setMethod("outXLSX", "Exploratory", 
-function(object){
-	outPath  <- file.path(outPath, "04Exploratorio")
+function(object, srcPath = "."){
+	outPath  <- file.path(srcPath, outPath, "04Exploratorio")
 	#####################################################
 	# # Function to Make Cabezotes
 	#####################################################
 	flagUser <- !is.null(object@param$seqFactors)
+	flagUser <- flagUser | length(object@param$seqFactors) != 0
 	PutCabezote <-  function(nameSheet, object, kk, isCensal = TRUE){
-	  codigo_prueba      <- gsub("(::|\\s)","_", kk)
+	  codigo_prueba      <- gsub("^(.*)(::)(.*)","\\1", kk)
 	  nItems <- nrow(object@datAnalysis[[kk]]$dictionary)
 	  kOmissionThreshold <- object@param$kOmissionThreshold	
-	  versionComment     <- object@verSalida
+	  versionComment 	 <- gsub("^(.*)(::)(.*)","\\3", kk)
 	  rotation           <- object@param$rotation	
 	  nObsExploratory    <- nrow(object@datAnalysis[[kk]]$datos)
-	  
+	  codigo_prueba2     <- object@test@nomTest
 
       # # Cabezote Exploratorio
 	  isOmissDel <- kOmissionThreshold < 1 & kOmissionThreshold > 0
@@ -293,7 +298,7 @@ function(object){
 	                  'Criterio para tratamiento de omisiones',
 	                  'Comentario', 'Rotación')
 
-	  valores2   <-  data.frame(valor = c(codigo_prueba,
+	  valores2   <-  data.frame(valor = c(codigo_prueba2,
 	                            nObsExploratory, kOmissionThreshold,
 	                            versionComment, rotation))
 
@@ -365,7 +370,7 @@ function(object){
 	  xlsx::setCellStyle(cells[[pcl3]], csC2)
 
 	}
-	load(object@outFile$pathRdata)
+	load(file.path(srcPath, object@outFile$pathRdata))
 	pruebasRead <- names(object@datAnalysis)
 	
 	for (kk in pruebasRead) {
@@ -443,6 +448,12 @@ function(object){
 
 
 	  # # Salida de resúmen de los items
+	  print(names(object@datAnalysis))
+	  auxEtiq <- object@datAnalysis[[kk]]$dictionary 
+      if (!"etiqu" %in% auxEtiq) {
+      	 auxEtiq <- auxEtiq[, "subCon"]
+         object@datAnalysis[[kk]]$dictionary[, "etiqu"] <- auxEtiq
+      }	  
       varKeepDict   <- c('id', 'subCon', 'etiqu')
 	  expItemIndex <- object@datAnalysis[[kk]]$dictionary[, varKeepDict]
       isVacio <- expItemIndex[, 'etiqu'] == '' | is.na(expItemIndex[, 'etiqu'])
@@ -534,7 +545,7 @@ function(object){
         nDim           <- finseqFact[jj]
         namesSheet     <- paste(nDim, "Dim", sep = '')
         assign(namesSheet, xlsx::createSheet(wb, sheetName = namesSheet))
-        PutCabezote(nameSheet, object = object, kk = kk, isCensal = TRUE)
+        PutCabezote(namesSheet, object = object, kk = kk, isCensal = TRUE)
         varExplained  <- resultsExp[[jj]]$VarExplained
         correlation   <- resultsExp[[jj]]$Correlation
         loadings      <- resultsExp[[jj]]$Loadings
@@ -825,7 +836,7 @@ function(object){
 	   loadingsTot[, expression] <- ''
 	   names(loadingsTot) <- gsub("Item.[1-9]", ' ', names(loadingsTot))
 	   names(loadingsTot) <- gsub("Factor\\.(\\d)(\\.\\d)*", "Factor \\1", names(loadingsTot))
-	   names(loadingsTot) <- recode(names(loadingsTot), "NA = '' ")
+	   names(loadingsTot) <- car::recode(names(loadingsTot), "NA = '' ")
 	   
 	      
 	   auxTable    <- expItemIndex[, c("id", "etiqu")]
@@ -863,7 +874,7 @@ function(object){
 
 		posiciones <- outer(rowRetain, colRetain, FUN = "paste", sep = '.')
 
-	      ld0  <- (loadingsTotI > -kThresholdLoadInfExp & loadingsTotI < -kThresholdLoadNCExp) |
+        ld0  <- (loadingsTotI > -kThresholdLoadInfExp & loadingsTotI < -kThresholdLoadNCExp) |
 	             (loadingsTotI > kThresholdLoadNCExp   & loadingsTotI < kThresholdLoadInfExp)
 
 	      ld1  <-  loadingsTotI < kThresholdLoadNCExp & loadingsTotI >
@@ -889,6 +900,7 @@ function(object){
 
 	    try(lapply(pcl0, function(x) xlsx::setCellStyle(cells[[x]], csL0) ), TRUE)
 	    
+	
 	    try(lapply(pcl1, function(x) xlsx::setCellStyle(cells[[x]], csL1) ), TRUE)
 	    try(lapply(pcl2, function(x) xlsx::setCellStyle(cells[[x]], csL2) ), TRUE)
 	    try(lapply(pcl3, function(x) xlsx::setCellStyle(cells[[x]], csL3) ), TRUE)
@@ -906,13 +918,91 @@ function(object){
 	                       paste("04Exploratorio_", auxPru,"_V", 01,
 	                             ".xlsx", sep = ''))
 	  xlsx::saveWorkbook(wb, file = outFile)
+	  listResults[[auxPru]]$fileXLSX <- outFile
 	  cat("Termino Salida: ", outFile, "\n")
 	}
+    saveResult(object, listResults, srcPath)
 })
 
 
-setGeneric(name = "outHTML", def = function(object){standardGeneric("outHTML")})
 setMethod("outHTML", "Exploratory", 
-function(object){
-	print("Funcion en construcción")
+function(object, srcPath = "."){
+	
+	load(file.path(srcPath, object@outFile$pathRdata)) # load listResults
+	nomPrueba <- object@test@nomTest
+	
+	cat("<h2>An&aacute;lisis exploratorio de la prueba:", nomPrueba, "</h2>\n")
+
+	cat("A continuación se muestra(n) el(los) gráfico(s) de sedimentación
+      para las correlaciones (tetracóricas) de la prueba, así como los
+      percentiles 95 estimados mediante análisis paralelo.\n", sep = "")
+ 
+  	cat("El gráfico de sedimentación presenta los valores propios asociados a
+      la matriz de correlaciones estimada de los ítems de la prueba, y el
+      percentil 95 de los valores propios correspondientes a matrices de
+      correlación del mismo tipo de la prueba, pero en
+      donde los ítems no se relacionan entre sí.\n\n",
+      sep  = "")
+
+  	cat("El gráfico representa cuan fuertes son las asociaciones entre los ítems,
+      cuántas dimensiones pueden necesitarse para describir aproximadamente
+      estas asociaciones y cuán diferentes son los valores propios, de los que
+      se observarían en el caso de que los ítems no se asocien entre sí.\n",
+      sep  = "")
+  	
+  	cat("En este sentido, el gráfico permite identificar la cantidad de dimensiones
+      que se desean interpretar; en especial, permite observar si algún conjunto
+      de valores propios, a pesar de superar el percentil definido, son muy
+      similares a lo que se esperarían cuando los ítems no se asocian y así
+      explorar un menor número de dimensiones.\n", sep  = "")
+
+	cat("<table bgcolor=\"#FFFFFF\" border=\"0\" cellpadding=\"2\" cellspacing=\"2\" width=\"100%\" class=\"table-bordered table-condensed\"><tbody>")
+
+     nomSubPru <- names(object@datAnalysis)
+     
+     for(ii in nomSubPru){
+     	
+	     nomAux   <- gsub("::|\\s", "_", ii) 
+	     pathImg  <- listResults[[nomAux]]$paPlotFile
+	     nomSub   <- gsub("^(.+)(::)(.+)", "\\3", ii)
+	     nFactors <- listResults[[nomAux]]$nFactors
+	     nFactAux <- paste(nFactors,"Factores")
+	     expVar1  <- listResults[[nomAux]]$resultsExp[[nFactAux]]$VarExplained[,2]
+    
+    simpleCap <- function(x) {
+      s <- strsplit(x, " ")[[1]]
+      paste(toupper(substring(s, 1,1)), substring(s, 2),
+          sep="", collapse=" ")
+    }
+
+    cat("<tr>",
+        "<td width=\"80%\">",	     
+        "<center>",
+        "<b>",
+        "<h3 id=\"Exploratory_Header_tab\">",
+        "An&aacute;lisis exploratorio de:", nomSub, 
+        "</h3>", "</b>", "</center>",
+        "</td>", "</tr>")
+         cat('<tr>')    
+         cat('<td width="100%">')
+		 cat("Al realizar un análisis factorial exploratorio se encontró que los primeros ",
+             nFactors, " dimensiones recogen el ", round(100 * expVar1, 1), "% de la varianza. \n", sep = "")
+         
+         cat("Se realizo una rotación ", simpleCap(object@param$rotation), ", la cual redistribuye la varianza explicada por cada dimensión
+             buscando que cada ítem pese fuertemente en una sola de las dimensiones
+             conservadas, con lo cual se facilita la interpretación de las mismas.\n", sep = "")
+
+		 cat("<center><a href=\"javascript:void(0)\" onclick=\"PopupCenter('", pathImg, 
+		 	 "', 'Exploratory Analysis', '944', '900')\"><img src=\"", 
+		 	 pathImg,'" alt="alt text" style = "width:472px;height:450px"></a>
+		     </center></td>', sep = "")		 
+		 cat(paste0('<td> <li class="linkxlscol"><a href="', listResults[[nomAux]]$fileXLSX, 
+		 	        '"> Descargar <br> informe Excel </a></li>', 
+                    '<li class="linkxlscol"><a href="../../../../Manuales/02_AnalisisDimensionalidad.docx">', 
+                    '<b> Manual de <br> interpretación </b></a></li>',
+		 	        '</td>'))
+	     cat('</tr>\n')
+     
+     }
+     cat('</tbody></table>')
 })

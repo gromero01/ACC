@@ -2,13 +2,13 @@
 # # pruebaClass.R
 # # R Versions: R version 3.0.0 i386
 # #
-# # Author(s):
+# # Author(s): Jorge Mario Carrasco
 # #
-# # SABER 11
+# # SABER 11	
 # # Description: Función creada para definar la clase prueba, la clase análisis y
 # #              reporte prueba para las definir las funciones de análisis de item.
 # #
-# # Outputs: Funciones para crear objetos y metodos
+# # Outputs: Funcio nes para crear objetos y metodos
 # #
 # # File history:
 # #   20160302: Creation
@@ -18,37 +18,57 @@
 ################################################################################
 
 ################################################################################
-# # global paths 
+# # Global Definitions
 ################################################################################
-# # docPath <- file.path("..","doc","latex")
 inPath  <- file.path("..","Input")
 srcPath <- file.path("..","Src")
+docPath <- file.path("..","Doc")
 funPath <- file.path("Function")
 outPath <- file.path("..", "Output")
 logPath <- file.path("..", "Log")
+
+options(encoding = "UTF-8")
+source(file.path(funPath, "tablasHtml.R"))
+source(file.path(funPath, "pruebaClass.R"))
+source("00Filtros.R")
+source("03TCT.R")
+source("04Exploratorio.R")
+source("06IRT.R") 
+
+################################################################################
+# # Execute 
 ################################################################################
 
-pathExpeci <- file.path(inPath, "Especificaciones1.xlsx")
-pathExam   <- "AC20152"
-source(file.path("Function", "pruebaClass.R"))
-source("04Exploratorio.R")
-paramLect <- list(infoItem = c('id' = "CODIGO_ITEM", 'subCon' = "COMPETENCIA_NOMBRE", 
-               	               'prueba' = "NOMBRE_PRUEBA"), 
-                  conDirs = "PBA116.con", valMUO = NA,
-                  subConInfo = c('path' = pathExpeci, 'nameSheet' =  "FINAL"))
-prueba0 <- new('Test', path = paste0(pathExam, "/PBA116"), 
-               exam = "SABERPRO", codMod = "07",
-               verInput = 1, nomTest = "SABER 11(Sociales y Competencias)", 
-               paramLect = paramLect) 
+dirPandoc <- file.path(Sys.getenv("APPDATA"), "..", "Local\\Pandoc") 
+Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
+#Sys.setenv(RSTUDIO_PANDOC = "C:\\Program Files (x86)\\Pandoc")
 
-ana1 <- Exploratory(test = prueba0)
-codeana1 <- codeAnalysis(ana1)
-xlsxana1 <- outXLSX(ana1)
+vecJson  <- c(#"../Input/parameters_EN.json", "../Input/parameters_MA.json", 
+              #"../Input/parameters_PR.json",
+              "../Input/parameters_CC.json",
+              "../Input/parameters_RC.json","../Input/parameters_LC.json", 
+              "../Input/parameters_IN.json")
 
-paso50  <- new('Analisis', prueba = prueba0,
- 	           param = list('flagUni' = TRUE, 'flagMultiC' = TRUE, 'flagMultiNC' = TRUE, 'flagBiFac' = TRUE), 
-   	           inputFile = list(), outFile = list(pathRdata = "../Output/05Confirmatorio/confirmatAnalysis.Rdata"))
+for (fileJson in vecJson){
+  listTests <- analyzeTests(fileJson)
+  jointReports(listTests, fileJson, pathJS = "../../../../lib", 
+   	           flagView = FALSE)
+} 
 
-#explorAnalysis(prueba0)
-resulExp <- explorAnalysis(prueba0)
-resul    <- confirmatAnalysis(prueba0, paso50)
+publishRepo(vecJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 
+            flagActualizar = FALSE)
+
+################################################################################
+# # Depuración metodo 
+################################################################################
+#prueba0 <- listTests[[1]]
+#object  <- listTests[[1]]@listAnal[["Filtros"]]
+#codeAnalysis(object)
+#outHTML(object)
+# prueba0 <- new('Test', path = "JUNTURAS/EK20161/exam717/PBAF000401JN", 
+# 	           exam = "SABERTYT", codMod = "07", verInput = 1, 
+#                periodo = "EK20161", nomTest = "SABER T&T(Lectura Crítica Conjunta)", 
+#                paramLect = list("conDirs" = "pbaF000401JN.con"))
+# object <- IRT(test = prueba0, paramExp = list("kOmissionThreshold" = 1))
+# codeAnalysis(object)
+# outHTML(object)

@@ -1,8 +1,8 @@
 ---
 output:
   knitrBootstrap::bootstrap_document:
-    title: "Analisis de ítem SABER"
-    theme: Simplex
+    title: "Analisis de item ICFES"
+    theme: Cerulean
     highlight: Tomorrow
     theme.chooser: TRUE
     highlight.chooser: TRUE
@@ -10,48 +10,41 @@ output:
 
 <style type="text/css" class="init">
 td.details-control {
-    background: url("lib/SD7Dz.png") no-repeat center center;
+    background: url("../../../../lib/SD7Dz.png") no-repeat center center;
     cursor: pointer;
 }
  tr.shown td.details-control {
-    background: url("lib/d4ICC.png") no-repeat center center;
+    background: url("../../../../lib/d4ICC.png") no-repeat center center;
 }
 </style>
 
 <BR>
 <TABLE bgcolor="#FFFFFF" BORDER="0" CELLPADDING="2" CELLSPACING="2" WIDTH="100%">
 <TR>
-<TD WIDTH="80%"><center><B><h1>Análisis de ítems de las prueba SABER T&T </h1></B></center></TD>
-<TD WIDTH="20%"><img src="logo.png" title="Logo Title Text 1" alt="alt text" /></TD>
+<TD WIDTH="5%">
+<a href = "../../../../index.html">
+<img src="../../../../logo_regresar.png" title="Logo regresar" alt="alt text" style="width:75px;height:75px;"/>
+</a>
+</TD>
+<TD WIDTH="75%"><center><font size="26"><B>An&aacute;lisis de &iacute;tems  
+
+```{r, echo = FALSE, message = F, results = "asis", comment = NA, warning = F}
+examLabel <- sapply(listTests, function(x) gsub("SABER", "", x@exam))
+examLabel <- unique(examLabel)
+if (length(examLabel) == 1){
+  examLabel <- ifelse(examLabel == "359", "3, 5, 7 y 9", examLabel)
+  cat('SABER', examLabel, '</B></font></center></TD>')  
+}
+```
+<TD WIDTH="20%"><img src="../../../../logo.png" title="Logo Title Text 1" alt="alt text" /></TD>
 </TR>
 </TABLE>
 
-```{r, include=FALSE}
-intNam  <- names(resulModel)
-vecLen  <- length(intNam)
-# vecLen  <- c(length(names(tabResul2)), length(names(tabResul3)))
-# intNam  <- intersect(names(tabResul2), names(tabResul3))
-gradVec <- gsub("(.+)(pba)(.+)", "\\3", intNam)
-# gradVec <- gsub("(^\\d)::.+", "\\1", intNam); 
-names(gradVec) <- intNam
-gradVec[duplicated(gradVec)] <- ""
-gradVec <- ifelse(gradVec != "", paste0('<h1 id="Forma-', gradVec, '"> Prueba ', gradVec, '</h1>'), "")
-
-#for (i in names(grafList)) knit_child("template2.Rmd", label.suffix = i)
-
-# Leer los nombres de las formas
-
-
-src <- lapply(intNam, function(iipba) {
-              namePba <- mapvalues(gsub("(.+)(pba)(.+)", "\\3", iipba), 
-                                   from = c("PBAL", "PBAM", "PBAC", "PBAD", "PBAF"), 
-                                   to = c("Lenguaje", "Matemáticas", "Ciencias", "Competencias Ciudadanas", 
-                                   "Financiera"), warn_missing = FALSE)
-              # # Caso especial para Pensamiento Ciudadano (Cambiar Titulos)
-              titulAgreI  <- ifelse("{{iipba}}" %like% "PBAD", "Competencia", "Componente")
-              titulAgreII <- ifelse("{{iipba}}" %like% "PBAD", "Afirmación", "Competencia")
-
-              return(paste(gradVec[iipba], knit_expand(file = "template.Rmd"), sep = "\n"))
-              })
+```{r, echo = FALSE, message = F, results = "asis", comment = NA, warning = F, out.width = 800, out.height = 120, fig.width=16, fig.height=9}
+for (Test in listTests){
+  cat("<h1> Prueba de", Test@nomTest, "</h1> \n ")
+  for (analysis in Test@listAnal){
+    outHTML(analysis, srcPath = "..")
+  }
+}
 ```
-`r knit_child(text = iconv(unlist(src), "UTF-8", "latin1"))`

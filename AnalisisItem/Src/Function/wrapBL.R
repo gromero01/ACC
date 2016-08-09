@@ -1,5 +1,5 @@
 #################################################################################
-# # wrapPS.R
+# # wrapBL.R
 # # R Versions: 2.15.0
 # #
 # # Author(s): Jorge Mario Carrasco Ortiz
@@ -21,6 +21,35 @@
 ################################################################################
 # # Function for reading Parscale output file
 ################################################################################
+
+ readPH2CHI <- function(fileName, filePath = "./"){
+  # # Reads the item parameters from Bilog
+  # #
+  # # Arg:
+  # #  fileName: The file name
+  # #  filePath: The file path
+  # #
+  # # Ret:
+  # #
+  require(dplyr)
+  inFile <- file.path(filePath, fileName)
+  data   <- readLines(inFile)
+  linea  <- grep(pattern = "QUADRATURE POINTS, POSTERIOR WEIGHTS", data)
+  indPri <- grep("ITEM PARAMETERS AFTER CYCLE", data)
+  data  <- data[(max(indPri) + 5):(linea - 17)]
+  sp    <- seq(from = 3, to = (3 * (length(data) + 1) / 3 - 2), by = 3) 
+  tab <- gsub("\\n", "", data[-sp] %>% paste(collapse = "\n"))
+  tab <- data.table('Original' = strsplit(tab, ") I")[[1]])
+  tab <- tab[, tstrsplit(Original, "|", fixed=TRUE)]
+  tab <- tab[, list('item'  =  gsub("I", "", V1), 
+                    'p_val_chi2' = as.numeric(gsub("\\(|\\)", "", V13)), 
+                    'chi2'       = as.numeric(gsub("(\\d.+)\\s+(\\d.+)", "\\1", V7)), 
+                    'gl_chi2'    = as.numeric(gsub("(\\d.+)\\s+(\\d.+)", "\\2", V7)))]
+  tab <- tab[, item := paste0("I", gsub("\\s", "", item))]
+  return(tab)
+}
+
+
 
 ReadBlParFile <- function (fileName, filePath = "./") {
   # # Reads the item parameters from Bilog
@@ -93,46 +122,35 @@ ReadBlTCTFile <- function (fileName, filePath = "./") {
   return(tctData)
 }
 
-ReadBlScoFile <- function (fileName, filePath = "./", lengthIds = 8,
-                          flagGr = TRUE) {
+ReadBlScoFile <- function (fileName, filePath = "./", lengthIds = 8) {
   # # This function reads person ability estimates from Parscale
   # #
   # # Arg:
   # #  fileName:  The file name
   # #  filePath:  The file path
   # #  lengthIds: The length of the key
-  # #  flagGr:    The flag if the last number is the group
   # # Ret:
-  # #  pPar: The person abilities table as a data.frame
+  # #  readFile: The person abilities table as a data.frame
 
   inFile <- file.path(filePath, fileName)
   if (!file.exists(inFile)) {
     stop(fileName, " not found in ", filePath, "\n")
   }
+  readFile <- readLines(inFile)
+  indPegue <- data.frame(colId = seq(1, length(readFile), 2), 
+                         colHab = seq(2, length(readFile), 2))
+  readFile <- apply(indPegue, 1, function(x) paste(readFile[x], collapse = ""))[-1]
+  readFile <- gsub("\\s+", " ", readFile)
+  readFile <- read.delim(text = readFile, sep = " ", header = FALSE, 
+                         colClasses = c("integer", rep("character", 2),
+                           "double", "character", "integer",
+                           "integer", rep("double", 5)))
 
-  flagGr    <- ifelse(flagGr, 1, 0)
-  auxCwidth <- c(3, 2 + lengthIds, flagGr, 6, 8, 7, 5, 10, 12, 12, 11, 9)
-  system(paste("vim.exe \"+set backup\" \"+%s/\\(  \\d\\{1\\}  \\(\\d\\|\\w\\)\\+\\)\\n/\\1/\" \"+1\"",
-               "\"+d\" \"+d\" \"+x\"", inFile))
-
-  if (nchar(readLines(inFile, 5)[5]) != sum(auxCwidth)) {
-    stop("Ancho de las columnas no cuadraron revisar parametros (lengthIds y flagGr)")
-  }
-
-  pPar <- laf_open_fwf(filename = inFile, trim = TRUE,
-                       column_widths = auxCwidth,
-                       column_types = c("integer", rep("character", 2),
-                                        "double", "character", "integer",
-                                        "integer", rep("double", 5)))
-  pPar   <- pPar[, ]
-  names(pPar) <- c("GROUP", "ID", "group_id", "WEIGHT", "TEST", "TRIED",
-                   "RIGHT", "PERCENT", "ABILITY", "SERROR",
-                   "C11", "C12")
-  pPar[, "iSubject"]<- 1:nrow(pPar)
-  close(file(inFile, "wt"))
-  file.append(inFile, gsub(".SCO", ".SCO~", inFile))
-  file.remove(gsub(".SCO", ".SCO~", inFile))
-  return(pPar[, !names(pPar) %in% c("C11", "C12")])
+  names(readFile) <- c("C1", "GROUP", "ID", "WEIGHT", "TEST", "TRIED",
+                       "RIGHT", "PERCENT", "ABILITY", "SERROR",
+                       "C11", "C12")
+  readFile[, "iSubject"]<- 1:nrow(readFile)
+  return(readFile[, !names(readFile) %in% c("C1", "C11", "C12")])
 }
 
 
@@ -141,36 +159,36 @@ ReadBlScoFile <- function (fileName, filePath = "./", lengthIds = 8,
 ################################################################################
 
 RunFromWN <- function(runPath, scriptPath) {
-  auxDir    <- getwd()
-  batchFile <- file.path(runPath, "WinXP-RUNBILOG-PL.bat")
-  cat('SET SCRIPT_PATH=', scriptPath, '\n', file = batchFile, sep = "")
-  cat("::\n:: Genera archivos BILOG desde WINSTEPS\n::\n", file = batchFile, append = TRUE)
-
-  cat("%SCRIPT_PATH%ParcharITEM1NAMELEN.pl\n", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%WS2BILJJ.pl -blm -dat -key -cortar\n\n", file = batchFile, append = TRUE)
-
-  cat("::\n:: Corre prueba y anula items por correlacion menor que 0.05\n::", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%CorrerBLM.pl -pba -f1\n", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%BilogEliminarCorrelacion.pl -cor 0.05\n", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%WS2BILJJ.pl -blm -cortarGrado\n", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%CorrerBLM.pl -pba -f3\n", file = batchFile, append = TRUE)
-
-  cat("%SCRIPT_PATH%BILOGcheckPH2.pl -t >revisionPH2.txt", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%BILOGsco2icc.pl -mid 24 -hab 2.0", file = batchFile, append = TRUE)
-
-  cat(":: calcular Correlacion!", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%RunRCorrelacion.pl", file = batchFile, append = TRUE)
-  cat(":: graficar", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%RunRGraficos.pl ", file = batchFile, append = TRUE)
-  cat("call CrearGraficasICC.BAT %SCRIPT_PATH%", file = batchFile, append = TRUE)
-
-  cat("%SCRIPT_PATH%BILOGgetItemSTATS.pl -t", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%BILOGgetSCO2.pl -t", file = batchFile, append = TRUE)
-  cat("%SCRIPT_PATH%consolidarDatosReporte.pl", file = batchFile, append = TRUE)
-
-  setwd(runPath)
-  system("WinXP-RUNBILOG-PL.bat")
-  setwd(auxDir)
+   auxDir    <- getwd()
+   batchFile <- file.path(runPath, "WinXP-RUNBILOG-PL.bat")
+   cat('SET SCRIPT_PATH=', scriptPath, '\n', file = batchFile, sep = "")
+   cat("::\n:: Genera archivos BILOG desde WINSTEPS\n::\n", file = batchFile, append = TRUE)
+ 
+   cat("%SCRIPT_PATH%ParcharITEM1NAMELEN.pl\n", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%WS2BILJJ.pl -blm -dat -key -cortar\n\n", file = batchFile, append = TRUE)
+ 
+   cat("::\n:: Corre prueba y anula items por correlacion menor que 0.05\n::", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%CorrerBLM.pl -pba -f1\n", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%BilogEliminarCorrelacion.pl -cor 0.05\n", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%WS2BILJJ.pl -blm -cortarGrado\n", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%CorrerBLM.pl -pba -f3\n", file = batchFile, append = TRUE)
+ 
+   cat("%SCRIPT_PATH%BILOGcheckPH2.pl -t >revisionPH2.txt", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%BILOGsco2icc.pl -mid 24 -hab 2.0", file = batchFile, append = TRUE)
+ 
+   cat(":: calcular Correlacion!", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%RunRCorrelacion.pl", file = batchFile, append = TRUE)
+   cat(":: graficar", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%RunRGraficos.pl ", file = batchFile, append = TRUE)
+   cat("call CrearGraficasICC.BAT %SCRIPT_PATH%", file = batchFile, append = TRUE)
+ 
+   cat("%SCRIPT_PATH%BILOGgetItemSTATS.pl -t", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%BILOGgetSCO2.pl -t", file = batchFile, append = TRUE)
+   cat("%SCRIPT_PATH%consolidarDatosReporte.pl", file = batchFile, append = TRUE)
+ 
+   setwd(runPath)
+   system("WinXP-RUNBILOG-PL.bat")
+   setwd(auxDir)
 }
 
 RunBilog <- function (responseMatrix, runName, outPath = "./",
@@ -180,40 +198,42 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
                       logistic = TRUE, kD = NULL, dif = NULL,
                       srcPath = "../src/", binPath = "../bin/", verbose = TRUE,
                       commentFile = NULL,  calibFile = NULL,
-                      runProgram = TRUE, itNumber = NULL, NPArm = 2) {
+                      runProgram = TRUE, itNumber = NULL, NPArm = 2, 
+                      thrCorr = 0.05, datAnclas = NULL){
 
-  # # This function generates a Parscale control file given the options in its
-  # # arguments, runs it and reads the item parameters
-  # #
-  # # Arg:
-  # #  responseMatrix: numeric matrix or data.frame containing the (coded) responses to the items
-  # #  runName: name of the stem used for the files related with the analyses
-  # #  outPath: path where the files will be stored
-  # #  weights: vector with the weights to be asigned to each responses register
-  # #  group: vector with group numbers or single character codes of group membership
-  # #  personIds: vector with the ids to be written for each responses register
-  # #  itemIds: vector with the ids for each item
-  # #  nQuadPoints: number of quadrature points to be used for estimation
-  # #  score: logical indicating whether or not person abilities should be obtained and stored
-  # #  personEstimation: string scalar with the name of the estimation
-  # #                    method to use for ability estimates (EAP, WML or MLE)
-  # #  kD: numeric constant to use as D for scaling parameters. Dafaults
-  # #      to 1.702 if lofistic is TRUE and 1.0 if it is FALSE
-  # #  kChiGroups: numbre of groups for chi-square item fit calculations
-  # #  dif: vector indicating the group of parameters to be estimated jointly (0) or separated (1)
-  # #       (isSeparateSlopes, isSeparateThresholds, isSeparateCategories, isSeparateGuessing)
-  # #  srcPath: path to working directory
-  # #  binPath: path where the Parscale executables may be found
-  # #  verbose: logical indicating whether to show or not function progres
-  # #  commentFile: Title with information of Test
-  # #  calibFile: file name with the Parameter Calibration
-  # #  runProgram:
-  # #  NPArm: Number of parameters of the model
-  # # Ret:
-  # #  iPar: returns the estimated item parameters
-  ################################################################################
-  # # Check arguments consistency
-  ################################################################################
+    # # This function generates a Parscale control file given the options in its
+    # # arguments, runs it and reads the item parameters
+    # #
+    # # Arg:
+    # #  responseMatrix: numeric matrix or data.frame containing the (coded) responses to the items
+    # #  runName: name of the stem used for the files related with the analyses
+    # #  outPath: path where the files will be stored
+    # #  weights: vector with the weights to be asigned to each responses register
+    # #  group: vector with group numbers or single character codes of group membership
+    # #  personIds: vector with the ids to be written for each responses register
+    # #  itemIds: vector with the ids for each item
+    # #  nQuadPoints: number of quadrature points to be used for estimation
+    # #  score: logical indicating whether or not person abilities should be obtained and stored
+    # #  personEstimation: string scalar with the name of the estimation
+    # #                    method to use for ability estimates (EAP, WML or MLE)
+    # #  kD: numeric constant to use as D for scaling parameters. Dafaults
+    # #      to 1.702 if lofistic is TRUE and 1.0 if it is FALSE
+    # #  kChiGroups: numbre of groups for chi-square item fit calculations
+    # #  dif: vector indicating the group of parameters to be estimated jointly (0) or separated (1)
+    # #       (isSeparateSlopes, isSeparateThresholds, isSeparateCategories, isSeparateGuessing)
+    # #  srcPath: path to working directory
+    # #  binPath: path where the Parscale executables may be found
+    # #  verbose: logical indicating whether to show or not function progres
+    # #  commentFile: Title with information of Test
+    # #  calibFile: file name with the Parameter Calibration
+    # #  runProgram:
+    # #  NPArm: Number of parameters of the model
+    # #  datAnclas: Data Frame with items parameters to estimate
+    # # Ret:
+    # #  iPar: returns the estimated item parameters
+    ################################################################################
+    # # Check arguments consistency
+    ################################################################################
 
   if (!is.null(weights)) {
     if (length(weights) != nrow(responseMatrix)) {
@@ -237,6 +257,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   ################################################################################
   # # General variables and filenames
   ################################################################################
+
   # # Responses dimensions and category information
   nItems           <- ncol(responseMatrix)
   nObservations    <- nrow(responseMatrix)
@@ -245,9 +266,9 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   binPath <- file.path(srcPath, binPath)
   runPath <- file.path(srcPath, runPath)
 
-
   # # Files used by Bilog
   dataFileName    <- paste(runName, ".dat.cal", sep = "")
+  prFileName      <- paste(runName, ".prm", sep = "")
   omitkeyFileName <- paste(runName, ".om", sep = "")
   keyFileName     <- paste(runName, ".key", sep = "")
   notpresFileName <- paste(runName, ".np", sep = "")
@@ -263,6 +284,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   # # With paths for the ones where data is written
   commandFile <- file.path(runPath, paste(runName, ".blm", sep = ""))
   dataFile    <- file.path(runPath, dataFileName)
+  prFile      <- file.path(runPath, prFileName)
   keyFile     <- file.path(runPath, keyFileName)
   omitkeyFile <- file.path(runPath, omitkeyFileName)
   notpresFile <- file.path(runPath, notpresFileName)
@@ -359,24 +381,66 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   # # FILES
   cat(">GLOBAL DFNAME = '", dataFileName, "', \n", sep = "", file = commandFile,
       append = TRUE)
+  
   if (!is.null(calibFile)) {
     cat("       IFNAME = '", calibFile, "', \n", sep = "",
         file = commandFile, append = TRUE)
   }
-  cat("        NPArm = ", NPArm, ",\n", sep = "", file = commandFile, append = TRUE)
+  
+  if (!is.null(datAnclas)) {
+    cat("        PRNAME = '", prFileName, "', \n", sep = "",
+        file = commandFile, append = TRUE)
+    
+    # # Position and code of items
+    indPosi <- data.frame(item = itemIds,
+                          pos  = seq(1, length(itemIds)))
+    datAnclas <- subset(datAnclas, select = c("item", "dif", "disc", "azar"))
+    indPosi   <- merge(indPosi, datAnclas, by = "item", all.x = TRUE)
+    indPosi   <- cbind(indPosi, 'Fix' = ifelse(is.na(indPosi$dif), 0, 1))
+    indPosi   <- indPosi[order(indPosi$pos), ]
+    
+    # # Construct PRM
+    writePRM <- function(indPosi, prFile, isBad = NULL) {      
+      if (!is.null(isBad)) {
+        isElim  <- any(isBad %in% indPosi[["pos"]])
+        if (isElim) {
+          indPosi <- indPosi[-isBad, ]
+          indPosi$pos <- 1:nrow(indPosi)
+        }
+      }
+      prmDAT <- subset(indPosi, !is.na(dif), 
+                      select = c("pos", "disc", "dif", "azar"))
+
+      # # format and run
+      cols   <- c("dif", "disc", "azar")
+      for (jj in cols){
+        prmDAT[[jj]] <- sprintf("%.6f", prmDAT[[jj]])
+      }      
+      # # output file
+      write(nrow(prmDAT), file = prFile)
+      write.table(prmDAT, file = prFile, append = TRUE, sep = "\t",
+                  row.names = FALSE, na = " ", col.names = FALSE, 
+                  quote = FALSE)
+      if (verbose) cat("Prm file prepared\n")
+    }
+    writePRM(indPosi, prFile)
+  }
+ 
+  cat("        NPArm = ", NPArm, ",\n", sep = "", file = commandFile, 
+      append = TRUE)
   cat("        NTEST = 1,\n", file = commandFile, append = TRUE)
   cat("        SAVE;\n", sep = "", file = commandFile, append = TRUE)
 
   # # SAVE
-# #   cat(">SAVE PARM = '", toupper(gsub("/", "\\\\", itemFileName)),
-# #       "', \n", sep = "", file = commandFile, append = TRUE)
-# #   cat("      SCORE = '", toupper(gsub("/", "\\\\", scoreFileName)),
-# #       "', \n", sep = "", file = commandFile, append = TRUE)
-# #   cat("      INFORMATION = '", toupper(gsub("/", "\\\\", infoFileName)),
-# #       "', \n", sep = "", file = commandFile, append = TRUE)
-# #   cat("      FIT = '", toupper(gsub("/", "\\\\", fitFileName)),
-# #       "';\n", sep = "", file = commandFile, append = TRUE)
-# #
+  # #   cat(">SAVE PARM = '", toupper(gsub("/", "\\\\", itemFileName)),
+  # #       "', \n", sep = "", file = commandFile, append = TRUE)
+  # #   cat("      SCORE = '", toupper(gsub("/", "\\\\", scoreFileName)),
+  # #       "', \n", sep = "", file = commandFile, append = TRUE)
+  # #   cat("      INFORMATION = '", toupper(gsub("/", "\\\\", infoFileName)),
+  # #       "', \n", sep = "", file = commandFile, append = TRUE)
+  # #   cat("      FIT = '", toupper(gsub("/", "\\\\", fitFileName)),
+  # #       "';\n", sep = "", file = commandFile, append = TRUE)
+  # #
   cat(">SAVE PARM = '", toupper(itemFileName),
       "', \n", sep = "", file = commandFile, append = TRUE)
   cat("      ISTAT = '", toupper(tctFileName),
@@ -413,7 +477,19 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   cat("                );\n", sep = "", file = commandFile, append = TRUE)
 
   # # TEST
-  cat(">TEST \n      TNAME = '", gsub("_V.+", "", runName), "', \n",
+  cat(">TEST \n", file = commandFile, append = TRUE)
+  printFix <- function(vecFix, commandFile){  
+      cat("      FIX = (\n", file = commandFile, append = TRUE)
+      auxFix <- strwrap(paste(vecFix, collapse = ", "), width = 30)
+      cat(gsub("\\s", "", auxFix), sep = "\n", file = commandFile, append = TRUE)
+      cat("                ),\n", file = commandFile, append = TRUE)
+  }
+
+  if (!is.null(datAnclas)) {
+    printFix(vecFix = indPosi$Fix, commandFile)
+  }
+  
+  cat("      TNAME = '", substr(gsub("_V.+", "", runName), 1, 8), "', \n",
     sep = "", file = commandFile, append = TRUE)
   cat("      INUmber = (\n", file = commandFile, append = TRUE)
   if (is.null(itNumber)){
@@ -424,7 +500,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     auxItems <- strwrap(paste(itNumber, collapse = ", "),  width = 30)
     cat(gsub("\\s", "", auxItems), sep = "\n", file = commandFile, append = TRUE)
   }
-  cat("                );\n", sep = "", file = commandFile, append = TRUE)
+  cat("                );\n", file = commandFile, append = TRUE)
 
   # # (variable format statement)
   if (!is.null(dif) & !is.null(weights)) {
@@ -444,8 +520,9 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   cat("       NEWTON = 30, \n", file = commandFile, append = TRUE)
   cat("       NQPT = ", nQuadPoints, ", \n", sep = "", file = commandFile, append = TRUE)
   cat("       NOSprior, \n", file = commandFile, append = TRUE)
+  #cat("       TPRIOR, \n", file = commandFile, append = TRUE)
   cat("       DIAGNOSIS = 1, \n", file = commandFile, append = TRUE)
-  cat("       CRIT = 0.0001 \n", file = commandFile, append = TRUE)
+  cat("       CRIT = 0.001 \n", file = commandFile, append = TRUE)
   cat("       ;\n", file = commandFile, append = TRUE)
 
   # # SCORE
@@ -463,9 +540,15 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     file.remove(batDir)
   }
 
+  # # Escribiendo bats
+  cat(paste(gsub("/", "\\\\", file.path(binPath, "BLM1.eje")),
+            " ", runName, " > ", paste0(runName, ".log1"),
+            "\n", sep = ""), file = gsub("\\.bat", "_f1.bat", batDir))
+
   cat(paste(gsub("/", "\\\\", file.path(binPath, "BLM1.eje")),
             " ", runName, " > ", paste0(runName, ".log1"),
             "\n", sep = ""), file = batDir)
+
   cat(paste(gsub("/", "\\\\", file.path(binPath, "BLM2.eje")),
             " ", runName, " > ", paste0(runName, ".log2"),
             "\n", sep = ""), file = batDir,
@@ -475,7 +558,68 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
             "\n", sep = ""), file = batDir,
       append = TRUE)
 
+  # # Exclusión correlación biserial
   setwd(runPath)
+  iiCor <- 1
+  repeat{
+    system("WinXP-RUNBILOG_f1.bat")
+    if (iiCor == 1){
+      file.copy(tctFileName, gsub("\\.TCT", "_ori.TCT", tctFileName))
+    }
+
+    # # Identificando items malos
+    auxTCT <- ReadBlTCTFile(tctFileName, ".")
+    isBad  <- auxTCT[, "BISERIAL"] < thrCorr
+    isBad  <- which(itemIds %in% auxTCT[isBad, "item"])
+    auxBlm <- readLines(commandFile)
+    linea1 <- grep(pattern = "INUmber", auxBlm)
+    linea2 <- grep(pattern = ">CALIB", auxBlm)
+    linea4 <- grep(pattern = ">TEST", auxBlm)
+    
+    # # Construyendo el nuevo archivo
+    auxdata1 <- auxBlm[(linea1 + 1):(linea2 - 3)]
+    auxdata <- unlist(strsplit(paste0(auxdata1, collapse=""), ","))
+    auxdata <- strwrap(paste(subset(auxdata, !(auxdata%in%isBad)), 
+                       collapse = ", "), width = 30)
+    numAux  <- linea2 - linea1 - 3 - length(auxdata)
+    auxdata <- c(auxdata, rep("", numAux))
+    auxBlm[(linea1 + 1):(linea2 - 3)] <- gsub("\\s", "", auxdata)
+    isBlanck <- grep("^$", auxBlm)
+    isBlanck <- isBlanck[isBlanck > linea1 + 1 & isBlanck < linea2 - 3]
+    if (length(isBlanck) > 0) {
+      auxBlm   <- auxBlm[-isBlanck]  
+    }
+    
+    # # Cambiar el NITems
+    linea3 <- grep(pattern = "NITems", auxBlm)
+    antNUM <- gsub(".+\\((\\d+)\\).+", "\\1", auxBlm[linea3])
+    nueNUM <- as.character(as.numeric(antNUM) - length(isBad))
+    nueNUM <- gsub("(.+\\()(\\d+)(\\).+)", paste0("\\1", nueNUM, "\\3"), 
+                  auxBlm[linea3])
+    auxBlm[linea3] <- nueNUM
+    if (!is.null(datAnclas) & length(isBad) > 0) {
+      # # Ajustando campo Fix
+      cat(auxBlm[1:linea4], sep = "\n", file = commandFile)  
+      #print(indPosi$Fix)
+      cat("Eliminando items ...... \n")
+      cat(isBad)
+      #print(indPosi$Fix[-isBad])
+      printFix(vecFix = indPosi$Fix[-isBad], commandFile)
+      cat(auxBlm[(linea1 - 1):length(auxBlm)], sep = "\n", 
+          file = commandFile, append = TRUE)
+
+      # # Ajustando archivo PRM
+      writePRM(indPosi, prFile, isBad = isBad)
+
+    } else {
+      cat(auxBlm, sep = "\n", file = commandFile)  
+    }
+
+    if(all(auxTCT[, "BISERIAL"] >= thrCorr)){
+      break
+    }
+    iiCor <- iiCor + 1
+  }
   if (runProgram) {
     system("WinXP-RUNBILOG.bat")
   }
