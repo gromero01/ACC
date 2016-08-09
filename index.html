@@ -70,7 +70,7 @@ source(file.path(<span class="pl-s"><span class="pl-pds">"</span>Function<span c
 <span class="pl-c"># # Inicializacion de análisis</span>
 <span class="pl-smi">paramLect</span> <span class="pl-k">&lt;-</span> <span class="pl-k">list</span>(<span class="pl-v">conDirs</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>pbaF500301.con<span class="pl-pds">"</span></span>, <span class="pl-v">valMUO</span> <span class="pl-k">=</span> <span class="pl-c1">NA</span>)
 <span class="pl-smi">prueba0</span>   <span class="pl-k">&lt;-</span> new(<span class="pl-s"><span class="pl-pds">'</span>Test<span class="pl-pds">'</span></span>, <span class="pl-v">path</span> <span class="pl-k">=</span> paste0(<span class="pl-smi">pathExam</span>, <span class="pl-s"><span class="pl-pds">"</span>/pbaF500301<span class="pl-pds">"</span></span>), 
-               <span class="pl-v">exam</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>SABERTyT<span class="pl-pds">"</span></span>, <span class="pl-v">codMod</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>07<span class="pl-pds">"</span></span>,
+               <span class="pl-v">exam</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>SABERTYT<span class="pl-pds">"</span></span>, <span class="pl-v">codMod</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>07<span class="pl-pds">"</span></span>,
                <span class="pl-v">verInput</span> <span class="pl-k">=</span> <span class="pl-c1">1</span>, <span class="pl-v">nomTest</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>SABER T&amp;T(Mantenimiento e Instalación de Software y Hardware F1)<span class="pl-pds">"</span></span>, 
                <span class="pl-v">paramLect</span> <span class="pl-k">=</span> <span class="pl-smi">paramLect</span>) </pre></div>
 
@@ -234,7 +234,6 @@ source(file.path(<span class="pl-s"><span class="pl-pds">"</span>Function<span c
       cat(<span class="pl-s"><span class="pl-pds">"</span>.... Ejecutando para --&gt;<span class="pl-pds">"</span></span>, <span class="pl-smi">kk</span>, <span class="pl-s"><span class="pl-pds">"</span><span class="pl-cce">\n</span><span class="pl-pds">"</span></span>)
       <span class="pl-c"># # Define Dictionary</span>
       <span class="pl-smi">dictVarPrueba</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">object</span><span class="pl-k">@</span><span class="pl-smi">datAnalysis</span>[[<span class="pl-smi">kk</span>]]<span class="pl-k">$</span><span class="pl-smi">dictionary</span>
-      <span class="pl-smi">varId</span>         <span class="pl-k">&lt;-</span> <span class="pl-smi">dictVarPrueba</span>[, <span class="pl-s"><span class="pl-pds">'</span>id<span class="pl-pds">'</span></span>]
 
       <span class="pl-c"># # item that are part of the index</span>
       <span class="pl-smi">indexItems</span>    <span class="pl-k">&lt;-</span> <span class="pl-smi">dictVarPrueba</span>[, <span class="pl-s"><span class="pl-pds">'</span>id<span class="pl-pds">'</span></span>]
