@@ -93,7 +93,7 @@ source(file.path(<span class="pl-s"><span class="pl-pds">"</span>Function<span c
 <li>Inicializar el análisis IRT con la función creada para tal fin, ¿Qué se observa?.</li>
 </ol>
 
-<div class="highlight highlight-source-r"><pre><span class="pl-smi">codeana1</span> <span class="pl-k">&lt;-</span> IRT(<span class="pl-v">test</span> <span class="pl-k">=</span> <span class="pl-smi">prueba0</span>)</pre></div>
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">codeana1</span> <span class="pl-k">&lt;-</span> IRT(<span class="pl-v">test</span> <span class="pl-k">=</span> <span class="pl-smi">prueba0</span>, <span class="pl-k">list</span>(<span class="pl-v">kOmissionThreshold</span> <span class="pl-k">=</span> <span class="pl-c1">1</span>))</pre></div>
 
 <h2>
 <a id="métodos-de-la-clase-analysis" class="anchor" href="#m%C3%A9todos-de-la-clase-analysis" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Métodos de la clase "Analysis"</h2>
@@ -169,7 +169,7 @@ source(file.path(<span class="pl-s"><span class="pl-pds">"</span>Function<span c
 </ol>
 
 <div class="highlight highlight-source-r"><pre><span class="pl-en">Incorrectos</span><span class="pl-k">&lt;-</span> <span class="pl-k">function</span>(<span class="pl-smi">test</span>, <span class="pl-v">paramExp</span> <span class="pl-k">=</span> <span class="pl-c1">NULL</span>){
-  <span class="pl-smi">paramDefault</span> <span class="pl-k">&lt;-</span> <span class="pl-k">list</span>(<span class="pl-v">kOmissionThreshold</span> <span class="pl-k">=</span> <span class="pl-c1">0.5</span>,
+  <span class="pl-smi">paramDefault</span> <span class="pl-k">&lt;-</span> <span class="pl-k">list</span>(<span class="pl-v">kOmissionThreshold</span> <span class="pl-k">=</span> <span class="pl-c1">1</span>,
                        <span class="pl-v">flagOri</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>, <span class="pl-v">flagTotal</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>,
                        <span class="pl-v">flagSubCon</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>, <span class="pl-v">orderedDat</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>)
   <span class="pl-c"># # Include paramExp</span>
