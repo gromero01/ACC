@@ -274,15 +274,6 @@ setMethod("codeAnalysis", "IRT",
         itemDiffFile   <- paste("salidas/", indexData, ".PAR", sep = "")
         itemParameters <- try(ReadBlParFile(itemDiffFile, outPath))
         
-        if (!is.null(listResultsAN)) { # Indicadora de Anclas
-          itemAnclas     <- subset(listResultsAN[[object@param$formAncla]], select = c("item"))
-          itemAnclas     <- cbind(itemAnclas, 'Ancla' = 1)
-          itemParameters <- merge(itemParameters, itemAnclas, by = "item", all.x = TRUE)
-          isNOAncla      <- is.na(itemParameters[["Ancla"]])
-          itemParameters[["Ancla"]][isNOAncla] <- 0
-        } else {
-          itemParameters <- cbind(itemParameters, 'Ancla' = 0)
-        }
         # # Reading TCT results Original
         itemTCTFile  <- paste("salidas/", indexData, "_ori.TCT", sep = "")
         tctParam_ORI <- try(ReadBlTCTFile(itemTCTFile, outPath))
@@ -462,6 +453,19 @@ setMethod("codeAnalysis", "IRT",
         tablaRep <- dcast.data.table(tablaRep, item ~ categoria + variable, fun = sum,
                                      value.var = c("value"))
         tablaFin <- merge(merge(ldirOP, ldirICC, by = "item", all = TRUE), tablaRep, by = "item", all = TRUE)
+
+        # # Cruce con Anclas
+        if (!is.null(listResultsAN)) { # Indicadora de Anclas
+          itemAnclas     <- subset(listResultsAN[[object@param$formAncla]], select = c("item"))
+          itemAnclas     <- cbind(itemAnclas, 'Ancla' = 1)
+          itemParameters <- merge(itemParameters, itemAnclas, by = "item", all.x = TRUE)
+          isNOAncla      <- is.na(itemParameters[["Ancla"]])
+          itemParameters[["Ancla"]][isNOAncla] <- 0
+        } else {
+          itemParameters <- cbind(itemParameters, 'Ancla' = 0)
+        }
+
+        # # Construct Data Consolidation
         tablaFin <- merge(tablaFin, itemParameters, by = "item", all = TRUE)
         tablaFin <- merge(tablaFin, tctParam, by = "item", all = TRUE)
         tablaFin <- merge(tablaFin, tablaFlags, by = "item", all = TRUE)

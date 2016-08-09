@@ -896,21 +896,9 @@ ReadDataAI <- function (folderName, dict,
   ################################################################################
   # # validate parameters
   ################################################################################
-  cat("Empece a usar ReadDataAI", "\n")
-  # if (!exists(as.character(substitute(dict)))) {
-  #   stop("Object: ", dict, " doesn't exist")
-  # }
-  if (is.null(dict)) {
+  if (!exists(as.character(substitute(dict)))) {
     stop("Object: ", dict, " doesn't exist")
   }
-<<<<<<< HEAD
-=======
-  cat("Pase la primera condicion")
-  if (class(dict) != "RD") {
-    stop("Dict parameter is expected to be a output of the ReadDict function")
-  }
-
->>>>>>> 98c0444b6b0a27e1b6b1e246cd890c5896760e06
 
   if (!file.exists(folderName)) {
     stop("Folder: ", folderName, " doesn't exist")
