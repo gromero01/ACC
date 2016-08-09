@@ -65,7 +65,7 @@ IRT <- function(test, paramExp = NULL){
                        idNoPKey = c('O', 'M'), constDmodel = 1.7,
                        isCheckKeys = FALSE, kThresItemCorrDic = 0.2,
                        kThresItemCorrOrd = 0.2, espSd = 1, espMean = 0, 
-                       AnclaRdata = NULL)
+                       AnclaRdata = NULL, formAncla = "")
   if (!is.null(paramExp)) {
     isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
     isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
@@ -150,10 +150,6 @@ setMethod("codeAnalysis", "IRT",
 	# # see ?psych::alpha
 	isCheckKeys <- FALSE
 
-	# # create list to save results
-	listResults <- list()
-	pruebasRead <- names(object@datAnalysis)
-
   # # Cargando archivo de anclas
   if (!is.null(object@param$AnclaRdata)) {
      fileAncla <- object@param$AnclaRdata
@@ -165,6 +161,9 @@ setMethod("codeAnalysis", "IRT",
      listResultsAN <- NULL
   }
 
+  # # create list to save results
+  listResults <- list()
+  pruebasRead <- names(object@datAnalysis)
 
 	for (kk in pruebasRead) {	
       cat(".... Ejecutando estimación para -->", kk, "\n")
@@ -265,7 +264,7 @@ setMethod("codeAnalysis", "IRT",
                  runPath = file.path(outPath, 'corridas'),
                  verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
                  commentFile = indexData, NPArm = auxNPAR, thrCorr = 0.05, 
-                 datAnclas = listResultsAN[[auxPru]])
+                 datAnclas = listResultsAN[[object@param$formAncla]])
         
         # Reading results of chi square test 
         itemPH2File <- paste(indexData, ".PH2", sep = "")
@@ -274,7 +273,16 @@ setMethod("codeAnalysis", "IRT",
         # Reading results of parameters model
         itemDiffFile   <- paste("salidas/", indexData, ".PAR", sep = "")
         itemParameters <- try(ReadBlParFile(itemDiffFile, outPath))
-
+        
+        if (!is.null(listResultsAN)) { # Indicadora de Anclas
+          itemAnclas     <- subset(listResultsAN[[object@param$formAncla]], select = c("item"))
+          itemAnclas     <- cbind(itemAnclas, 'Ancla' = 1)
+          itemParameters <- merge(itemParameters, itemAnclas, by = "item", all.x = TRUE)
+          isNOAncla      <- is.na(itemParameters[["Ancla"]])
+          itemParameters[["Ancla"]][isNOAncla] <- 0
+        } else {
+          itemParameters <- cbind(itemParameters, 'Ancla' = 0)
+        }
         # # Reading TCT results Original
         itemTCTFile  <- paste("salidas/", indexData, "_ori.TCT", sep = "")
         tctParam_ORI <- try(ReadBlTCTFile(itemTCTFile, outPath))

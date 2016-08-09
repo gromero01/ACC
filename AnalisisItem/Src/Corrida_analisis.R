@@ -50,7 +50,7 @@ vecJson  <- c(#"../Input/parameters_EN.json", "../Input/parameters_MA.json",
               "../Input/parameters_IN.json")
 
 for (fileJson in vecJson){
-  listTests <- analyzeTests(fileJson, anUpdate = "IRT")
+  listTests <- analyzeTests(fileJson)
   jointReports(listTests, fileJson, pathJS = "../../../../lib", 
    	           flagView = FALSE)
 } 
