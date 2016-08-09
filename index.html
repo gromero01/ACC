@@ -222,10 +222,29 @@ source(file.path(<span class="pl-s"><span class="pl-pds">"</span>Function<span c
 
 <div class="highlight highlight-source-r"><pre><span class="pl-ent">setMethod</span>("<span class="pl-en">codeAnalysis</span>", "conteoIncorrectos", 
 <span class="pl-k">function</span>(<span class="pl-smi">object</span>){
+  <span class="pl-c"># # Load libraries and create folders</span>
   <span class="pl-smi">outPath</span> <span class="pl-k">&lt;-</span> file.path(<span class="pl-smi">outPath</span>, <span class="pl-s"><span class="pl-pds">"</span>XXINCORRECTOS<span class="pl-pds">"</span></span>)
   dir.create(<span class="pl-smi">outPath</span>, <span class="pl-v">recursive</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>, <span class="pl-v">showWarnings</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>)    
-  <span class="pl-c"># # Load libraries</span>
   require(<span class="pl-smi">data.table</span>)
+
+  <span class="pl-c"># # create list to save results</span>
+  <span class="pl-smi">listResults</span> <span class="pl-k">&lt;-</span> <span class="pl-k">list</span>()
+  <span class="pl-smi">pruebasRead</span> <span class="pl-k">&lt;-</span> names(<span class="pl-smi">object</span><span class="pl-k">@</span><span class="pl-smi">datAnalysis</span>)
+  <span class="pl-k">for</span> (<span class="pl-smi">kk</span> <span class="pl-k">in</span> <span class="pl-smi">pruebasRead</span>) { 
+      cat(<span class="pl-s"><span class="pl-pds">"</span>.... Ejecutando para --&gt;<span class="pl-pds">"</span></span>, <span class="pl-smi">kk</span>, <span class="pl-s"><span class="pl-pds">"</span><span class="pl-cce">\n</span><span class="pl-pds">"</span></span>)
+      <span class="pl-c"># # Define Dictionary</span>
+      <span class="pl-smi">dictVarPrueba</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">object</span><span class="pl-k">@</span><span class="pl-smi">datAnalysis</span>[[<span class="pl-smi">kk</span>]]<span class="pl-k">$</span><span class="pl-smi">dictionary</span>
+      <span class="pl-smi">varId</span>         <span class="pl-k">&lt;-</span> <span class="pl-smi">dictVarPrueba</span>[, <span class="pl-s"><span class="pl-pds">'</span>id<span class="pl-pds">'</span></span>]
+
+      <span class="pl-c"># # item that are part of the index</span>
+      <span class="pl-smi">indexItems</span>    <span class="pl-k">&lt;-</span> <span class="pl-smi">dictVarPrueba</span>[, <span class="pl-s"><span class="pl-pds">'</span>id<span class="pl-pds">'</span></span>]
+      <span class="pl-smi">dataCor</span>       <span class="pl-k">&lt;-</span> <span class="pl-smi">object</span><span class="pl-k">@</span><span class="pl-smi">datAnalysis</span>[[<span class="pl-smi">kk</span>]]<span class="pl-k">$</span><span class="pl-smi">datos</span>[, <span class="pl-smi">indexItems</span>, <span class="pl-v">with</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>]
+
+      <span class="pl-c"># # count mistakes</span>
+      <span class="pl-smi">countIncorrec</span> <span class="pl-k">&lt;-</span> rowSums(<span class="pl-smi">dataCor</span> <span class="pl-k">==</span> <span class="pl-c1">0</span>)
+      print(summary(<span class="pl-smi">countIncorrec</span>))
+      cat(<span class="pl-s"><span class="pl-pds">"</span>El total de respuestas incorrectas es de :<span class="pl-pds">"</span></span>, <span class="pl-smi">countIncorrec</span>)
+  }
 
 })</pre></div>
         </section>
