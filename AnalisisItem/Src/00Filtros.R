@@ -117,6 +117,11 @@ setMethod("codeAnalysis", "Filtros",
       datSblq[SNP %in% sospPrueb[,"SNP1"], indCopia := 1]
      
       errBaseCop <- sospPrueb[,"SNP1"][!sospPrueb[,"SNP1"] %in% datSblq[, SNP]] 
+      
+      if (any(!c("Tipo_de_Evaluado", "Estado_Final") %in% names(datSblq))){
+        datSblq[, Tipo_de_Evaluado := "1"]
+        datSblq[, Estado_Final := "1"]
+      }
 
       # # Seleccion No estudiante
    	  datSblq[, indNE := ifelse(Tipo_de_Evaluado != "1" & !flagConjunta, 1, 0)]
@@ -181,6 +186,9 @@ setMethod("codeAnalysis", "Filtros",
                          "muestra la cantidad de registros por grupo de referencia.")
 
       # # Conteos por grupo de referecia (TyT Pro)
+      if (any(duplicated(datInfo[["SNP"]]))) {
+        stop("ERROR TECNOLOGIA------- IndividualBasicos con duplicados")
+      }
       if (object@test@exam %in% c("SABERPRO", "SABERTYT")){
         datSblq <- merge(datSblq, datInfo, by = "SNP", all.x = TRUE)
         datSblq[is.na(GRRE_NOMBRE), GRRE_NOMBRE := "SIN GRUPO DE REFERENCIA"]

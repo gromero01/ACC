@@ -163,7 +163,7 @@ function(object, desElim = NULL){
     #keyString <- keyString[infoCon$IDENTIFICADOR %in% filtItem]
 
     # # Reading IDFLE of Test
-    pathIDFILE  <- file.path(inPath, object@path, gsub("IDFILE = ", "", con[grep("IDFILE", con)]))
+    pathIDFILE  <- file.path(inPath, object@path, gsub("(.+)?IDFILE = ", "", con[grep("IDFILE", con)]))
     if (!file.exists(pathIDFILE))
       stop("**ERROR** No se encontro el idfile para ::", conFile  , "\n")
     idFile <- scan(pathIDFILE, what = character(), comment.char = "*")
@@ -345,8 +345,7 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
           "\n# # Reading: ", prueba, #"\n# # Version: ", version,
           "\n# # Date   : ", as.character(dia),
           "\n#########################################################################\n")
-      conInfo   <- read.table(file = inFileCon, sep = '\t',
-                              colClasses = 'character')
+      conInfo   <- readLines(inFileCon)
     } else if (length(fileCon) == 0) {
       stop("Can't find any file with the form: ", conFile,
            "\n in the directory: ", folderName, "\n or in any subdirectory inside")
@@ -356,8 +355,8 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
            "\n please specify a correct folderName or conFile to avoid multiple files")
     }
 
-    nSItem <- grep("&END", conInfo[, 'V1']) + 1
-    nEItem <- grep("END NAMES", conInfo[, 'V1']) - 1
+    nSItem <- grep("&END", conInfo) + 1
+    nEItem <- grep("END NAMES", conInfo) - 1
 
     if (length(nSItem) == 0 | length(nEItem) == 0) {
       stop("Is imposible determined the posicions where the name of the
@@ -377,7 +376,7 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
        nEItem <- nEItem[1]
      }
 
-    items <- substr(conInfo[nSItem:nEItem, "V1"], 1, 7)
+    items <- substr(conInfo[nSItem:nEItem], 1, 7)
 
     if (!object@exam %in% c("SABERPRO", "SABERTYT", "SABER11")) {
       if (all(order(items) != seq(length(items)))) {
@@ -385,8 +384,8 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
       }
     }
 
-    posNI  <- grep("NI =", conInfo[, 'V1'])
-    nItems <- as.numeric(gsub("NI = (\\d+)", "\\1", conInfo[posNI, 'V1']))
+    posNI  <- grep("NI =", conInfo)
+    nItems <- as.numeric(gsub("NI = (\\d+)", "\\1", conInfo[posNI]))
 
     cat("Reading from file:\n", inFileCon, "\n  a total of =",
         length(items), "codes of items are in the .con file \n",
@@ -400,8 +399,8 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
     ################################################################################
     # # .dat file, the structure of the id is given here
     ################################################################################
-    posDATA <- grep("DATA =", conInfo[, 'V1'])
-    pathDAT <- gsub("DATA = (.+)", "\\1", conInfo[posDATA, 'V1'])
+    posDATA <- grep("DATA =", conInfo)
+    pathDAT <- gsub("(.+)?DATA = (.+)", "\\2", conInfo[posDATA])
     inFileDat <- file.path(folderName, pathDAT)
 
     if (length(inFileDat) != 1) {
@@ -553,8 +552,8 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
                for AnalItem files")
         } else {
           # #         souItemPrev <- substr(read[, "string"], posiNo, posiEnd)
-          souItem <- read[, nameItem, with = FALSE][[1]]
-          missingValues <- c("", "O", "M")
+          souItem       <- read[, nameItem, with = FALSE][[1]]
+          missingValues <- c("O", "M")
 
           #########################################################################
           # # decoded, put 1 in when student
@@ -562,9 +561,13 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
           # # dropped
 
           if (multiMarkOmiss) {
+            calItem <- souItem
+            isMUO   <- souItem %in% missingValues
             calItem <- ifelse(souItem == keyItem, 1, 0)
             calItem <- ifelse(souItem == "", NA, calItem)
-            calItem[souItem %in% missingValues] <- valMUO
+            calItem[isMUO] <- valMUO
+
+            
           } else {
             calItem <- ifelse(souItem == keyItem, 1, 0)
             calItem <- ifelse(souItem == "", NA, calItem)
@@ -959,8 +962,7 @@ ReadDataAI <- function (folderName, dict,
       dia    <- gsub(";Creado el ", "", readLines(inFileCon, 1))
       dia    <- as.Date(dia, "%d/%m/%Y")
     }
-    conInfo   <- read.table(file = inFileCon, sep = '\t',
-                            colClasses = 'character')
+    conInfo   <- readLines(inFileCon)
   } else if (length(fileCon) == 0) {
     stop("Can't find any file with the form: ", conFile,
          "\n in the directory: ", folderName, "\n or in any subdirectory inside")
@@ -970,8 +972,8 @@ ReadDataAI <- function (folderName, dict,
          "\n please specify a correct folderName or conFile to avoid multiple files")
   }
 
-  nSItem <- grep("&END", conInfo[, 'V1']) + 1
-  nEItem <- grep("END NAMES", conInfo[, 'V1']) - 1
+  nSItem <- grep("&END", conInfo) + 1
+  nEItem <- grep("END NAMES", conInfo) - 1
 
   if (length(nSItem) == 0 | length(nEItem) == 0) {
     stop("Is imposible determined the posicions where the name of the
@@ -991,14 +993,14 @@ ReadDataAI <- function (folderName, dict,
      nEItem <- nEItem[1]
    }
 
-  items <- substr(conInfo[nSItem:nEItem, "V1"], 1, 7)
+  items <- substr(conInfo[nSItem:nEItem], 1, 7)
 
   if (all(order(items) != seq(length(items)))) {
     stop("Disorder of the items in the .com file")
   }
 
-  posNI <- grep("NI =", conInfo[, 'V1'])
-  nItems <- as.numeric(gsub("NI = (\\d+)", "\\1", conInfo[posNI, 'V1']))
+  posNI <- grep("NI =", conInfo)
+  nItems <- as.numeric(gsub("NI = (\\d+)", "\\1", conInfo[posNI]))
 
   cat("Reading from file:\n", inFileCon, "\n  a total of =",
       length(items), "codes of items are in the .con file \n",
