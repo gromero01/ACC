@@ -65,7 +65,13 @@ IRT <- function(test, paramExp = NULL){
                        idNoPKey = c('O', 'M'), constDmodel = 1.7,
                        isCheckKeys = FALSE, kThresItemCorrDic = 0.2,
                        kThresItemCorrOrd = 0.2, espSd = 1, espMean = 0, 
-                       AnclaRdata = NULL, formAncla = "")
+                       AnclaRdata = NULL, formAncla = "", flagSPrior = FALSE)
+  if ("verSalida" %in% names(paramExp)){
+    auxVerSalida <- paramDefault$verSalida
+  } else {
+    auxVerSalida <- 1
+  }
+
   if (!is.null(paramExp)) {
     isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
     isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
@@ -75,7 +81,8 @@ IRT <- function(test, paramExp = NULL){
   }
   cat("----->Se correra un analisis IRT con los siguientes parametros: \n")
   print(paramExp)
-  object <- new("IRT", test = test, param = paramExp)
+  object <- new("IRT", test = test, param = paramExp, 
+                verSalida = auxVerSalida)
   object <- filterAnalysis(object)
   return(object)
 }
@@ -137,18 +144,18 @@ setMethod("codeAnalysis", "IRT",
   source(file.path(funPath, "gvisUtils.R"))
   source(file.path(funPath, "tablasHtml.R"))
 
-	# # models
-	codesRasch           <- c("01", "02", "04")
-	names(codesRasch)    <- c("PCM", "RSM", "MRD")
-	codesNotRasch        <- c("03", "05")
-	names(codesNotRasch) <- c("GRM", "2PL")
+  # # models
+  codesRasch           <- c("01", "02", "04")
+  names(codesRasch)    <- c("PCM", "RSM", "MRD")
+  codesNotRasch        <- c("03", "05")
+  names(codesNotRasch) <- c("GRM", "2PL")
 
-	# # version with dict V03
-	versionOutput  <- object@verSalida
-	versionComment <- paste0("Corrida Análisis Exploratorio --",  object@test@nomTest, "--") 
+  # # version with dict V03
+  versionOutput  <- object@verSalida
+  versionComment <- paste0("Corrida Análisis Exploratorio --",  object@test@nomTest, "--") 
 
-	# # see ?psych::alpha
-	isCheckKeys <- FALSE
+  # # see ?psych::alpha
+  isCheckKeys <- FALSE
 
   # # Cargando archivo de anclas
   if (!is.null(object@param$AnclaRdata)) {
@@ -156,7 +163,7 @@ setMethod("codeAnalysis", "IRT",
      load(fileAncla)
      listResultsAN <- listResults
      rm(listResults)
-     listResultsAN <- lapply(listResultsAN, function(x) x$tablaFin)
+     #listResultsAN <- lapply(listResultsAN, function(x) x$tablaFin)
   } else {
      listResultsAN <- NULL
   }
@@ -165,7 +172,7 @@ setMethod("codeAnalysis", "IRT",
   listResults <- list()
   pruebasRead <- names(object@datAnalysis)
 
-	for (kk in pruebasRead) {	
+  for (kk in pruebasRead) { 
       cat(".... Ejecutando estimación para -->", kk, "\n")
       basePru <- gsub("(.+)::.+", "\\1", kk)
       auxPru  <- gsub("(::|\\s)","_", kk)
@@ -264,7 +271,8 @@ setMethod("codeAnalysis", "IRT",
                  runPath = file.path(outPath, 'corridas'),
                  verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
                  commentFile = indexData, NPArm = auxNPAR, thrCorr = 0.05, 
-                 datAnclas = listResultsAN[[object@param$formAncla]])
+                 datAnclas = listResultsAN[[object@param$formAncla]]$tablaFin, 
+                 flagSPrior = object@param$flagSPrior)
         
         # Reading results of chi square test 
         itemPH2File <- paste(indexData, ".PH2", sep = "")
@@ -293,7 +301,7 @@ setMethod("codeAnalysis", "IRT",
                                          tctParam[, "BISERIAL.y"])
         tctParam[, "BISERIAL.x"] <- tctParam[, "BISERIAL.y"] <- NULL
 
-      	# # Resultados estimación de habilidades
+        # # Resultados estimación de habilidades
         personAbilFile  <- paste("salidas/", indexData, ".SCO", sep = "")
         outFileAbili    <- file.path(outPath, "salidas",
                                      paste0("personAbilities_V",
@@ -308,9 +316,16 @@ setMethod("codeAnalysis", "IRT",
            load(outFileAbili)
         }
  
+        # # Usando promedio de anclaje
+        if (!is.null(listResultsAN)) { # Indicadora de Anclas
+          meanAbil <- listResultsAN[[object@param$formAncla]]$meanAbil
+          sdAbil   <- listResultsAN[[object@param$formAncla]]$sdAbil
+        } else {
+          meanAbil <- mean(personAbilities$ABILITY)
+          sdAbil   <- sd(personAbilities$ABILITY)         
+        }
+
         # # Transformando dificultad y habilidad
-        meanAbil <- mean(personAbilities$ABILITY)
-        sdAbil   <- sd(personAbilities$ABILITY)
         personAbilities[, "ABILITY_NEW"] <- personAbilities[, "ABILITY"]
         itemParameters[, "dif_NEW"]      <- itemParameters[, "dif"]
         itemParameters[, "eedif_NEW"]    <- itemParameters[, "eedif"]
@@ -397,7 +412,7 @@ setMethod("codeAnalysis", "IRT",
                                sdFin =  object@param$espSd, flagEE = FALSE)
         }
         # # Items - Person Curve and Test Information Curve
-        dirPerItem <- paste0("graficos/personItem-", indexData, ".png")                                	
+        dirPerItem <- paste0("graficos/personItem-", indexData, ".png")                                 
         dirPerItem <- file.path(outPath, dirPerItem)
         pathGraph  <- object@test@nomTest
         pathGraph  <- gsub("\\)", paste0(" - ", subComm, ")"), pathGraph)
@@ -418,7 +433,7 @@ setMethod("codeAnalysis", "IRT",
                                          COMPETENCIA, keyItem, 'item_cod' = id,
                                          'item' = paste0(SUBBLOQUE, sprintf("%.2d", 1:length(id)))),
                                           by = "SUBBLOQUE"]
-	      } else {
+        } else {
           infoBloque <- data.table(dictVarPrueba)
           infoBloque <- infoBloque[id %in% indexItems, ]
           infoBloque <- infoBloque[match(indexItems, infoBloque$id),
@@ -431,7 +446,7 @@ setMethod("codeAnalysis", "IRT",
         itemParameters <- merge(itemParameters, infoBloque, by = "item", all = TRUE)
         setnames(itemParameters, "item_cod", "item_blq")
         selecColTCT    <- names(tctParam)
-        tctParam 	     <- merge(tctParam, infoBloque, by = "item", all.x = TRUE)
+        tctParam       <- merge(tctParam, infoBloque, by = "item", all.x = TRUE)
         setnames(tctParam, "item_cod", "item_blq")
         tctParam       <- tctParam[, selecColTCT]
 
@@ -456,7 +471,7 @@ setMethod("codeAnalysis", "IRT",
 
         # # Cruce con Anclas
         if (!is.null(listResultsAN)) { # Indicadora de Anclas
-          itemAnclas     <- subset(listResultsAN[[object@param$formAncla]], select = c("item"))
+          itemAnclas     <- subset(listResultsAN[[object@param$formAncla]]$tablaFin, select = c("item"))
           itemAnclas     <- cbind(itemAnclas, 'Ancla' = 1)
           itemParameters <- merge(itemParameters, itemAnclas, by = "item", all.x = TRUE)
           isNOAncla      <- is.na(itemParameters[["Ancla"]])
@@ -508,6 +523,11 @@ setMethod("codeAnalysis", "IRT",
                           'FLAGCV' = ifelse(eedif_NEW > 30, 1, 0))])
         tablaFin[, eedif_NEW := paste0(sprintf("%.2f", eedif_NEW), "%")]
         listResults[[auxPru]][["tablaFin"]] <- tablaFin
+
+        # # Guardando media y Varianza
+        listResults[[auxPru]][["meanAbil"]] <- meanAbil
+        listResults[[auxPru]][["sdAbil"]]   <- sdAbil
+
       }
       outPath <- auxOutPath
   }
