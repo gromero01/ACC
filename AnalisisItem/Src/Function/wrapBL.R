@@ -199,7 +199,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
                       srcPath = "../src/", binPath = "../bin/", verbose = TRUE,
                       commentFile = NULL,  calibFile = NULL,
                       runProgram = TRUE, itNumber = NULL, NPArm = 2, 
-                      thrCorr = 0.05, datAnclas = NULL){
+                      thrCorr = 0.05, datAnclas = NULL, flagSPrior = FALSE){
 
     # # This function generates a Parscale control file given the options in its
     # # arguments, runs it and reads the item parameters
@@ -518,11 +518,15 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   cat(">CALIB \n", file = commandFile, append = TRUE)
   cat("       CYCLES = 500, \n", file = commandFile, append = TRUE)
   cat("       NEWTON = 30, \n", file = commandFile, append = TRUE)
-  cat("       NQPT = ", nQuadPoints, ", \n", sep = "", file = commandFile, append = TRUE)
-  cat("       NOSprior, \n", file = commandFile, append = TRUE)
+  cat("       NQPT = ", nQuadPoints, ", \n", sep = "", file = commandFile, append = TRUE) 
+  
+  if (!flagSPrior) {
+    cat("       NOSprior, \n", file = commandFile, append = TRUE)
+  }
+  
   #cat("       TPRIOR, \n", file = commandFile, append = TRUE)
   cat("       DIAGNOSIS = 1, \n", file = commandFile, append = TRUE)
-  cat("       CRIT = 0.001 \n", file = commandFile, append = TRUE)
+  cat("       CRIT = 0.0001 \n", file = commandFile, append = TRUE)
   cat("       ;\n", file = commandFile, append = TRUE)
 
   # # SCORE

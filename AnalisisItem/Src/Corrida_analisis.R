@@ -46,17 +46,17 @@ Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
 vecJson  <- c(#"../Input/parameters_EN.json", "../Input/parameters_MA.json", 
               #"../Input/parameters_PR.json",
               "../Input/parameters_CC.json",
-              "../Input/parameters_RC.json","../Input/parameters_LC.json", 
-              "../Input/parameters_IN.json")
+              "../Input/parameters_RC.json",
+              "../Input/parameters_LC.json")[2]
 
 for (fileJson in vecJson){
   listTests <- analyzeTests(fileJson)
   jointReports(listTests, fileJson, pathJS = "../../../../lib", 
    	           flagView = FALSE)
-} 
+}
 
-publishRepo(vecJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 
-            flagActualizar = FALSE)
+#publishRepo(vecJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 
+#            flagActualizar = FALSE)
 
 ################################################################################
 # # Depuración metodo 

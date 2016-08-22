@@ -159,14 +159,12 @@ function(object){
       	load(datDictionary)
       }
       # # Reading the DB using generic dictionary (only for dichotomous items)
-      if (is.null(object@paramLect$valMUO)){
-        object@paramLect[["valMUO"]] <- 9
-      }        
-      datBlock <- ReadGeneric(object, dict = dictionaryList, verbose =  FALSE, 
-                               valMUO = object@paramLect$valMUO, 
-                               eliminatedVars = FALSE, 
-                               multiMarkOmiss = TRUE)
-	      save(datBlock, file = datReadBlock)
+      if (is.null(object@paramLect$valMUO))
+        object@paramLect$valMUO <- 9
+	      datBlock <- ReadGeneric(object, dict = dictionaryList, verbose =  FALSE, 
+                                valMUO = object@paramLect$valMUO, 
+                                eliminatedVars = FALSE, multiMarkOmiss = FALSE)
+	    save(datBlock, file = datReadBlock)
     }    
     # # Save directions of Rdata and datDictionary    
     object@dictionaryList <- dictionaryList
