@@ -70,7 +70,14 @@ setMethod("codeAnalysis", "Filtros",
                               colClasses = "character")
     sospechosos[,"APLICACION"]<- substr(sospechosos[,"SNP"],1,7)
 
-    sospechosos[,"SNP1"]<- substr(sospechosos[,"SNP"],8,15)
+    # # Verificando forma del SNP
+    isSNPALL <- !grepl("\\w{2}\\d{5}.+", object@test@datBlock[[1]][["oriBlock"]][[1]])
+    if (all(isSNPALL)) {
+      sospechosos[,"SNP1"] <- substr(sospechosos[,"SNP"], 8, 15)
+    } else {
+      sospechosos[,"SNP1"] <- sospechosos[,"SNP"]
+      cat("... Se trabajara con el SNP completo\n")
+    }
 
     # # Lectura de Individual Basicos
     pathInfo <- file.path(inPath, getParams(object)$indiInfo)
@@ -111,8 +118,15 @@ setMethod("codeAnalysis", "Filtros",
         auxForma <- paste0(baseName, ".+")
       } 
 
-	    sospPrueb <- subset(sospechosos, PRUE_CODIGOICFES %like% auxForma & 
-	  	                    APLICACION == object@test@periodo)
+      print(str(sospechosos))
+      print(auxForma)
+      if (!flagConjunta){
+	      sospPrueb <- subset(sospechosos, PRUE_CODIGOICFES %like% auxForma & 
+	  	                      APLICACION == object@test@periodo)
+      } else{
+        sospPrueb <- sospechosos
+      }
+      print(str(sospPrueb))
       datSblq[!SNP %in% sospPrueb[,"SNP1"], indCopia := 0]
       datSblq[SNP %in% sospPrueb[,"SNP1"], indCopia := 1]
      
@@ -146,7 +160,7 @@ setMethod("codeAnalysis", "Filtros",
       datSblq[, indEXTS := ifelse(indExtS, 1, 0)]
 
       # # Indicadora global
-      datSblq[, indTOTAL := ifelse(indCopia + indNENP + indOMI > 0, 1, 0)]
+      datSblq[, indTOTAL := ifelse(indCopia + indNENP + indOMI + indNP + indNE > 0, 1, 0)]
       datSblq[, indInclu := ifelse(indTOTAL == 0, 1, 0)]
       datSblq[, indTodo := indTOTAL + indInclu]
 

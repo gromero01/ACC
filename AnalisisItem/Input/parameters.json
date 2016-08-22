@@ -15,7 +15,7 @@
                                  "isCheckKeys":[false]}},
  	                     {"Exploratory": {"kOmissionThreshold":[0.5], 
  	                                      "flagOri":[false], 
-                                          "flagTotal":[true], 
+                                          "flagTotal":[false], 
                                           "flagSubCon":[true],
                                           "orderedDat":[true], 
                                           "catToNA":["No Presentado","NR","Multimarca"],
