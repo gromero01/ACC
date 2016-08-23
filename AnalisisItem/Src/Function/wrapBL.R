@@ -422,8 +422,10 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
                   row.names = FALSE, na = " ", col.names = FALSE, 
                   quote = FALSE)
       if (verbose) cat("Prm file prepared\n")
+      return(indPosi)
     }
-    writePRM(indPosi, prFile)
+
+    indPosi <- writePRM(indPosi, prFile)
   }
  
   cat("        NPArm = ", NPArm, ",\n", sep = "", file = commandFile, 
@@ -605,16 +607,17 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
       # # Ajustando campo Fix
       cat(auxBlm[1:linea4], sep = "\n", file = commandFile)  
       #print(indPosi$Fix)
+      #print(str(indPosi))
       cat("Eliminando items ...... \n")
-      cat(isBad)
+      cat(isBad, "\n")
       #print(indPosi$Fix[-isBad])
       printFix(vecFix = indPosi$Fix[-isBad], commandFile)
       cat(auxBlm[(linea1 - 1):length(auxBlm)], sep = "\n", 
           file = commandFile, append = TRUE)
 
+      #readline(prompt="Press [enter] to continue")
       # # Ajustando archivo PRM
-      writePRM(indPosi, prFile, isBad = isBad)
-
+      indPosi <- writePRM(indPosi, prFile, isBad = isBad)
     } else {
       cat(auxBlm, sep = "\n", file = commandFile)  
     }
