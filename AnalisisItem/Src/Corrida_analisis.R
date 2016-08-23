@@ -43,14 +43,10 @@ dirPandoc <- file.path(Sys.getenv("APPDATA"), "..", "Local\\Pandoc")
 Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
 #Sys.setenv(RSTUDIO_PANDOC = "C:\\Program Files (x86)\\Pandoc")
 
-vecJson  <- c(#"../Input/parameters_EN.json", "../Input/parameters_MA.json", 
-              #"../Input/parameters_PR.json",
-              "../Input/parameters_CC.json",
-              "../Input/parameters_RC.json",
-              "../Input/parameters_LC.json")[2]
+vecJson  <- c("../Input/parameters.json")
 
-for (fileJson in vecJson){
-  listTests <- analyzeTests(fileJson)
+for (fileJson in  vecJson){
+  listTests <- analyzeTests(fileJson, anUpdate = "IRT")
   jointReports(listTests, fileJson, pathJS = "../../../../lib", 
    	           flagView = FALSE)
 }

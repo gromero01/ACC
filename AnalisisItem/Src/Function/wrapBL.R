@@ -40,7 +40,7 @@
   sp    <- seq(from = 3, to = (3 * (length(data) + 1) / 3 - 2), by = 3) 
   tab <- gsub("\\n", "", data[-sp] %>% paste(collapse = "\n"))
   tab <- data.table('Original' = strsplit(tab, ") I")[[1]])
-  tab <- tab[, tstrsplit(Original, "|", fixed=TRUE)]
+  tab <- tab[, strsplit(Original, "|", fixed=TRUE)]
   tab <- tab[, list('item'  =  gsub("I", "", V1), 
                     'p_val_chi2' = as.numeric(gsub("\\(|\\)", "", V13)), 
                     'chi2'       = as.numeric(gsub("(\\d.+)\\s+(\\d.+)", "\\1", V7)), 
