@@ -418,8 +418,11 @@ setMethod("codeAnalysis", "IRT",
         pathGraph  <- gsub("\\)", paste0(" - ", subComm, ")"), pathGraph)
 
         cat("......Guardado WrightMap. \n")
-        itHaMap    <- WrightMapICFES(itemParameters, personAbilities,
-                                     "ABILITY_NEW", "dif_NEW", file = dirPerItem,
+        itHaMap    <- WrightMapICFES(infoItem = itemParameters, 
+                                     infoCal = personAbilities,
+                                     colHab = "ABILITY_NEW", 
+                                     colDiff = "dif_NEW", 
+                                     file = dirPerItem,
                                      Title = gsub("(\\s+)?SABER 3,\\s?5 y 9 ", "", pathGraph))       
         listResults[[auxPru]][["itHaMap"]]  <- itHaMap
         listResults[[auxPru]][["plotInfo"]] <- infTest
@@ -498,9 +501,9 @@ setMethod("codeAnalysis", "IRT",
         }
 
         # # Other Flags
-        tablaFin[, indPos := ifelse(TRIED <= 200, 1, ifelse(TRIED > 100000, 4, ifelse(TRIED > 500, 3, 2))), by = item]
-        tablaFin[, minOutms := c(0.7, 0.75, 0.8, 0.9)[indPos]]
-        tablaFin[, maxOutms := c(1.3, 1.25, 1.2, 1.1)[indPos]]
+        #tablaFin[, indPos := ifelse(TRIED <= 200, 1, ifelse(TRIED > 100000, 4, ifelse(TRIED > 500, 3, 2))), by = item]
+        #tablaFin[, minOutms := c(0.7, 0.75, 0.8, 0.9)[indPos]]
+        #tablaFin[, maxOutms := c(1.3, 1.25, 1.2, 1.1)[indPos]]
 
         # # Cambio en el se de la dificultad
         tablaFin[, eedif_NEW := eedif_NEW / abs(dif_NEW) * 100]
@@ -513,8 +516,8 @@ setMethod("codeAnalysis", "IRT",
                           'FLAGA'    = ifelse(disc < 0.5 , 1, 0),
                           'FLAGB'    = ifelse(dif > 3 | dif < -3, 1, 0),
                           'FLAGBISE' = ifelse(BISERIAL < 0.1, 1, 0), 
-                          'FLAGINFIT' = ifelse((INFIT < minOutms[indPos]) | (INFIT > maxOutms[indPos]), 1, 0),
-                          'FLAGOUTFIT' = ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
+                          'FLAGINFIT' = 0,   #ifelse((INFIT < minOutms[indPos]) | (INFIT > maxOutms[indPos]), 1, 0),
+                          'FLAGOUTFIT' = 0,  #ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
                           'FLAGKEY1' = 0, 'FLAGKEY3' = 0,
                           'FLAGDIFDIS' = ifelse(dif < -3 & disc > 0.5, 1, 0),
                           'FLAGAZAR'  = ifelse(azar > 0.25 | eeazar > 0.15, 1, 0), 
@@ -527,7 +530,7 @@ setMethod("codeAnalysis", "IRT",
         # # Guardando media y Varianza
         listResults[[auxPru]][["meanAbil"]] <- meanAbil
         listResults[[auxPru]][["sdAbil"]]   <- sdAbil
-
+stop("ok ok ")
       }
       outPath <- auxOutPath
   }

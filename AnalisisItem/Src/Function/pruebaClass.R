@@ -542,7 +542,8 @@ analyzeTests <- function(vecJson, anUpdate = NULL){
          auxFiltros <- Filtros(auxTest, readJson[[test]]$Filtros)  
          auxTest    <- codeAnalysis(auxFiltros)
        }    
-       auxTest <- runAnalysis(auxTest, jsonTest = readJson[[test]]$Analisis, 
+       auxTest <- runAnalysis(object   = auxTest,
+                              jsonTest = readJson[[test]]$Analisis, 
                               anUpdate = anUpdate)
        if ("Filtros" %in% names(readJson[[test]])){
          auxTest@listAnal <- c('Filtros' = auxFiltros, 

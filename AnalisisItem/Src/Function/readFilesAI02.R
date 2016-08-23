@@ -106,6 +106,7 @@ function(object, desElim = NULL){
     print(pathCon)
     stop("**ERROR** No se encontro algo de estos archivos")
   }
+
   # # Fill desElim
   if (is.null(desElim)) {
     desElim <- data.frame('elimina' = c('06', '11'),
@@ -124,8 +125,8 @@ function(object, desElim = NULL){
 
   # # Reading aditional information of items
   if ("subConInfo" %in% names(controlAnal)) {
-      fileInfo <- controlAnal$subConInfo["path"]
-      namSheet <- controlAnal$subConInfo["nameSheet"]
+      fileInfo <- controlAnal$subConInfo[["path"]]
+      namSheet <- controlAnal$subConInfo[["nameSheet"]]
       require(XLConnect)
       channel <- XLConnect::loadWorkbook(fileInfo)
       infoItem <- XLConnect::readWorksheet(channel, namSheet)
@@ -199,7 +200,7 @@ function(object, desElim = NULL){
     if ("subConInfo" %in% names(controlAnal)) {
       if (!"infoItem" %in% names(controlAnal))
         stop("**ERROR** Se de especificar en 'infoItem' las columnas del archivo 'subConInfo'")
-      rnColum  <- controlAnal$infoItem
+      rnColum  <- unlist(controlAnal$infoItem)
       infoItem <- setnames(infoItem, rnColum, names(rnColum))      
 
       #infoItem <- infoItem[toupper(infoItem[, "prueba"]) ==
@@ -212,7 +213,7 @@ function(object, desElim = NULL){
       infoCon  <- merge(infoCon, infoItem[, c(names(rnColum), 'etiqu' = 'etiqu')], by = "id", all.x = TRUE)
       if (any(is.na(infoCon$subCon)))
         warning("**WARNING** Al cruzar con el archivo (eliminar duplicados o hay faltantes): ",
-             controlAnal$subConInfo["path"], "base original --", nrowAnte,
+             controlAnal$subConInfo[["path"]], "base original --", nrowAnte,
              "-- base final --", nrow(infoCon))
     }
 
