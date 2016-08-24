@@ -530,7 +530,6 @@ setMethod("codeAnalysis", "IRT",
         # # Guardando media y Varianza
         listResults[[auxPru]][["meanAbil"]] <- meanAbil
         listResults[[auxPru]][["sdAbil"]]   <- sdAbil
-stop("ok ok ")
       }
       outPath <- auxOutPath
   }
