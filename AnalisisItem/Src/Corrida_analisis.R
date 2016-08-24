@@ -45,7 +45,7 @@ Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
 
 vecJson  <- c("../Input/parameters.json")
 
-for (fileJson in  vecJson){
+for (fileJson in vecJson){
   listTests <- analyzeTests(fileJson, anUpdate = "IRT")
   jointReports(listTests, fileJson, pathJS = "../../../../lib", 
    	           flagView = FALSE)
@@ -57,8 +57,8 @@ for (fileJson in  vecJson){
 ################################################################################
 # # Depuración metodo 
 ################################################################################
-#prueba0 <- listTests[[1]]
-#object  <- listTests[[1]]@listAnal[["Filtros"]]
+prueba0 <- listTests[[1]]
+object  <- listTests[[1]]@listAnal[["IRT"]]
 #codeAnalysis(object)
 #outHTML(object)
 # prueba0 <- new('Test', path = "JUNTURAS/EK20161/exam717/PBAF000401JN", 

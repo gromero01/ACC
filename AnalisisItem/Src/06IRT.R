@@ -519,7 +519,7 @@ setMethod("codeAnalysis", "IRT",
                           'FLAGINFIT' = 0,   #ifelse((INFIT < minOutms[indPos]) | (INFIT > maxOutms[indPos]), 1, 0),
                           'FLAGOUTFIT' = 0,  #ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
                           'FLAGKEY1' = 0, 'FLAGKEY3' = 0,
-                          'FLAGDIFDIS' = ifelse(dif < -3 & disc > 0.5, 1, 0),
+                          'FLAGDIFDIS' = ifelse(abs(dif) > 3 & disc > 0.5, 1, 0),
                           'FLAGAZAR'  = ifelse(azar > 0.25 | eeazar > 0.15, 1, 0), 
                           'FLAGCHI2' = ifelse(p_val_chi2 > 0.1, 1, 0), 
                           'FLAGINFO' = ifelse(max(maxINFO, na.rm = TRUE) == maxINFO, 1, 0), 
@@ -542,7 +542,105 @@ setMethod("codeAnalysis", "IRT",
 
 setMethod("outXLSX", "IRT", 
 function(object, srcPath = "."){
-  print("en contrucción outXLSX para IRT")
+  require(xlsx)
+  load(file.path(srcPath, object@outFile$pathRdata))
+  pruebasRead <- names(object@datAnalysis)
+  for (kk in pruebasRead) {
+     auxPru  <- gsub("(::|\\s)","_", kk)
+     wb <- xlsx::createWorkbook()
+     # # header style
+     csEnc <- CellStyle(wb) + Font(wb, isBold = TRUE) + Fill(foregroundColor = brewer.pal(3, "Greys")[1])+ 
+              Border(pen = "BORDER_DOUBLE") + Alignment(h = "ALIGN_CENTER")
+     csL2  <- CellStyle(wb) +
+              Fill(foregroundColor = brewer.pal(3, "Greys")[1])
+                
+     # # Hoja de parametros
+     nameSheet <- 'Parametros'
+     assign(nameSheet, xlsx::createSheet(wb, sheetName = nameSheet))
+     auxSalida <- listResults[[kk]]$tablaFin
+
+     # # Eliminando columnas
+     colRemove <- c("prueba", "item_blq", "p_val_chi2", 
+                    "chi2", "gl_chi2", "FLAGCHI2", "INFIT", "OUTFIT", 
+                    "FLAGINFIT", "FLAGOUTFIT", "indPos", 
+                    "minOutms", "maxOutms", "codMOD", "intercepto", 
+                    "eeinter", "cons")
+     auxSalida[, (colRemove) := NULL]
+     addDataFrame(auxSalida, 
+                  sheet = get(nameSheet), startRow = 1,
+                  startColumn = 1, row.names = FALSE,
+                  col.names = TRUE, colnamesStyle = csEnc)
+     outFile <- file.path(outPath,
+                         paste("06IRT_", auxPru,"_V", object@verSalida,
+                               ".xlsx", sep = ''))
+     
+
+     # # correlación Diccionario
+
+     labelVariable <- c("item", "dir_OP", "dir_ICC", "maxINFO", "A_prop", "A_mAbility", 
+                        "B_prop", "B_mAbility", "C_prop", "C_mAbility", "D_prop", "D_mAbility", "E_prop", 
+                        "E_mAbility", "F_prop", "F_mAbility", "G_prop", "G_mAbility", "H_prop", "H_mAbility", 
+                        "M_prop", "M_mAbility", "O_prop", "O_mAbility", "disc", "eedisc", "dif", "eedif", 
+                        "dispersion", "eedisp", "azar", "eeazar", "drift", "eedrift", "dif_NEW", "eedif_NEW", 
+                        "codigo_prueba", "keyItem", "Ancla", "order", "TRIED", "RIGHT", "PCT", "LOGIT", "PEARSON", 
+                        "BISERIAL", "FLAGPROP", "FLAGKEY2", "CORRELACION", "SUBBLOQUE", "COMPONENTE", "COMPETENCIA", 
+                        "FLAGMEAN", "FLAGCORR", "FLAGA", "FLAGB", "FLAGBISE", "FLAGKEY1", "FLAGKEY3", 
+                        "FLAGDIFDIS", "FLAGAZAR", "FLAGINFO", "FLAGCV")
+
+     varDescrip <- c("Código del ítem","Dirección de la grafica de opciones de respuesta", 
+                    "Dirección de la grafica de la curva caracteristica","Punto de máxima información del ítem",
+                    "Proporción de respuesta de la opción A","Promedio de habilidad de los que respondieron la opción A ",
+                    "Proporción de respuesta de la opción B","Promedio de habilidad de los que respondieron la opción B",
+                    "Proporción de respuesta de la opción C","Promedio de habilidad de los que respondieron la opción C",
+                    "Proporción de respuesta de la opción D","Promedio de habilidad de los que respondieron la opción D",
+                    "Proporción de respuesta de la opción E","Promedio de habilidad de los que respondieron la opción E",
+                    "Proporción de respuesta de la opción F","Promedio de habilidad de los que respondieron la opción F",
+                    "Proporción de respuesta de la opción G","Promedio de habilidad de los que respondieron la opción G",
+                    "Proporción de respuesta de la opción H","Promedio de habilidad de los que respondieron la opción H",
+                    "Proporción de Multimarcas del ítem","Promedio de habilidad de los que respondieron multimarca",
+                    "Proporción de Omisiones del ítem","Promedio de habilidad de los que respondieron omisión","Parámetro de discriminación",
+                    "Error de estimación del parámetro de discriminación","Parámetro de dificultad","Error de estimación del parámetro de dificultad",
+                    "Representa la carga en el primer factor ","Error de estimación  del parámetro dispersión","Parámetro de azar",
+                    "Error estimado del parámetro de azar","Medida de funcionamiento diferencial del ítem",
+                    "Medida de funcionamiento diferencial del ítem en el tiempo","Parámetro de dificultad en la escala de la prueba",
+                    "Coeficiente de variación del parámetro de dificultad en la escala de la prueba","Código de la prueba",
+                    "Clave","Indicadora de anclaje de los ítems","Posición del ítem en la corrida","Numero de personas que abordan el ítem",
+                    "Numero de personas que responden correctamente el ítem","Porcentaje de respuestas correctas del ítem",
+                    "Porcentaje de respuestas correctas del ítem en Logit","Correlación de pearson","Correlación punto biserial",
+                    "La proporción de respuesta de alguna opción es menor al 10% o mayor al 90%",
+                    "Si la habilidad media de la clave es menor a la habilidad media de otra opción",
+                    "Correlación punto biserial excluyendo al ítem","Subloque al que pertenece el ítem",
+                    "Componente asociado al ítem","Competencia asociado al ítem","Porcentaje de respuestas correctas del ítem es menor al 10% o mayor al 90%",
+                    "Correlación excluyendo al ítem sea menor a 0.1","Si la discriminación es menor a 0.5",
+                    "Si la dificultad original es mayor a 3 o menor que -3", "Si la correlación Biserial es menor que 0.1","","",
+                    "Si la dificultad en valor absoluto es mayor a 3 y la discriminación es menor 0.5",
+                    "Si el azar es mayor a 0.25 o el error de estimación del azar > 0.15",
+                    "Indicadora del ítem con la 'mayor' información", "Si el coeficiente de variación es mayor a 30")
+
+     tablaDescri <- data.frame('V1' = labelVariable, 'V2' = varDescrip)
+     names(tablaDescri) <- c('Variable', 'Descripción')
+     # # Hoja de Diccionario
+     nameSheet <- 'Diccionario'
+     assign(nameSheet, xlsx::createSheet(wb, sheetName = nameSheet))
+     addDataFrame(tablaDescri, 
+                  sheet = get(nameSheet), startRow = 1,
+                  startColumn = 1, row.names = FALSE,
+                  col.names = TRUE, colnamesStyle = csEnc)
+     xlsx::setColumnWidth(get(nameSheet), 1, 14)
+     xlsx::setColumnWidth(get(nameSheet), 2, 72)
+     rows   <- xlsx::getRows(sheet = get(nameSheet),
+                             rowIndex = seq(2, 100))
+     cells  <- xlsx::getCells(rows, colIndex = 1)
+     lapply(names(cells), 
+            function(x) xlsx::setCellStyle(cells[[x]], csL2))
+
+     outFile <- file.path(outPath,
+                         paste("06IRT_", auxPru,"_V", object@verSalida,
+                               ".xlsx", sep = ''))
+     xlsx::saveWorkbook(wb, file = outFile)
+     listResults[[auxPru]]$fileXLSX <- outFile
+  }
+  saveResult(object, listResults, srcPath)
 })
 
 setMethod("outHTML", "IRT", 
@@ -644,6 +742,9 @@ function(object, srcPath){
       cat('<h3 id="IRT_Header_tab">\n', nomSub, '</h3>\n\n')
       tabHtml <- reporteItem(listResults[[nomAux]]$tablaFin, idPrueba = nomAux)    
       cat(as.character(htmltools::tagList(tabHtml)))
+      cat(paste0('<td> <li class="linkxlscol"><a href="', listResults[[nomAux]]$fileXLSX, 
+        '"> Descargar <br> informe Excel </a></li>', 
+        '</td>'))
     }    
   }
 })

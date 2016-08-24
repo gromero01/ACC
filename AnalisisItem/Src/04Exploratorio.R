@@ -915,7 +915,7 @@ function(object, srcPath = "."){
 	    }
 
 	  outFile <- file.path(outPath,
-	                       paste("04Exploratorio_", auxPru,"_V", 01,
+	                       paste("04Exploratorio_", auxPru,"_V", object@verSalida,
 	                             ".xlsx", sep = ''))
 	  xlsx::saveWorkbook(wb, file = outFile)
 	  listResults[[auxPru]]$fileXLSX <- outFile

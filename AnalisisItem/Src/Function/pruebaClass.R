@@ -631,6 +631,7 @@ jointReports <- function(listTests, vecJson, pathJS = 'lib', flagView = FALSE){
     #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoomHTML.jsp" type="text/javascript"></script>',
                  paste0('  <link href="', pathJS,'/datatables-default-1.10.7/dataTables.extra.css" rel="stylesheet" />'),
                  paste0('  <link href="', pathJS,'/datatables-default-1.10.7/jquery.dataTables.min.css" rel="stylesheet" />'))
+                 paste0('<link href="', pathJS,'/../css/linkDownload.css" rel="stylesheet" />')
                  
     archHtml  <- readLines(salPathDoc)
     archCSS   <- grep("<!-- jQuery -->", archHtml)

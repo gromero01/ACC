@@ -45,7 +45,7 @@ Filtros <- function(test, paramExp = NULL){
   	stop("_____ERROR_____ Especifica el archivo de copietas 'fileCopy'")
   }
 
-  if (is.null(paramExp$indiInfo)){
+  if (is.null(paramExp$indiInfo) & test@exam %in% c("SABERPRO", "SABERTYT")){
   	stop("_____ERROR_____ Especifica el archivo de informacion basica 'indiInfo'") 	
   }
   cat("----->Se haran los filtros con los siguientes parametros: \n")
@@ -80,21 +80,23 @@ setMethod("codeAnalysis", "Filtros",
     }
 
     # # Lectura de Individual Basicos
-    pathInfo <- file.path(inPath, getParams(object)$indiInfo)
-    infoINR  <- gsub("(.+)\\..+", "\\1.Rdata", pathInfo)
-    if (!file.exists(infoINR)) {
-        datInfo  <- read.delim(pathInfo, sep ="\t", header=TRUE, 
-                         colClasses = "character")
-        datInfo  <- subset(datInfo, select = c("CITA_SNEE", "GRRE_ID", "GRRE_NOMBRE"))
-        datInfo  <- data.table(datInfo)
-        datInfo[, SNP := substr(CITA_SNEE, 8, 14)]
-        save(datInfo, file = infoINR)
-    } else {
-      load(infoINR)
-    }
-
-    if (nrow(datInfo) == 0) {
-      stop("-----ERROR-LECTURA----- Cambiar Encoding a UTF-8 o revisar archivo:\n", pathInfo)
+    if (object@test@exam %in% c("SABERPRO", "SABERTYT")){
+      pathInfo <- file.path(inPath, getParams(object)$indiInfo)
+      infoINR  <- gsub("(.+)\\..+", "\\1.Rdata", pathInfo)
+      if (!file.exists(infoINR)) {
+          datInfo  <- read.delim(pathInfo, sep ="\t", header=TRUE, 
+                           colClasses = "character")
+          datInfo  <- subset(datInfo, select = c("CITA_SNEE", "GRRE_ID", 
+                                                 "GRRE_NOMBRE"))
+          datInfo  <- data.table(datInfo)
+          datInfo[, SNP := substr(CITA_SNEE, 8, 14)]
+          save(datInfo, file = infoINR)
+      } else {
+        load(infoINR)
+      }
+      if (nrow(datInfo) == 0) {
+        stop("-----ERROR-LECTURA----- Cambiar Encoding a UTF-8 o revisar archivo:\n", pathInfo)
+      }
     }
 
     # # Extrae info sobre grado and test   
@@ -200,10 +202,11 @@ setMethod("codeAnalysis", "Filtros",
                          "muestra la cantidad de registros por grupo de referencia.")
 
       # # Conteos por grupo de referecia (TyT Pro)
-      if (any(duplicated(datInfo[["SNP"]]))) {
-        stop("ERROR TECNOLOGIA------- IndividualBasicos con duplicados")
-      }
       if (object@test@exam %in% c("SABERPRO", "SABERTYT")){
+        if (any(duplicated(datInfo[["SNP"]]))) {
+          stop("ERROR TECNOLOGIA------- IndividualBasicos con duplicados")
+        }
+
         datSblq <- merge(datSblq, datInfo, by = "SNP", all.x = TRUE)
         datSblq[is.na(GRRE_NOMBRE), GRRE_NOMBRE := "SIN GRUPO DE REFERENCIA"]
         tabResumen2 <- datSblq[, sum(indTodo), by = c("GRRE_NOMBRE", "indInclu")]      
@@ -219,9 +222,9 @@ setMethod("codeAnalysis", "Filtros",
         listResults[[kk]] <- list('parrafo' = textoIni, 'tabla' = tabResumen, 
                                   'parrafo2' = textoGREE, 'tablaGRRE' = tabResumen2)
       } else {
-     	listResults[[kk]] <- list('parrafo' = textoIni, 'tabla' = tabResumen, 'parrafo2' = textoGREE)
+     	listResults[[kk]] <- list('parrafo' = textoIni, 'tabla' = tabResumen, 
+                                'parrafo2' = textoGREE)
       }
-
       saveResult(object, listResults)
 
       # # Filtros de la pruebas
@@ -230,9 +233,6 @@ setMethod("codeAnalysis", "Filtros",
       	                                            SNP %in% snps, select = auxSelected)
       object@test@datBlock[[kk]]$calBlock <- subset(object@test@datBlock[[kk]]$calBlock, 
       	                                            SNP %in% snps)
-
-      
-
    }
    return(object@test)
 })
