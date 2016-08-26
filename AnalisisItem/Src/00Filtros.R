@@ -66,17 +66,27 @@ setMethod("codeAnalysis", "Filtros",
     
     # # Lectura de copia
     pathCopy    <- file.path(inPath, getParams(object)$fileCopy)
+    if (!file.exists(pathCopy)){
+      stop("_____ERROR_____ No se encuentra el archivo de copia :'( :'( :'(")  
+    }
     sospechosos <- read.delim(pathCopy, sep ="\t", header=TRUE, 
                               colClasses = "character")
-    sospechosos[,"APLICACION"]<- substr(sospechosos[,"SNP"],1,7)
 
     # # Verificando forma del SNP
-    isSNPALL <- !grepl("\\w{2}\\d{5}.+", object@test@datBlock[[1]][["oriBlock"]][[1]])
-    if (all(isSNPALL)) {
-      sospechosos[,"SNP1"] <- substr(sospechosos[,"SNP"], 8, 15)
-    } else {
-      sospechosos[,"SNP1"] <- sospechosos[,"SNP"]
-      cat("... Se trabajara con el SNP completo\n")
+    if (object@test@exam %in% c("SABERPRO", "SABERTYT")){    
+      sospechosos[,"APLICACION"] <- substr(sospechosos[,"SNP"],1,7)
+      isSNPALL <- !grepl("\\w{2}\\d{5}.+", object@test@datBlock[[1]][["oriBlock"]][[1]])
+      if (all(isSNPALL)) {
+        sospechosos[,"SNP1"] <- substr(sospechosos[,"SNP"], 8, 15)
+      } else {
+        sospechosos[,"SNP1"] <- sospechosos[,"SNP"]
+        cat("... Se trabajara con el SNP completo\n")
+      }
+    }
+
+    if (object@test@exam == "SABER11"){
+       sospechosos <- plyr::rename(sospechosos, c("APLICACIÓN" = "APLICACION"))
+       sospechosos[,"SNP1"] <- sospechosos[,"SNP"]
     }
 
     # # Lectura de Individual Basicos
@@ -113,7 +123,11 @@ setMethod("codeAnalysis", "Filtros",
       flagConjunta <- object@param$flagConjunta
 
       # # Seleccion copia
-      auxForma <- gsub("(pba|PBA|UOF|pba)", "", gsub("\\.con", "", kk))
+      auxForma <- gsub("(pba|PBA|UOF|pbaF)", "", gsub("\\.con", "", kk))
+      if (object@test@exam == "SABER11"){
+         auxForma <- gsub("(\\d{3})(.+)?", "\\1", auxForma)
+      }
+
       if (flagConjunta){
         baseName <- strsplit(gsub("(.+)(JN)$", "\\1", auxForma), "")[[1]]
         baseName <- paste(baseName[1:(length(baseName)-2)], collapse = "")
@@ -123,7 +137,8 @@ setMethod("codeAnalysis", "Filtros",
       print(str(sospechosos))
       print(auxForma)
       if (!flagConjunta){
-	      sospPrueb <- subset(sospechosos, PRUE_CODIGOICFES %like% auxForma & 
+	      sospPrueb <- subset(sospechosos, 
+                            PRUE_CODIGOICFES %like% auxForma & 
 	  	                      APLICACION == object@test@periodo)
       } else{
         sospPrueb <- sospechosos
