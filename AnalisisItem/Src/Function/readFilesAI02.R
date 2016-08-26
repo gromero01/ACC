@@ -128,7 +128,7 @@ function(object, desElim = NULL){
       fileInfo <- controlAnal$subConInfo[["path"]]
       namSheet <- controlAnal$subConInfo[["nameSheet"]]
       require(XLConnect)
-      channel <- XLConnect::loadWorkbook(fileInfo)
+      channel  <- XLConnect::loadWorkbook(fileInfo)
       infoItem <- XLConnect::readWorksheet(channel, namSheet)
   }
 

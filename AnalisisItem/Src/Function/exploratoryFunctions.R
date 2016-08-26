@@ -44,8 +44,14 @@ MakeExploratory <- function(kFactors, rotation, dictVarPrueba, corExpBlock){
   if(kFactors == 1){
       compCorrelation <- as.matrix(1)
   } else {
+    if (rotation == "oblimin"){
       compCorrelation <- blockEFA$Phi
+    } 
+    if (rotation == "Varimax"){
+      compCorrelation <- diag(kFactors)
+    }
   }
+
   rownames(compCorrelation) <- paste("Comp.", 1:kFactors, sep = '')
   colnames(compCorrelation) <- paste("Comp.", 1:kFactors, sep = '')
 

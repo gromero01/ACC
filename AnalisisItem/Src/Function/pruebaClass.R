@@ -573,12 +573,8 @@ function(object, jsonTest, anUpdate = NULL){
      
      # # Definiendo analisis
      exprAnalysis <- paste0(analisis, "(test = object, paramExp = jsonTest[[ii]][[1]])")
-     auxAnalysis  <- try(eval(parse(text = exprAnalysis)))
-     if (class(auxAnalysis) != "try-error"){
-       object@listAnal <- c(object@listAnal, auxAnalysis)
-       names(object@listAnal)[length(object@listAnal)] <- analisis
-     }
-          
+     auxAnalysis  <- try(eval(parse(text = exprAnalysis)))         
+     
      # # Corriendo analisis
      if (file.exists(auxAnalysis@outFile$pathRdata)){
         load(auxAnalysis@outFile$pathRdata)
@@ -591,6 +587,14 @@ function(object, jsonTest, anUpdate = NULL){
          outXLSX(auxAnalysis, srcPath = ".")
      } else {
          cat("-----> Cargando los resultados de la clase '", analisis, "'\n")
+     }
+
+     # # Guardando análisis en la prueba
+     if (class(auxAnalysis) != "try-error"){
+       auxAnalysis@test@datBlock       <- list()
+       auxAnalysis@test@dictionaryList <- list()
+       object@listAnal  <- c(object@listAnal, auxAnalysis)
+       names(object@listAnal)[length(object@listAnal)] <- analisis
      }
      
   }
