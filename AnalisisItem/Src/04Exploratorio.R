@@ -141,8 +141,9 @@ function(object){
 	# # Analisis de Dimensionalidad
 	################################################################################
     auxRdata <- object@outFile$pathRdata
+
     if (file.exists(auxRdata)){
-      load(auxRdata)   	
+      load(auxRdata)
       readyList <- unlist(lapply(listResults, names))
       readyList <- paste0(names(readyList), readyList)
     } else {
@@ -153,12 +154,15 @@ function(object){
 	listResults <- list()
 	pruebasRead <- names(object@datAnalysis)
 
+    #cat("esto es una prueba", pruebasRead)
+
 	for (kk in pruebasRead) {
 	  # # create folder and routes to save results
 	  # #  carpetas por prueba
 
 	  auxPru 	 <- gsub("(::|\\s)","_", kk)
 	  outPathPba <- file.path(outPath, auxPru)
+
 	  # #  carpetas de muestras por prueba
 	  outPathSamPba   <- file.path(outPathSamp, auxPru)
 	  outPathPbaGraph <- file.path(outPath, "graficas")
@@ -191,9 +195,21 @@ function(object){
 	  ### Obtain parallel analysis with exploratory data
 	  ##################################################
       if (!paste0(auxPru, "paBlock") %in% readyList) {
-	    paBlock <- PA(expkkBlock, percentiles = 0.95,
-	                  nReplicates = nReplicatesExp, type = "ordered",
-	                  use = useCorExp, algorithm = 'polychoric')
+      	dir.create(file.path(outPath, "bckPA"), 
+      		       showWarnings = FALSE)
+      	auxBCKPA <- file.path(outPath, "bckPA",
+      		                  paste0("bckPA_", auxPru, "_V",
+	                                 versionOutput, ".Rdata"))
+      	if (!file.exists(auxBCKPA)){
+	       paBlock <- PA(expkkBlock, percentiles = 0.95,
+	                     nReplicates = nReplicatesExp, type = "ordered",
+	                     use = useCorExp, algorithm = 'polychoric')
+	       save(paBlock, file = auxBCKPA)
+	    } else {
+	       cat(".....Cargando PA previo\n")
+	       load(auxBCKPA)
+	    }
+
 	    nFactors <- CountEigen.PA(paBlock)
   	    listResults[[auxPru]][["paBlock"]]  <- paBlock
   	    listResults[[auxPru]][["nFactors"]] <- nFactors
