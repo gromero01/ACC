@@ -206,7 +206,6 @@ setMethod("codeAnalysis", "IRT",
       personDataBlo <- object@datAnalysis[[kk]]$datos[ , isIDStudent, with = FALSE]
       dataCor       <- object@datAnalysis[[kk]]$datos[, indexItems, with = FALSE]
 
-
       if (object@test@exam == "ACC"){
          # # correlations item
          itemCorrelations <- psych::alpha(data.frame(dataCor), check.keys = isCheckKeys)$item.stats
@@ -358,10 +357,12 @@ setMethod("codeAnalysis", "IRT",
 
         # # Capturando base de datos original
         datBase  <- grep(paste0(basePru, "\\.con"), 
-                            names(object@test@datBlock), value = TRUE)
+                         names(object@test@datBlock), value = TRUE)
         if (length(datBase) > 1) {
           stop("_____ Se encontro mas de una prueba base:", datBase)
         }
+        #print(datBase)
+        #print(names(object@test@datBlock))
         resBlockOri <- object@test@datBlock[[datBase]]$oriBlock
         isIDgood    <- resBlockOri[[isIDStudent]] %in% personDataBlo[[1]]
         resBlockOri <- subset(object@test@datBlock[[datBase]]$oriBlock, 
@@ -634,7 +635,7 @@ function(object, srcPath = "."){
      lapply(names(cells), 
             function(x) xlsx::setCellStyle(cells[[x]], csL2))
 
-     outFile <- file.path(outPath,
+     outFile <- file.path(outPath, "06IRT",
                          paste("06IRT_", auxPru,"_V", object@verSalida,
                                ".xlsx", sep = ''))
      xlsx::saveWorkbook(wb, file = outFile)

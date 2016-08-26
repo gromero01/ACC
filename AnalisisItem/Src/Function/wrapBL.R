@@ -40,7 +40,7 @@
   sp    <- seq(from = 3, to = (3 * (length(data) + 1) / 3 - 2), by = 3) 
   tab <- gsub("\\n", "", data[-sp] %>% paste(collapse = "\n"))
   tab <- data.table('Original' = strsplit(tab, ") I")[[1]])
-  tab <- tab[, strsplit(Original, "|", fixed=TRUE)]
+  tab <- tab[, data.table::tstrsplit(Original, "|", fixed=TRUE)]
   tab <- tab[, list('item'  =  gsub("I", "", V1), 
                     'p_val_chi2' = as.numeric(gsub("\\(|\\)", "", V13)), 
                     'chi2'       = as.numeric(gsub("(\\d.+)\\s+(\\d.+)", "\\1", V7)), 
@@ -128,7 +128,6 @@ ReadBlScoFile <- function (fileName, filePath = "./", lengthIds = 8) {
   # # Arg:
   # #  fileName:  The file name
   # #  filePath:  The file path
-  # #  lengthIds: The length of the key
   # # Ret:
   # #  readFile: The person abilities table as a data.frame
 
@@ -141,14 +140,27 @@ ReadBlScoFile <- function (fileName, filePath = "./", lengthIds = 8) {
                          colHab = seq(2, length(readFile), 2))
   readFile <- apply(indPegue, 1, function(x) paste(readFile[x], collapse = ""))[-1]
   readFile <- gsub("\\s+", " ", readFile)
-  readFile <- read.delim(text = readFile, sep = " ", header = FALSE, 
-                         colClasses = c("integer", rep("character", 2),
-                           "double", "character", "integer",
-                           "integer", rep("double", 5)))
+  inFile   <- gsub("\\.SCO", ".SCO.red", inFile)
+  cat(readFile, sep = '\n', file = inFile)
+ 
+  laf      <- laf_open_csv(filename = inFile, sep = " ", trim = TRUE,
+                           column_types = c("integer", rep("string", 2),
+                           "double", "string", "integer",
+                           "integer", rep("double", 5)), 
+                           column_names = c("C1", "GROUP", "ID", 
+                                            "WEIGHT", "TEST", "TRIED",
+                                            "RIGHT", "PERCENT", 
+                                            "ABILITY", "SERROR",
+                                            "C11", "C12"))
+  readFile <- laf[, ]
+  # readFile <- read.delim(text = readFile, sep = " ", header = FALSE, 
+  #                        colClasses = c("integer", rep("character", 2),
+  #                          "double", "character", "integer",
+  #                          "integer", rep("double", 5)))
 
-  names(readFile) <- c("C1", "GROUP", "ID", "WEIGHT", "TEST", "TRIED",
-                       "RIGHT", "PERCENT", "ABILITY", "SERROR",
-                       "C11", "C12")
+  # names(readFile) <- c("C1", "GROUP", "ID", "WEIGHT", "TEST", "TRIED",
+  #                      "RIGHT", "PERCENT", "ABILITY", "SERROR",
+  #                      "C11", "C12")
   readFile[, "iSubject"]<- 1:nrow(readFile)
   return(readFile[, !names(readFile) %in% c("C1", "C11", "C12")])
 }
@@ -199,7 +211,8 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
                       srcPath = "../src/", binPath = "../bin/", verbose = TRUE,
                       commentFile = NULL,  calibFile = NULL,
                       runProgram = TRUE, itNumber = NULL, NPArm = 2, 
-                      thrCorr = 0.05, datAnclas = NULL, flagSPrior = FALSE){
+                      thrCorr = 0.05, datAnclas = NULL, flagSPrior = FALSE, 
+                      flagTPrior = FALSE){
 
     # # This function generates a Parscale control file given the options in its
     # # arguments, runs it and reads the item parameters
@@ -526,12 +539,21 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     cat("       NOSprior, \n", file = commandFile, append = TRUE)
   }
   
+  if (flagTPrior) {
+    cat("       TPRIOR, \n", file = commandFile, append = TRUE)
+    cat("       READPRI, \n", file = commandFile, append = TRUE)
+  }
+
   #cat("       TPRIOR, \n", file = commandFile, append = TRUE)
   cat("       DIAGNOSIS = 1, \n", file = commandFile, append = TRUE)
   cat("       CRIT = 0.0001 \n", file = commandFile, append = TRUE)
   cat("       ;\n", file = commandFile, append = TRUE)
 
   # # SCORE
+  if (flagTPrior){
+    cat(">PRIOR TSIGMA=(3.0(0)", nItems, ");\n", file = commandFile, append = TRUE)
+  }
+  
   cat(">SCORE NQPT = ", nQuadPoints, ", \n", sep = "", file = commandFile, append = TRUE)
   cat("       RSCTYPE = 0 \n",  file = commandFile, append = TRUE)
   if (!score) {
