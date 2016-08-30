@@ -1,4 +1,3 @@
-
 ################################################################################
 # # RunDimensionalityCC.R
 # # R Versions: 3.02
@@ -47,12 +46,12 @@ setMethod("initialize", "Exploratory", function(.Object, ..., param) {
 
 Exploratory <- function(test, paramExp = NULL) { 
   paramDefault <-  list(kOmissionThreshold = 0.5,
-						     flagOri = FALSE, flagTotal = TRUE,
-						     flagSubCon = TRUE, orderedDat = TRUE,
-						     catToNA = c('No Presentado', 'NR', 'Multimarca'),
-						     seqFactors = NULL, rotation = 'oblimin',
-						     semilla = format(Sys.time(), "%d%m%Y"),
-						     tamSize = 0.5)
+						flagOri = FALSE, flagTotal = TRUE,
+						flagSubCon = TRUE, orderedDat = TRUE,
+						catToNA = c('No Presentado', 'NR', 'Multimarca'),
+						seqFactors = NULL, rotation = 'oblimin',
+						semilla = format(Sys.time(), "%d%m%Y"),
+						tamSize = 0.5)
   if (!is.null(paramExp)) {
     isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
     isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
@@ -68,7 +67,7 @@ Exploratory <- function(test, paramExp = NULL) {
 }
 
 # # use parameter for correlations
-useCorExp      <<- "complete.obs"
+useCorExp      <<- "pairwise.complete.obs"
 kThereLoadiExp <<- 0.15
 nReplicatesExp <<- 200
 
@@ -89,6 +88,7 @@ kThresholdComInfExp  <<- 0.15
 ################################################################################
 setMethod("codeAnalysis", "Exploratory", 
 function(object){
+    #object <- filterAnalysis(object) # Organizando filtros
 
     # # Load libraries
     require(xtable)   # # 1.5-6
@@ -110,15 +110,10 @@ function(object){
 
 	source(file.path("Function", "exploratoryFunctions.R"))
     outPath  <- file.path(outPath, "04Exploratorio")
-    if(dir.exists(outPath)){
-    	cat("OJO-------> ya tenia el directorio 04Exploratorio creado\n")
-    	#unlink(outPath, recursive = TRUE)
-    	dir.create(outPath, showWarnings = FALSE)
-	}
+    dir.create(outPath, showWarnings = FALSE)
 
 	# # version with object parameter
 	versionOutput <- object@verSalida
-	versionComment <- paste0("Corrida Análisis Exploratorio --",  object@test@nomTest, "--") 
 
 	# # version of input dictionary
 	verDataIn <- object@test@verInput
@@ -127,16 +122,13 @@ function(object){
 	flagUser <- !is.null(object@param$seqFactors) 
 	flagUser <- flagUser | length(object@param$seqFactors) != 0
 
-
-	################################################################################
-	# # Adjusting the DB
-	###############################################################################
-
+	# # Crear carpeta de muestras
 	outPathSamp <- file.path(outPath, "../Muestras")
   	if(!file.exists(outPathSamp)){
     	dir.create(outPathSamp)
     	cat("Se creo la carpeta muestras en el output!!!!!\n")
   	}
+
 	################################################################################
 	# # Analisis de Dimensionalidad
 	################################################################################
@@ -153,8 +145,6 @@ function(object){
 	# # create list to save results
 	listResults <- list()
 	pruebasRead <- names(object@datAnalysis)
-
-    #cat("esto es una prueba", pruebasRead)
 
 	for (kk in pruebasRead) {
 	  # # create folder and routes to save results
@@ -178,10 +168,10 @@ function(object){
    	  	next
   	  }
 
-  	  # # Define la base de datos
+  	  # # Definir la base de datos
   	  kkBlock  <- as.data.frame(object@datAnalysis[[kk]]$datos)
     	 
-  	  # # Compute matriz correlation
+  	  # # Calcular matrix de correlación
   	  corBlock <- MakeCorrelation(kkBlock, outPathSamPba, verDataIn, auxPru, 
   	                			  semilla = object@param$semilla, 
   	 	            			  tamMue = object@param$tamSize, 
@@ -271,6 +261,7 @@ function(object){
 	   # # Guardando resultados 
        saveResult(object, listResults)
      }
+     return(object)
 })
 ################################################################################
 # # Definition of output files
@@ -279,6 +270,7 @@ function(object){
 setMethod("outXLSX", "Exploratory", 
 function(object, srcPath = "."){
 	outPath  <- file.path(srcPath, outPath, "04Exploratorio")
+	
 	#####################################################
 	# # Function to Make Cabezotes
 	#####################################################

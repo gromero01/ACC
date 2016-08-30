@@ -60,7 +60,8 @@ TCT <- function(test, paramExp = NULL){
 setMethod("codeAnalysis", "TCT",
  # object <- controlData[[prueba]]
 function(object){
-  
+    #object <- filterAnalysis(object) # Organizando filtros
+
     # # Load wrapWS.R functions
     source(file.path(funPath, "univariateFunctions01.R"))
     source(file.path(funPath, "log.R"))  # # log
@@ -171,6 +172,7 @@ function(object){
     }
    # # Guardando
    saveResult(object, listResults)
+   return(object)
 })
 
 ################################################################################

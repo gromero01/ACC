@@ -83,7 +83,7 @@ IRT <- function(test, paramExp = NULL){
   print(paramExp)
   object <- new("IRT", test = test, param = paramExp, 
                 verSalida = auxVerSalida)
-  object <- filterAnalysis(object)
+  object <- filterAnalysis(object) # Organizando filtros            
   return(object)
 }
 
@@ -115,6 +115,7 @@ funRescal <- function(datFrame, colName, meanHab = 0, sdHab = 1, meanFin = 0,
 
 setMethod("codeAnalysis", "IRT",
           analIRT <- function(object){
+  #object <- filterAnalysis(object) # Organizando filtros            
   binPath <- file.path("..", "Src", "bin")
   outPath <- file.path(outPath, "06IRT")
   dir.create(outPath, recursive = TRUE, showWarnings = FALSE)    
@@ -535,6 +536,7 @@ setMethod("codeAnalysis", "IRT",
       outPath <- auxOutPath
   }
   saveResult(object, listResults)
+  return(object)
 })
 
 ################################################################################
@@ -716,6 +718,7 @@ function(object, srcPath){
        "</table>",
        "</center>")
   nomSubPru <- names(object@datAnalysis)
+
   for(ii in nomSubPru){
     nomAux <- gsub("::|\\s", "_", ii) 
     nomSub <- gsub("^(.+)(::)(.+)", "\\3", ii)
