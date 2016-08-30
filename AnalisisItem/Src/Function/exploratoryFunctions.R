@@ -89,65 +89,38 @@ MakeCorrelation <- function(kkBlock, outPathSamPba, verDataIn,
                             varId, useCor){  
    require(polycor)
    # # Obtain sample
-    confData <- file.path(outPathSamPba,
-                         paste("confirmatorySample_", auxPru, "_V",
-                         verDataIn, ".RData", sep = ""))
-     expData  <- file.path(outPathSamPba,
-                           paste("exploratorytorySample_", auxPru, "_V",
-                           verDataIn, ".RData", sep = ""))
-
-     if (!file.exists(confData) & !file.exists(expData)) {  
-      # # Select Exploratory
-
+   auxNom  <- ifelse(flagExplo, "Exploratory", "Confirmatory")
+   auxData <- file.path(outPathSamPba,
+                        paste0("sample", auxNom, "_", auxPru, "_V",
+                        verDataIn, ".RData"))
+   if (!file.exists(auxData)) {  
+      # # Select Exploratory or Confirmatory
       set.seed(as.numeric(semilla))     
-      isExploratory <- sample(x = rownames(kkBlock), size = ceiling(nrow(kkBlock) * tamMue))      
-      expkkBlock    <- kkBlock[isExploratory, varId]
-      rownames(expkkBlock) <- kkBlock[isExploratory, "SNP"]
-      nObsExploratory <- nrow(expkkBlock)
-      expkkBlock <- structure(expkkBlock)
-
-       # # Select Confirmatory
-      if(tamMue == 1){
-        warning("Esta utilizando el 100% en exploratio y Confirmatorio")
-        isConfirmatory <- isExploratory
-      } else {
-        isConfirmatory <- -as.numeric(isExploratory)
-      }    
-      confkkBlock           <- kkBlock[isConfirmatory, varId]
-      rownames(confkkBlock) <- kkBlock[isConfirmatory, "SNP"]
-      nObsConfirmatory      <- nrow(confkkBlock)
-      save(expkkBlock, nObsExploratory, file = expData)
-      save(confkkBlock, nObsConfirmatory, file = confData)
+      isExploratory <- sample(x = rownames(kkBlock), 
+                              size = ceiling(nrow(kkBlock) * tamMue))
+      indSelected   <- ifelse(flagExplo, -as.numeric(isExploratory))
+      kkBlockSAM    <- kkBlock[indSelected, varId]
+      rownames(kkBlockSAM) <- kkBlock[indSelected, "SNP"]
+      nObs       <- nrow(kkBlockSAM)
+      kkBlockSAM <- structure(kkBlockSAM)
+      save(kkBlockSAM, nObs, file = auxData)    
     } else {
-      if (flagExplo) load(expData)
-      if (!flagExplo) load(confData)
+      load(auxData)
     }
 
-     # # Obtain correlation matrix
-     corExpData   <- file.path(outPathSamPba,
-                               paste("corExploratory_", auxPru, "_V",
-                               verDataIn, ".RData", sep = ""))
-     corConfData  <- file.path(outPathSamPba,
-                               paste("corConfirmatory_", auxPru, "_V",
-                               verDataIn, ".RData", sep = ""))
-
-     if (!file.exists(corExpData) & !file.exists(corConfData)) {
-       corExpBlock  <- hetcor(expkkBlock, pd = TRUE, use = useCor, std.err =
-                            FALSE, ML = FALSE)
-       
-       corConfBlock <- hetcor(confkkBlock, pd = TRUE, use = useCor, std.err =
-                            FALSE, ML = FALSE)
-       if(class(corConfBlock) != "try-error" & class(corExpBlock) != "try-error"){
-          save(corExpBlock,  file = corExpData)
-          save(corConfBlock, file = corConfData)
-          cat("Listo analisis Exploratorio y Confirmatorio de :", auxPru , "\n")
-        } else {
-          stop(cat("No se estimo la matriz policórica inicial\n\n"))
-        }
+    # # Obtain correlation matrix
+    corData <- file.path(outPathSamPba,
+                         paste("corExploratory_", auxPru, "_V",
+                         verDataIn, ".RData", sep = ""))
+    if (!file.exists(corData)) {
+      corBlock  <- try(hetcor(kkBlockSAM, pd = TRUE, use = useCor, 
+                       std.err = FALSE, ML = FALSE))
+      if(class(corBlock) != "try-error"){
+        save(corBlock, file = corData)
+        cat("Listo correlación ", auxNom, " :", auxPru , "\n")
+      } 
     } else {
-      if (flagExplo) load(corExpData)
-      if (!flagExplo) load(corConfData)
+      load(corData)
     }
-    if (flagExplo) return(list(corBlock = corExpBlock, sampleBlock = expkkBlock))
-    if (!flagExplo) return(list(corBlock = corConfBlock, sampleBlock = confkkBlock))
+    return(list(corBlock = corBlock, sampleBlock = kkBlockSAM))
 }
