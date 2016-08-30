@@ -154,7 +154,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
                 "Porcentaje.annotation", "Porcentaje.annotationText",
                 "Habilidad Promedio")
   varXtomar <- "categoria"
-  chartID   <- paste0("grafGPREP", idPrueba)
+  chartID   <- paste0("grafGPREP", gsub("-|\\s", "_", idPrueba))
   exaCombo <- gvisComboChart(itObs[[1]], xvar = varXtomar, chartid = chartID,
                           yvar = varYtomar,
                           options=list(width = 470, height = 310, 

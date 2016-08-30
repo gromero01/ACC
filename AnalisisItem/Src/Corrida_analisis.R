@@ -43,12 +43,19 @@ dirPandoc <- file.path(Sys.getenv("APPDATA"), "..", "Local\\Pandoc")
 Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
 #Sys.setenv(RSTUDIO_PANDOC = "C:\\Program Files (x86)\\Pandoc")
 
-vecJson  <- c("../Input/parameters.json")
+vecJson  <- list.files(inPath, "\\.json", 
+	                   full.names = TRUE)[1:2]
 
 for (fileJson in vecJson){
-  listTests <- analyzeTests(fileJson, anUpdate = "IRT")
+  if ('listTests' %in% ls()) {
+  	rm(listTests)
+    gc(reset = TRUE)
+  }
+  listTests <- analyzeTests(fileJson, anUpdate = c(""), 
+  	                        testUpdate = c(""))
+  armaIdentifica(listTests)
   jointReports(listTests, fileJson, pathJS = "../../../../lib", 
-   	           flagView = FALSE)
+  	           flagView = FALSE)
 }
 
 #publishRepo(vecJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 
@@ -57,10 +64,11 @@ for (fileJson in vecJson){
 ################################################################################
 # # Depuración metodo 
 ################################################################################
-prueba0 <- listTests[[1]]
-object  <- listTests[[1]]@listAnal[["IRT"]]
+#prueba0 <- listTests[[1]]
+#object  <- listTests[[1]]@listAnal[["IRT"]]
 #codeAnalysis(object)
 #outHTML(object)
+
 # prueba0 <- new('Test', path = "JUNTURAS/EK20161/exam717/PBAF000401JN", 
 # 	           exam = "SABERTYT", codMod = "07", verInput = 1, 
 #                periodo = "EK20161", nomTest = "SABER T&T(Lectura Crítica Conjunta)", 
