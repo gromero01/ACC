@@ -32,7 +32,8 @@ Filtros <- function(test, paramExp = NULL){
   paramDefault <- list(fileCopy = NULL, 
   	                   indiInfo = NULL, 
   	                   kOmissionThreshold = 0.5, 
-                       flagConjunta = FALSE) 
+                       flagConjunta = FALSE, 
+                       flagNOESTU = FALSE) 
   if (!is.null(paramExp)) {
     isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
     isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
@@ -155,7 +156,9 @@ setMethod("codeAnalysis", "Filtros",
       }
 
       # # Seleccion No estudiante
-   	  datSblq[, indNE := ifelse(Tipo_de_Evaluado != "1" & !flagConjunta, 1, 0)]
+
+      datSblq[, indNE := ifelse(Tipo_de_Evaluado != "1" & !flagConjunta, 1, 0)]  	  
+      
       # # Seleccion No presentes
    	  datSblq[, indNP := ifelse(!Estado_Final %in% c("1", "8") & !flagConjunta, 1, 0)]
 	
@@ -177,7 +180,12 @@ setMethod("codeAnalysis", "Filtros",
       datSblq[, indEXTS := ifelse(indExtS, 1, 0)]
 
       # # Indicadora global
-      datSblq[, indTOTAL := ifelse(indCopia + indNENP + indOMI + indNP + indNE > 0, 1, 0)]
+      if (!object@param$flagNOESTU){ 
+        datSblq[, indTOTAL := ifelse(indCopia + indNENP + indOMI + indNP + indNE > 0, 1, 0)]
+      } else {
+        datSblq[, indTOTAL := ifelse(indCopia + indNENP + indOMI + indNP > 0, 1, 0)]
+      }
+      
       datSblq[, indInclu := ifelse(indTOTAL == 0, 1, 0)]
       datSblq[, indTodo := indTOTAL + indInclu]
 
