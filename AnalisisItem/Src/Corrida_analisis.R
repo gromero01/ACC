@@ -44,16 +44,16 @@ Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
 #Sys.setenv(RSTUDIO_PANDOC = "C:\\Program Files (x86)\\Pandoc")
 
 vecJson  <- list.files(inPath, "\\.json", 
-	                   full.names = TRUE)[1:2]
+	                   full.names = TRUE)
 
-for (fileJson in vecJson){
+for (fileJson in vecJson[5]){
   if ('listTests' %in% ls()) {
   	rm(listTests)
     gc(reset = TRUE)
   }
   listTests <- analyzeTests(fileJson, anUpdate = c(""), 
   	                        testUpdate = c(""))
-  armaIdentifica(listTests)
+  #armaIdentifica(listTests)
   jointReports(listTests, fileJson, pathJS = "../../../../lib", 
   	           flagView = FALSE)
 }
@@ -64,8 +64,11 @@ for (fileJson in vecJson){
 ################################################################################
 # # Depuración metodo 
 ################################################################################
-#prueba0 <- listTests[[1]]
-#object  <- listTests[[1]]@listAnal[["IRT"]]
+prueba0 <- listTests[["TestNOES"]]
+prueba0 <- readSupplies(prueba0)
+object  <- IRT(test = prueba0, paramExp = list("kOmissionThreshold" = 0.5))
+
+#object  <- listTests[["TestNOES"]]@listAnal[["IRT"]]
 #codeAnalysis(object)
 #outHTML(object)
 

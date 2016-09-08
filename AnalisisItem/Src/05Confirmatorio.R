@@ -202,7 +202,8 @@ setMethod("confirmatAnalysis", "Test",
               dictVarPrueba[, 'idx'] <- paste('I', dictVarPrueba[, 'id'], sep =  '')
               
 
-
+              generateConfirmatory()
+              
               return(auxAnalisis)
             }
           }

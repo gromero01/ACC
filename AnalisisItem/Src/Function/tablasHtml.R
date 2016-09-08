@@ -348,7 +348,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
     return titulos  + 
     '<tr>'+
       '<td colspan=\"2\">  N </td>'+
-      '<td colspan=\"1\">'+ d[16] +'</td>'+
+      '<td colspan=\"1\">'+ d[17] +'</td>'+
       '<td colspan=\"4\" rowspan=\"7\"> <div id=\"", chartID, "\" style=\"margin-left: 200;\"> </div>' +
       '</td>'+
     '</tr>'+

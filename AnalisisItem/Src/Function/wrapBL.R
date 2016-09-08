@@ -531,6 +531,9 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
 
   # # CALIB
   cat(">CALIB \n", file = commandFile, append = TRUE)
+  if (!is.null(datAnclas)) {
+    cat("       NOADJUST, \n", file = commandFile, append = TRUE)
+  }
   cat("       CYCLES = 500, \n", file = commandFile, append = TRUE)
   cat("       NEWTON = 30, \n", file = commandFile, append = TRUE)
   cat("       NQPT = ", nQuadPoints, ", \n", sep = "", file = commandFile, append = TRUE) 

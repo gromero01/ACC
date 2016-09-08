@@ -555,12 +555,12 @@ analyzeTests <- function(vecJson, anUpdate = NULL, testUpdate = NULL,
                       nomTest = jsonLec$nomTest, paramLect = paramLect, 
                       isUpdate = TRUE)#isTestUpdate)       
        
+       if ("Filtros" %in% names(readJson[[test]])){
+         auxFiltros <- Filtros(auxTest, readJson[[test]]$Filtros)  
+         auxTest    <- codeAnalysis(auxFiltros)
+       }
        # # Parametro para correr una forma en particular
        if (isTestUpdate){
-          if ("Filtros" %in% names(readJson[[test]])){
-            auxFiltros <- Filtros(auxTest, readJson[[test]]$Filtros)  
-            auxTest    <- codeAnalysis(auxFiltros)
-          }
           anUpdateaux <- anUpdate
        } else {        
           anUpdateaux <- c("")
@@ -575,7 +575,7 @@ analyzeTests <- function(vecJson, anUpdate = NULL, testUpdate = NULL,
          gc(reset = TRUE)
        }
 
-       if ("Filtros" %in% names(readJson[[test]]) & isTestUpdate){
+       if ("Filtros" %in% names(readJson[[test]])){
          auxTest@listAnal <- c('Filtros' = auxFiltros, 
                                auxTest@listAnal) 
          rm(auxFiltros)
