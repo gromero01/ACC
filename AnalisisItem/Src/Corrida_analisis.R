@@ -46,16 +46,17 @@ Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
 vecJson  <- list.files(inPath, "\\.json", 
 	                   full.names = TRUE)
 
-for (fileJson in vecJson[5]){
+for (fileJson in vecJson){
   if ('listTests' %in% ls()) {
   	rm(listTests)
     gc(reset = TRUE)
   }
   listTests <- analyzeTests(fileJson, anUpdate = c(""), 
-  	                        testUpdate = c(""))
-  #armaIdentifica(listTests)
-  jointReports(listTests, fileJson, pathJS = "../../../../lib", 
-  	           flagView = FALSE)
+  	                        testUpdate = c(""), 
+                            getDatBlocks = TRUE)
+  armaIdentifica(listTests)
+  # jointReports(listTests, fileJson, pathJS = "../../../../lib", 
+  # 	           flagView = FALSE)
 }
 
 #publishRepo(vecJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 

@@ -592,46 +592,47 @@ analyzeTests <- function(vecJson, anUpdate = NULL, testUpdate = NULL,
 # # Función para armarIdentifica (DIFF)
 ################################################################################
 
-armaIdentifica <- function(listTests, patternExclu = "21\\.con"){
-# # inicializa la clase Test para cada prueba en la entrada
-# #
-# # Arg:
-# #  fileJson: [character] la ruta del archivo de parametros
-# #  anUpdate: [vector] lista de analisis para correr
-# # Ret:
-# #  listTests: [list-Test] lista con todas las pruebas analizadas
-fileIdentifica <- file.path(outPath, "outIdentifica.Rdata")
-baseIdenti    <- NULL
-for (test in listTests) {
-    auxFormas  <- names(test@datBlock)
-    auxFormas  <- auxFormas[!grepl(patternExclu, auxFormas)]
-    if (length(auxFormas) > 0) {
-      getIDFORMA <- lapply(auxFormas, function(x) {
-                          auxTable <- test@datBlock[[x]][['oriBlock']]
-                          auxTable <- cbind(SNP = auxTable[, SNP], 'FORMA' = x)
-                          })
-      getIDFORMA <- data.frame(do.call(rbind, getIDFORMA))
-      baseIdenti <- rbind(baseIdenti, getIDFORMA)      
+armaIdentifica <- function(listTests, patternExclu = "(-21|01JN|-06|-07|(pbaF\\d{3}(06|07).+))\\.con"){
+    # # inicializa la clase Test para cada prueba en la entrada
+    # #
+    # # Arg:
+    # #  fileJson: [character] la ruta del archivo de parametros
+    # #  anUpdate: [vector] lista de analisis para correr
+    # # Ret:
+    # #  listTests: [list-Test] lista con todas las pruebas analizadas
+    fileIdentifica <- file.path(outPath, "outIdentifica.Rdata")
+    baseIdenti     <- NULL
+    for (test in listTests) {
+        auxFormas  <- names(test@datBlock)
+        auxFormas  <- auxFormas[!grepl(patternExclu, auxFormas)]
+        if (length(auxFormas) > 0) {
+          getIDFORMA <- lapply(auxFormas, function(x) {
+                              auxTable <- test@datBlock[[x]][['oriBlock']]
+                              auxTable <- cbind(SNP = auxTable[, SNP], 'FORMA' = x)
+                              })
+          getIDFORMA <- data.frame(do.call(rbind, getIDFORMA))
+          baseIdenti <- rbind(baseIdenti, getIDFORMA)      
+        }
     }
-}
-baseIdenti[, "FORMA_BASE"] <- gsub("(pba|PBA|pbaF|UOF)(\\d{3})(.+)?", "\\2",
-                                    baseIdenti[, "FORMA"])
-baseIdenti[, "FORMA_BASE"] <- paste0("Test", baseIdenti[, "FORMA_BASE"])
-if (any(duplicated(baseIdenti[, c("SNP", "FORMA_BASE")]))) {
-  stop("Hay mas de una forma base en listTests (Separe las pruebas en el json)")
-}
-
-baseIdenti <- dcast(baseIdenti, SNP ~ FORMA_BASE, value.var = "FORMA")
-
-if (file.exists(fileIdentifica)) {
-  newBase <- baseIdenti
-  load(fileIdentifica)
-  baseIdenti <- merge(baseIdenti, newBase, by = "SNP")
-}
-
-save(baseIdenti, file = fileIdentifica)
-write.table(baseIdenti, sep = "\t", file = gsub("\\.Rdata", ".txt", fileIdentifica), row.names = FALSE, quote = FALSE)
-return(cat("-----Archivo para DIFF generado!!-----\n"))
+    baseIdenti[, "FORMA_BASE"] <- gsub("(pba|PBA|pbaF|UOF)(\\d{3})(.+)?", "\\2",
+                                        baseIdenti[, "FORMA"])
+    baseIdenti[, "FORMA_BASE"] <- paste0("Test", baseIdenti[, "FORMA_BASE"])
+    if (any(duplicated(baseIdenti[, c("SNP", "FORMA_BASE")]))) {
+      stop("Hay mas de una forma base en listTests (Separe las pruebas en el json)")
+    }
+    
+    baseIdenti <- dcast(baseIdenti, SNP ~ FORMA_BASE, value.var = "FORMA")
+    baseIdenti[, "SNP"] <- as.character(baseIdenti[, "SNP"])
+    baseIdenti <- data.table(baseIdenti)
+    if (file.exists(fileIdentifica)) {
+      newBase <- data.table(baseIdenti)
+      load(fileIdentifica)
+      baseIdenti <- merge(baseIdenti, newBase, by = "SNP", all = TRUE)
+    }
+    
+    save(baseIdenti, file = fileIdentifica)
+    write.table(baseIdenti, sep = "\t", file = gsub("\\.Rdata", ".txt", fileIdentifica), row.names = FALSE, quote = FALSE)
+    return(cat("-----Archivo para DIFF generado!!-----\n"))
 }
 
 
