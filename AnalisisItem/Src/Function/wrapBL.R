@@ -22,6 +22,38 @@
 # # Function for reading Parscale output file
 ################################################################################
 
+readDIFF <- function(fileName, filePath = "./"){
+  # # Reads the DIFF output from Bilog
+  # #
+  # # Arg:
+  # #  fileName: The file name
+  # #  filePath: The file path
+  # #
+  # # Ret:
+  # #
+  inFile   <- file.path(filePath, fileName)
+  datDIFF  <- readLines(inFile)
+  idInicio <- grep("^\\s+$", datDIFF) 
+  idFin    <- c(idInicio[2], length(datDIFF))
+  arreglarFilas <- function(datDIFF, x) {
+    auxDat <- datDIFF[idInicio[x]:idFin[x]]
+    auxDat <- auxDat[-grep("^\\s+$", auxDat)]
+    auxDat <- paste0(auxDat[seq(1, length(auxDat), by = 2)], auxDat[seq(2, length(auxDat), by = 2)])
+    auxDat <- str_split_fixed(auxDat, pattern = "\\s+", n = ifelse(x == 2, 4, 6))
+    data.frame(auxDat, stringsAsFactors = FALSE)
+  }
+  datDIFF <- sapply(1:2, function(x) arreglarFilas(datDIFF, x))
+  datDIFF <- merge(datDIFF[[1]], datDIFF[[2]], by = c("X1", "X2"))
+  names(datDIFF) <- c("PBA", "ITEM", "DIFICULTAD_BASE", "DIFICULTAD_NUEVA", 
+                      "se_DIFICULTAD_BASE", "se_DIFICULTAD_NUEVA", "DIFF", "se_DIFF")
+  datDIFF[, -(1:2)] <- sapply(datDIFF[, -(1:2)], as.numeric)
+  datDIFF <- subset(datDIFF, !((DIFICULTAD_BASE == 0 & se_DIFICULTAD_BASE == 0) | (DIFICULTAD_NUEVA == 0 & se_DIFICULTAD_NUEVA == 0)))
+  datDIFF[,"Z"] <- datDIFF[,"DIFF"] / datDIFF[,"se_DIFF"]
+  datDIFF[, "pvalue"] <- round(pnorm(datDIFF[,"Z"]), 4)
+  return(datDIFF)
+}
+
+
  readPH2CHI <- function(fileName, filePath = "./"){
   # # Reads the item parameters from Bilog
   # #
@@ -109,6 +141,7 @@ ReadBlTCTFile <- function (fileName, filePath = "./") {
   ################################################################################
   auxHead        <- readLines(inFile)
   auxHead        <- which(nchar(gsub("-", "", auxHead)) == 1)
+  auxHead        <- auxHead[(length(auxHead) - 1):length(auxHead)]
   names(auxHead) <- c("ItInicial", "ItFinal")
 
   tctData  <- read.fwf(inFile, skip = auxHead["ItInicial"], header = FALSE,
@@ -207,13 +240,13 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
                       runPath = "./", weights = NULL, group = NULL,
                       personIds = NULL, itemIds = NULL, guessing = FALSE,
                       nQuadPoints = 30, score = TRUE, personEstimation = "EAP",
-                      logistic = TRUE, kD = NULL, dif = NULL,
+                      logistic = TRUE, kD = NULL, dif = FALSE,
                       srcPath = "../src/", binPath = "../bin/", verbose = TRUE,
                       commentFile = NULL,  calibFile = NULL,
                       runProgram = TRUE, itNumber = NULL, NPArm = 2, 
                       thrCorr = 0.05, datAnclas = NULL, flagSPrior = FALSE, 
                       flagTPrior = FALSE){
-
+    
     # # This function generates a Parscale control file given the options in its
     # # arguments, runs it and reads the item parameters
     # #
@@ -232,8 +265,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     # #  kD: numeric constant to use as D for scaling parameters. Dafaults
     # #      to 1.702 if lofistic is TRUE and 1.0 if it is FALSE
     # #  kChiGroups: numbre of groups for chi-square item fit calculations
-    # #  dif: vector indicating the group of parameters to be estimated jointly (0) or separated (1)
-    # #       (isSeparateSlopes, isSeparateThresholds, isSeparateCategories, isSeparateGuessing)
+    # #  dif: logical indicating the DIFF procces
     # #  srcPath: path to working directory
     # #  binPath: path where the Parscale executables may be found
     # #  verbose: logical indicating whether to show or not function progres
@@ -247,7 +279,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     ################################################################################
     # # Check arguments consistency
     ################################################################################
-
+ 
   if (!is.null(weights)) {
     if (length(weights) != nrow(responseMatrix)) {
       stop("weights length and responses number of rows should be equal")
@@ -289,6 +321,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   itemFileName  <- file.path(outPath, paste(runName, ".PAR", sep = "")) #NO
   tctFileName   <- file.path(outPath, paste(runName, ".TCT", sep = "")) #NO
   scoreFileName <- file.path(outPath, paste(runName, ".SCO", sep = "")) #NO
+  diffFileName  <- file.path(outPath, paste(runName, ".DIF", sep = "")) #NO
 
   #infoFileName    <- file.path(outPath, paste(runName, ".pslii", sep = "")) #NO
   #fitFileName     <- file.path(outPath, paste(runName, ".pslif", sep = "")) #NO
@@ -329,13 +362,13 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
 
   # # Group identifiers
   if (!is.null(group)) {
-    if (is.numeric(group)) {
-      typeGroupId <- "d" # # If numeric then add zeroes before the shorter ones
-    } else {
-      typeGroupId <- "s" # # If not numeric then add spaces before the shortest ones
+    if (!is.numeric(group)) {
+      group      <- as.factor(group)
+      groupLabel <- levels(group)
+      group      <- as.numeric(group)
     }
   } else {
-    group <- rep(1, nrow(responseMatrix))
+    group       <- rep(1, nrow(responseMatrix))
     typeGroupId <- "d"
   }
   groupWidth <- max(nchar(group))
@@ -359,22 +392,33 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     itemIds     <- gsub("\"", "", itemIds)
   }
 
-  fillerColumn <- rep("", nrow(responseMatrix))
-  if (!is.null(dif) & !is.null(weights)) {
-    responseMatrix <- cbind(personIds, fillerColumn, group, fillerColumn, weights, fillerColumn, responseMatrix)
-    omitLine       <- paste(rep("0", maxLengthId + 1 + groupWidth + 1 + 13 + 1 + nItems), collapse = "")
-  } else if (!is.null(dif) & is.null(weights)) {
-    responseMatrix <- cbind(personIds, fillerColumn, group, fillerColumn, responseMatrix)
-    omitLine       <- paste(rep("0", maxLengthId + 1 + groupWidth + 1 + nItems), collapse = "")
-  } else if (is.null(dif) & !is.null(weights)) {
-    responseMatrix <- cbind(personIds, fillerColumn, weights, fillerColumn, responseMatrix)
-    omitLine       <- paste(rep("0", maxLengthId + 1 + 13 + 1 + nItems), collapse = "")
-  } else if (is.null(dif) & is.null(weights)) {
-    responseMatrix <- cbind(personIds, fillerColumn, responseMatrix)
-    keyLine        <- paste(c(rep(" ", maxLengthId), rep("1", nItems)), collapse = "")
-    omitLine       <- paste(c(rep(" ", maxLengthId), rep("9", nItems)), collapse = "")
-    notprLin       <- paste(rep(" ", maxLengthId + nItems), collapse = "")
+
+  # # Delete all missing
+  isBad <- rowMeans(is.na(responseMatrix)) == 1
+  if (any(isBad)) {
+    responseMatrix <- responseMatrix[!isBad, ]
   }
+
+  # # Fix dat.cal 
+  fillerColumn <- rep("", nrow(responseMatrix))
+  if (dif & !is.null(weights)) {
+    responseMatrix <- cbind(personIds, fillerColumn, group, fillerColumn, weights, fillerColumn, responseMatrix)
+    auxLength      <- maxLengthId + groupWidth + max(nchar(weights))   
+  } else if (dif & is.null(weights)) {
+    responseMatrix <- cbind(personIds, fillerColumn, group, fillerColumn, responseMatrix)
+    auxLength      <- maxLengthId + groupWidth
+  } else if (!dif & !is.null(weights)) {
+    responseMatrix <- cbind(personIds, fillerColumn, weights, fillerColumn, responseMatrix)    
+    auxLength      <- maxLengthId + max(nchar(weights)) 
+  } else if (!dif & is.null(weights)) {
+    responseMatrix <- cbind(personIds, fillerColumn, responseMatrix)
+    auxLength      <- maxLengthId 
+  }
+
+  # # Construct key file and omi file 
+  keyLine        <- paste(c(rep(" ", auxLength), rep("1", nItems)), collapse = "")
+  omitLine       <- paste(c(rep(" ", auxLength), rep("9", nItems)), collapse = "")
+  notprLin       <- paste(rep(" ", auxLength + nItems), collapse = "")
 
   write.table(responseMatrix, file = dataFile, append = FALSE, sep = "",
               row.names = FALSE, na = " ", col.names = FALSE, quote = FALSE)
@@ -460,29 +504,30 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
       "', \n", sep = "", file = commandFile, append = TRUE)
   cat("      ISTAT = '", toupper(tctFileName),
       "', \n", sep = "", file = commandFile, append = TRUE)
-  cat("      SCORE = '", toupper(scoreFileName),
-      "'; \n", sep = "", file = commandFile, append = TRUE)
+  cat("      SCORE = '", toupper(scoreFileName), "'",
+      sep = "", file = commandFile, append = TRUE)
+
+  if (dif){
+  cat(", \n", "      DIF = '", toupper(diffFileName), "'",
+      sep = "", file = commandFile, append = TRUE)
+
+  }
+  cat(";\n", sep = "", file = commandFile, append = TRUE)
 
   #  cat("      COMBINE = '", combineFileName, "';\n", sep = "", file = commandFile, append = TRUE)
   cat(">LENGTH NITems = (", nItems, "); \n", sep = "", file = commandFile, append = TRUE)
   # # INPUT
   cat(">INPUT NTOTAL = ", nItems, ", \n", sep = "", file = commandFile, append = TRUE)
+  if (dif) {
+    cat("       NGRoup = ", length(table(group)), ", \n", sep = "", file = commandFile, append = TRUE)
+    cat("       DIF, \n", sep = "", file = commandFile, append = TRUE)
+  }
   cat("       KFNAME = '", keyFileName, "', \n", sep = "", file = commandFile, append = TRUE)
   cat("       OFNAME = '", omitkeyFileName, "', \n", sep = "", file = commandFile, append = TRUE)
   cat("       NFNAME = '", notpresFileName, "', \n", sep = "", file = commandFile, append = TRUE)
   cat("       NALt = 1000, \n", file = commandFile, append = TRUE)
   cat("       NIDCHAR = ", maxLengthId, "; \n", sep = "", file = commandFile, append = TRUE)
-  # if (!is.null(dif)) {
-  #   nameGroups <- names(table(group))
-  #   nGroups <- length(table(group))
-  #   cat(",\n", file = commandFile, append = TRUE)
-  #   cat("       MGROUP = ", nGroups, sep = "", file = commandFile, append = TRUE)
-  # }
-  # if (!is.null(weights)) {
-  #   cat(",\n", file = commandFile, append = TRUE)
-  #   cat("       WEIGHT\n", sep = "", file = commandFile, append = TRUE)
-  # }
-  # cat(";\n", file = commandFile, append = TRUE)
+ 
 
   # # ITEMS
   cat(">ITEMS INUMBERS = 1(1)", nItems, ", \n", sep = "", file = commandFile, append = TRUE)
@@ -517,20 +562,37 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   }
   cat("                );\n", file = commandFile, append = TRUE)
 
+  if (dif) {
+    nGroups <- length(table(group))
+    for (ii in 1:nGroups){
+      cat(">GROUP", ii, "  GNAme = '", groupLabel[ii], "';\n", sep = "", 
+          file = commandFile, append = TRUE)
+    }
+  }
+
+  # if (!is.null(weights)) {
+  #   cat(",\n", file = commandFile, append = TRUE)
+  #   cat("       WEIGHT\n", sep = "", file = commandFile, append = TRUE)
+  # }
+  #cat(";\n", file = commandFile, append = TRUE)
+
   # # (variable format statement)
-  if (!is.null(dif) & !is.null(weights)) {
-    cat("(", maxLengthId, "A1, ", groupWidth, "A1, 1X, 1F13.6, 1X, ", nItems, " A1)\n",
+  if (dif & !is.null(weights)) {
+    cat("(", maxLengthId, "A1, I", groupWidth, ", 1F13.6,", nItems, "A1)\n",
         sep = "", file = commandFile, append = TRUE)
-  } else if (!is.null(dif) & is.null(weights)) {
-    cat("(", maxLengthId, "A1, ", groupWidth, "A1, 1X, ", nItems, " A1)\n", sep = "", file = commandFile, append = TRUE)
-  } else if (is.null(dif) & !is.null(weights)) {
-    cat("(", maxLengthId, "A1, 1F13.6, 1X, ", nItems, " A1)\n", sep = "", file = commandFile, append = TRUE)
-  } else if (is.null(dif) & is.null(weights)) {
-    cat("(", maxLengthId, "A1, ", nItems, " A1)\n", sep = "", file = commandFile, append = TRUE)
+  } else if (dif & is.null(weights)) {
+    cat("(", maxLengthId, "A1, I", groupWidth, ", ", nItems, "A1)\n", sep = "", file = commandFile, append = TRUE)
+  } else if (!dif & !is.null(weights)) {
+    cat("(", maxLengthId, "A1, 1F13.6, ", nItems, " A1)\n", sep = "", file = commandFile, append = TRUE)
+  } else if (!dif & is.null(weights)) {
+    cat("(", maxLengthId, "A1, ", nItems, "A1)\n", sep = "", file = commandFile, append = TRUE)
   }
 
   # # CALIB
   cat(">CALIB \n", file = commandFile, append = TRUE)
+  if (!is.null(datAnclas)) {
+    cat("       NOADJUST, \n", file = commandFile, append = TRUE)
+  }
   cat("       CYCLES = 500, \n", file = commandFile, append = TRUE)
   cat("       NEWTON = 30, \n", file = commandFile, append = TRUE)
   cat("       NQPT = ", nQuadPoints, ", \n", sep = "", file = commandFile, append = TRUE) 
@@ -543,7 +605,10 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     cat("       TPRIOR, \n", file = commandFile, append = TRUE)
     cat("       READPRI, \n", file = commandFile, append = TRUE)
   }
-
+  
+  if (dif){
+    cat("       REFERENCE = 1, \n", file = commandFile, append = TRUE)
+  }
   #cat("       TPRIOR, \n", file = commandFile, append = TRUE)
   cat("       DIAGNOSIS = 1, \n", file = commandFile, append = TRUE)
   cat("       CRIT = 0.0001 \n", file = commandFile, append = TRUE)
@@ -601,7 +666,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     isBad  <- which(itemIds %in% auxTCT[isBad, "item"])
     auxBlm <- readLines(commandFile)
     linea1 <- grep(pattern = "INUmber", auxBlm)
-    linea2 <- grep(pattern = ">CALIB", auxBlm)
+    linea2 <- min(grep(pattern = ">(CALIB|GROUP)", auxBlm))
     linea4 <- grep(pattern = ">TEST", auxBlm)
     
     # # Construyendo el nuevo archivo
@@ -636,7 +701,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
       printFix(vecFix = indPosi$Fix[-isBad], commandFile)
       cat(auxBlm[(linea1 - 1):length(auxBlm)], sep = "\n", 
           file = commandFile, append = TRUE)
-
+      #indPosi$Fix <- indPosi$Fix[-isBad]
       #readline(prompt="Press [enter] to continue")
       # # Ajustando archivo PRM
       indPosi <- writePRM(indPosi, prFile, isBad = isBad)
