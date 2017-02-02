@@ -65,7 +65,8 @@ IRT <- function(test, paramExp = NULL){
                        idNoPKey = c('O', 'M'), constDmodel = 1.7,
                        isCheckKeys = FALSE, kThresItemCorrDic = 0.2,
                        kThresItemCorrOrd = 0.2, espSd = 1, espMean = 0, 
-                       AnclaRdata = NULL, formAncla = "", flagSPrior = FALSE)
+                       AnclaRdata = NULL, formAncla = "", flagSPrior = FALSE, 
+                       mCentrar = NULL, sdCentrar = NULL)
   if ("verSalida" %in% names(paramExp)){
     auxVerSalida <- paramDefault$verSalida
   } else {
@@ -204,6 +205,19 @@ setMethod("codeAnalysis", "IRT",
      }
   } else {
      listResultsAN <- NULL
+  }
+
+  # # Especificando la transformacion para las dificultades
+  if (!is.null(object@param$mCentrar)) {
+    cat("Centrando de acuerdo a parametros mCentrar:", 
+       object@param$mCentrar, "\n")
+    meanAbilParam <- object@param$mCentrar
+  }
+
+  if (!is.null(object@param$sdCentrar)) {
+    cat("Centrando de acuerdo a parametros sdCentrar:", 
+       object@param$sdAbilParam, "\n")
+    sdAbilParam <- object@param$sdAbilParam
   }
 
   # # create list to save results
@@ -594,7 +608,7 @@ setMethod("codeAnalysis", "IRT",
                           'FLAGKEY1' = 0, 'FLAGKEY3' = 0,
                           'FLAGDIFDIS' = ifelse(abs(dif) > 3 & disc > 0.5, 1, 0),
                           'FLAGAZAR'  = ifelse(azar > 0.25 | eeazar > 0.15, 1, 0), 
-                          'FLAGCHI2' = ifelse(p_val_chi2 > 0.1, 1, 0), 
+                          'FLAGCHI2' = 0, #ifelse(p_val_chi2 > 0.1, 1, 0), 
                           'FLAGINFO' = ifelse(max(maxINFO, na.rm = TRUE) == maxINFO, 1, 0), 
                           'FLAGCV' = ifelse(eedif_NEW > 30, 1, 0))])
         tablaFin[, eedif_NEW := paste0(sprintf("%.2f", eedif_NEW), "%")]

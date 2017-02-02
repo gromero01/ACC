@@ -782,19 +782,19 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
      }
    
      # # Creación de carpetas
-     foldIni <- unique(file.path(pathDest, outExam, outYear, outStage))  
-     for (folder in foldIni){
-       dir.create(folder, recursive = TRUE, showWarnings = FALSE)
-       foldOut <- file.path(folder, c("Doc", "Output"))
-       for (out in foldOut){
-         dir.create(out, recursive = TRUE, showWarnings = FALSE)      
-       }
-       # # Verificando archivos
-       fileOut <- file.path(folder, "Output", list.files(outPath, recursive = TRUE))
-       fileDoc <- file.path(folder, "Doc", list.files(docPath, recursive = TRUE))
-       file.copy(docPath, folder, recursive = TRUE, overwrite = flagActualizar)
-       file.copy(outPath, folder, recursive = TRUE, overwrite = flagActualizar)        
-     }
+     # foldIni <- unique(file.path(pathDest, outExam, outYear, outStage))  
+     # for (folder in foldIni){
+     #   dir.create(folder, recursive = TRUE, showWarnings = FALSE)
+     #   foldOut <- file.path(folder, c("Doc", "Output"))
+     #   for (out in foldOut){
+     #     dir.create(out, recursive = TRUE, showWarnings = FALSE)      
+     #   }
+     #   # # Verificando archivos
+     #   fileOut <- file.path(folder, "Output", list.files(outPath, recursive = TRUE))
+     #   fileDoc <- file.path(folder, "Doc", list.files(docPath, recursive = TRUE))
+     #   file.copy(docPath, folder, recursive = TRUE, overwrite = flagActualizar)
+     #   file.copy(outPath, folder, recursive = TRUE, overwrite = flagActualizar)        
+     # }
       
      # # Creando Lista 
      consNode <- function(label, child = list()){
@@ -805,15 +805,19 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
    
      indexJson  <- list()
      labelList  <- strsplit(names(auxJson), "\\.")
-     finalLabel <- unique(lapply(labelList, function(x) x[-length(x)]))
-     for (list in finalLabel) {
-       nodeList  <- consNode(list[1], consNode(list[2], consNode(list[3])))
-       indexJson <- append(indexJson, nodeList)
-     }
-   
+
      # # llenando lista
      for (ii in 1:length(auxJson)){
-       list    <- labelList[[ii]]
+       list     <- labelList[[ii]]
+       if (!list[1] %in% names(indexJson)) {
+         indexJson[[list[1]]] <- list()
+       }
+       if (!list[2] %in% names(indexJson[[list[1]]])) {
+         indexJson[[list[1]]][[list[2]]] <- list()
+       }
+       if (!list[3] %in% names(indexJson[[list[1]]][[list[2]]])){
+         indexJson[[list[1]]][[list[2]]][[list[3]]] <- list()
+       }
        auxHtml <- file.path(list[1], list[2], list[3], "Doc", auxJson[[ii]]) 
        indexJson[[list[1]]][[list[2]]][[list[3]]][[list[4]]] <- auxHtml
      }

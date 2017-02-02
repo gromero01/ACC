@@ -44,7 +44,7 @@ Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
 #Sys.setenv(RSTUDIO_PANDOC = "C:\\Program Files (x86)\\Pandoc")
 
 vecJson  <- list.files(inPath, "\\.json", full.names = TRUE)
-for (fileJson in vecJson[1]){
+for (fileJson in vecJson){
   if ('listTests' %in% ls()) {
   	rm(listTests)
     gc(reset = TRUE)
@@ -58,8 +58,8 @@ for (fileJson in vecJson[1]){
   }
 }
 
-# publishRepo(vecJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 
-#             flagActualizar = FALSE)
+publishRepo(vecJson, pathDest = "\\\\icfesserv5\\Analisisitems$", 
+            flagActualizar = FALSE)
 
 ################################################################################
 # # Depuración metodo 
