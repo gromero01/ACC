@@ -116,7 +116,7 @@ function(object){
                            paste("datBlock_V",
                                  controlPrueba@verInput, ".RData", sep = ""))
     } else {
-      auxExamen     <- gsub("(.+)?(exam\\d+).+", "\\1", controlPrueba@path)
+      auxExamen     <- gsub("(.+)?(exam\\d+).+", "\\2", controlPrueba@path)
       auxExamen     <- ifelse(nchar(auxExamen) > 0, auxExamen, controlPrueba@periodo)
       print(auxExamen)
       datDictionary <- file.path(outPath,
