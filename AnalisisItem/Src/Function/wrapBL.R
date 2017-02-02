@@ -78,6 +78,7 @@ readDIFF <- function(fileName, filePath = "./"){
                     'chi2'       = as.numeric(gsub("(\\d.+)\\s+(\\d.+)", "\\1", V7)), 
                     'gl_chi2'    = as.numeric(gsub("(\\d.+)\\s+(\\d.+)", "\\2", V7)))]
   tab <- tab[, item := paste0("I", gsub("\\s", "", item))]
+  tab <- subset(tab, item != "I")
   return(tab)
 }
 
@@ -245,7 +246,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
                       commentFile = NULL,  calibFile = NULL,
                       runProgram = TRUE, itNumber = NULL, NPArm = 2, 
                       thrCorr = 0.05, datAnclas = NULL, flagSPrior = FALSE, 
-                      flagTPrior = FALSE){
+                      flagTPrior = FALSE, flagRASCH = FALSE){
     
     # # This function generates a Parscale control file given the options in its
     # # arguments, runs it and reads the item parameters
@@ -274,6 +275,9 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     # #  runProgram:
     # #  NPArm: Number of parameters of the model
     # #  datAnclas: Data Frame with items parameters to estimate
+    # #  flagSPrior:
+    # #  flagTPrior:
+    # #  flagRASCH: Perform RASCH 1PL Model
     # # Ret:
     # #  iPar: returns the estimated item parameters
     ################################################################################
@@ -366,6 +370,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
       group      <- as.factor(group)
       groupLabel <- levels(group)
       group      <- as.numeric(group)
+      typeGroupId <- "d"
     }
   } else {
     group       <- rep(1, nrow(responseMatrix))
@@ -597,6 +602,10 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   cat("       NEWTON = 30, \n", file = commandFile, append = TRUE)
   cat("       NQPT = ", nQuadPoints, ", \n", sep = "", file = commandFile, append = TRUE) 
   
+  if (flagRASCH) {
+    cat("       RASCH, \n", file = commandFile, append = TRUE)
+  }
+
   if (!flagSPrior) {
     cat("       NOSprior, \n", file = commandFile, append = TRUE)
   }
@@ -655,30 +664,37 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   setwd(runPath)
   iiCor <- 1
   repeat{
-    system("WinXP-RUNBILOG_f1.bat")
+    system("WinXP-RUNBILOG.bat")
     if (iiCor == 1){
       file.copy(tctFileName, gsub("\\.TCT", "_ori.TCT", tctFileName))
     }
 
     # # Identificando items malos
     auxTCT <- ReadBlTCTFile(tctFileName, ".")
-    isBad  <- auxTCT[, "BISERIAL"] < thrCorr
-    isBad  <- which(itemIds %in% auxTCT[isBad, "item"])
+
+    if (iiCor > 1) { # Despues de eliminar negativos
+      auxTCT <- auxTCT[order(auxTCT[, "BISERIAL"]), ]
+      isBad  <- auxTCT[, "BISERIAL"] < thrCorr
+      isBad <- which(itemIds %in% auxTCT[isBad, "item"][1])
+    } else { # Primera corrida eliminar negativos
+      isBad  <- auxTCT[, "BISERIAL"] < 0
+      isBad  <- which(itemIds %in% auxTCT[isBad, "item"])
+    }   
     auxBlm <- readLines(commandFile)
     linea1 <- grep(pattern = "INUmber", auxBlm)
     linea2 <- min(grep(pattern = ">(CALIB|GROUP)", auxBlm))
     linea4 <- grep(pattern = ">TEST", auxBlm)
     
     # # Construyendo el nuevo archivo
-    auxdata1 <- auxBlm[(linea1 + 1):(linea2 - 3)]
+    auxdata1 <- auxBlm[(linea1 + 1):(linea2 - ifelse(dif,2,3) )]
     auxdata <- unlist(strsplit(paste0(auxdata1, collapse=""), ","))
-    auxdata <- strwrap(paste(subset(auxdata, !(auxdata%in%isBad)), 
+    auxdata <- strwrap(paste(subset(auxdata, !(auxdata %in% isBad)), 
                        collapse = ", "), width = 30)
-    numAux  <- linea2 - linea1 - 3 - length(auxdata)
+    numAux  <- linea2 - linea1 - ifelse(dif,2,3) - length(auxdata)
     auxdata <- c(auxdata, rep("", numAux))
-    auxBlm[(linea1 + 1):(linea2 - 3)] <- gsub("\\s", "", auxdata)
+    auxBlm[(linea1 + 1):(linea2 - ifelse(dif,2,3))] <- gsub("\\s", "", auxdata)
     isBlanck <- grep("^$", auxBlm)
-    isBlanck <- isBlanck[isBlanck > linea1 + 1 & isBlanck < linea2 - 3]
+    isBlanck <- isBlanck[isBlanck > linea1 + 1 & isBlanck < linea2 - ifelse(dif,2,3)]
     if (length(isBlanck) > 0) {
       auxBlm   <- auxBlm[-isBlanck]  
     }
@@ -709,13 +725,15 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
       cat(auxBlm, sep = "\n", file = commandFile)  
     }
 
-    if(all(auxTCT[, "BISERIAL"] >= thrCorr)){
+    # # revisar SCO 
+    sizeSCO <- file.info(scoreFileName)$size
+    if(sizeSCO >= 0 & all(auxTCT[, "BISERIAL"] > 0)){
       break
     }
     iiCor <- iiCor + 1
   }
-  if (runProgram) {
-    system("WinXP-RUNBILOG.bat")
-  }
+  # if (runProgram) {
+  #   system("WinXP-RUNBILOG.bat")
+  # }
   setwd(srcPath)
 }

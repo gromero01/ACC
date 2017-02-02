@@ -22,7 +22,7 @@ td.details-control {
 <TABLE bgcolor="#FFFFFF" BORDER="0" CELLPADDING="2" CELLSPACING="2" WIDTH="100%">
 <TR>
 <TD WIDTH="5%">
-<a href = "../../../../index.html">
+<a href = "../../../../index.html" onClick = "history.go(-1);return true;">
 <img src="../../../../logo_regresar.png" title="Logo regresar" alt="alt text" style="width:75px;height:75px;"/>
 </a>
 </TD>
