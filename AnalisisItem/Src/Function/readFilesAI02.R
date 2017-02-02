@@ -379,11 +379,11 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
 
     items <- substr(conInfo[nSItem:nEItem], 1, 7)
 
-    if (!object@exam %in% c("SABERPRO", "SABERTYT", "SABER11")) {
-      if (all(order(items) != seq(length(items)))) {
-        stop("Disorder of the items in the .com file")
-      }
-    }
+    # if (!object@exam %in% c("SABER359", "SABERPRO", "SABERTYT", "SABER11")) {
+    #   if (any(order(items) != seq(length(items)))) {
+    #     stop("Disorder of the items in the .com file")
+    #   }
+    # }
 
     posNI  <- grep("NI =", conInfo)
     nItems <- as.numeric(gsub("NI = (\\d+)", "\\1", conInfo[posNI]))
@@ -424,8 +424,10 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
     nombres <- c(gsub("\\s", "_", strDat[, "Nombre_del_campo"][-nrow(strDat)]), items)
 
     if (object@exam %in% c("ACC", "SABER359")) {
-      anchos  <- anchos[-1]; anchos[1] <- anchos[1] + 1
+      anchos  <- anchos[-1]
+      anchos[1] <- anchos[1] + 1
       nombres <- nombres[-1]
+      nombres[nombres == "Estado_Final"]<- "tipoApli"
     }
     if (object@exam %in% c("SABERPRO", "SABERTYT", "SABER11")) {
       anchos    <- anchos[-1]
@@ -564,14 +566,23 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
           if (multiMarkOmiss) {
             calItem <- souItem
             isMUO   <- souItem %in% missingValues
-            calItem <- ifelse(souItem == keyItem, 1, 0)
-            calItem <- ifelse(souItem == "", NA, calItem)
-            calItem[isMUO] <- valMUO
+            if (is.na(as.numeric(keyItem))){
+              calItem <- ifelse(souItem == keyItem, 1, 0)
+              calItem <- ifelse(souItem == "", NA, calItem)
+            } else {
+              calItem <- ifelse(as.numeric(souItem) >= 1 & as.numeric(souItem) < 9, 1, 0)
+              calItem <- ifelse(is.na(as.numeric(souItem)), NA, calItem)
+            }
 
-            
+            calItem[isMUO] <- valMUO
           } else {
-            calItem <- ifelse(souItem == keyItem, 1, 0)
-            calItem <- ifelse(souItem == "", NA, calItem)
+            if (is.na(as.numeric(keyItem))){
+              calItem <- ifelse(souItem == keyItem, 1, 0)
+              calItem <- ifelse(souItem == "", NA, calItem)
+            } else {
+              calItem <- ifelse(as.numeric(souItem) >= 1 & as.numeric(souItem) < 9, 1, 0)
+              calItem <- ifelse(is.na(as.numeric(souItem)), NA, calItem)              
+            }
           }
 
           # # if typeItem Ordinal imposed the order of categories,

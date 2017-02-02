@@ -74,6 +74,17 @@ responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges"
   # # Ret:
   # #     : Graphs in eps and png format
 
+
+  if (any(names(resBlockOri) %like% "^A.+")) { # # is writing item
+      colWriting <- grep("^A.+", names(resBlockOri), value = TRUE)
+      for (cc in colWriting){
+        categoria <- resBlockOri[[cc]]
+        resBlockOri[categoria %in% c("9", "."), cc := "O", with = FALSE]  
+        resBlockOri[categoria %in% as.character(1:5) , cc := "Correcta", with = FALSE]        
+        resBlockOri[categoria == "0", cc := "Incorrecta", with = FALSE]
+      }      
+  }
+
   # # Obtain the abilities and responses of all item
   abiliBlock <- personAbilities[, c("iSubject", "ABILITY_NEW", "SERROR")]
   names(abiliBlock)[2] <- "ABILITY"
@@ -126,7 +137,12 @@ responseCurve <- function(resBlockOri, personAbilities, methodBreaks = "Sturges"
                      auxFr <- countCategory(abiliBlock[[z]], indexItems, FALSE)
                      auxX  <- subset(xempICC, Group.1 == z)[, "x"]
                      auxFr <- subset(auxFr, !categoria %in% c("O", "M"))
-                     return(cbind(auxFr, 'x' = auxX))
+                     # # Eliminando grupos no graficables
+                     if (nrow(auxFr) != 0) {
+                       return(cbind(auxFr, 'x' = auxX))
+                     } else {
+                       abiliBlock[[z]] <- NULL
+                     }                     
                    })
   resBlock <- rbindlist(resBlock)
   resBlock <- split(resBlock, f = resBlock$item)
@@ -400,7 +416,6 @@ plotICCB <- function (itemParameters, resBlock, personAbilities,
     }
     return(list(listGGp, infTest))
 }
-
 plotICCP <- function (itemParameters, resBlock, personAbilities,
                       scaleD    = 1.702, methodBreaks = "Sturges",
                       dirPlot   = "ICCexample.eps", namesubCon = NULL,

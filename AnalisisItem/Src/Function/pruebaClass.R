@@ -32,11 +32,13 @@ Test <- setClass("Test",
 	            nomTest        = 'character',  # Nombre para impresion en los reportes
 	            paramLect      = 'list',       # Parametros de lectura de la prueba
 	            codMod         = 'character',
-              listAnal       = 'list'), # Codigos del modelo de la prueba
+              listAnal       = 'list',
+              isUpdate       = 'logical'), # Codigos del modelo de la prueba
 
  		# # Definir los valores por defecto
  		prototype = list(verInput = 1, path = "", exam = "", codMod = "02",
-					  	       nomPrueba = "", paramLect = list(conDirs = "")), 
+					  	       nomPrueba = "", paramLect = list(conDirs = ""), 
+                     isUpdate = TRUE), 
  		validity  = function(object){ 			 			
       auxModelos <- data.frame('codMod' = c("00", "01", "02", "03", "04", "05", "06", "07"),
                                'model'  = c("noModel", "PCM", "RSM", "GRM", "MRD", "2PL", "1PL", "3PL"))		
@@ -114,13 +116,18 @@ function(object){
                            paste("datBlock_V",
                                  controlPrueba@verInput, ".RData", sep = ""))
     } else {
+      auxExamen     <- gsub("(.+)?(exam\\d+).+", "\\1", controlPrueba@path)
+      auxExamen     <- ifelse(nchar(auxExamen) > 0, auxExamen, controlPrueba@periodo)
+      print(auxExamen)
       datDictionary <- file.path(outPath,
                                paste("dictionaryList_",
-                                     gsub(".+(\\\\|\\/)(.+)$", "\\2", controlPrueba@path), "_V",
+                                     gsub(".+(\\\\|\\/)(.+)$", "\\2", controlPrueba@path), 
+                                     "_", auxExamen, "_V",
                                      controlPrueba@verInput, ".RData", sep = ""))
       datReadBlock  <- file.path(outPath,
                                paste("datBlock_",
-                                     gsub(".+(\\\\|\\/)(.+)$", "\\2", controlPrueba@path),"_V",
+                                     gsub(".+(\\\\|\\/)(.+)$", "\\2", controlPrueba@path), 
+                                     "_", auxExamen, "_V",
                                      controlPrueba@verInput, ".RData", sep = ""))
     }
 
@@ -174,17 +181,21 @@ function(object){
   })
 
 
-setMethod("initialize", "Test", function(.Object, ..., test) {    
+setMethod("initialize", "Test", function(.Object, ..., isUpdate = TRUE) {    
     .Object <- callNextMethod()
-    if(missing(test)){
-    	if (length(.Object@path) != 0){
+   	if (length(.Object@path) != 0){
     		if (length(.Object@dictionaryList) == 0 & length(.Object@datBlock) == 0){
-          .Object <- readSupplies(.Object)
+          if (isUpdate){
+            .Object <- readSupplies(.Object)  
+          } else {
+            cat("#############################################################\n",
+                "se uso el parametro 'testUpdate' no se correra ", .Object@nomTest,
+                "\n #############################################################\n\n")
+          }        
     		}    	
-    	}
     }
     .Object
-  })
+})
 
 ################################################################################
 # # Definición Clase Analysis
@@ -200,7 +211,7 @@ Analysis <- setClass("Analysis",
  					  	   outFile     = 'list', 
  					  	   verSalida   = 'numeric', 
                  pathCor     = 'character', 
-                 funVirtual  = 'character'),  					  
+                 pruebasRead = 'character'),  					  
  					    # # Definir los valores por defecto
  					    prototype = list(test = NULL, scripName = "", param = list(), 
  					                    inputFile = list(), outFile = list(pathRdata = "")), 
@@ -305,6 +316,9 @@ setMethod("filterSubsets", "Analysis",
 
     # # Conserved data from sample
     if(object@test@exam %in% c("ACC", "SABER359")){
+      if (is.null(object@param$kApli)) {
+        stop("ERROR_____ Definir kApli en los parametros (.json)")
+      }
       object@datAnalysis <- lapply(object@datAnalysis, function(x){
                                    x$datos <- subset(x$datos, x$datos$tipoApli %in% object@param$kApli)
                                    x$datos <- data.frame(x$datos)
@@ -443,6 +457,7 @@ setMethod("buildSubsets", "Analysis",
 				    'datos'      = object@test@datBlock[iiTest][[1]][[auxParGet]],
 				    'dictionary' = filConP)
         }
+
         if(flagSubCon & length(unique(filConP$subCon)) > 1) {
           for(jjSubCon in unique(filConP$subCon)){             
              filterDict <- subset(filConP, subCon == jjSubCon)
@@ -479,17 +494,20 @@ setMethod("filterAnalysis", "Analysis",
 # # Save result of Analysis
 setGeneric(name = "saveResult", def = function(object, ...){standardGeneric("saveResult")})
 setMethod("saveResult", "Analysis", function(object, listResults, srcPath = "."){
+     dataRead <- data.frame('nomTest' = object@test@nomTest, 
+                            'codSalida' = names(listResults))
      outRdata <- file.path(srcPath, object@outFile$pathRdata)
-     if (!file.exists(outRdata)){
-       save(listResults, file = outRdata)
-     } else {
-       auxResult <- listResults
-       load(file = outRdata)
-       for (resul in names(auxResult)){
-         listResults[[resul]] <- auxResult[[resul]]
-       }     
-       save(listResults, file = outRdata)
+     if (file.exists(outRdata)){
+        auxResult <- listResults
+        auxDataRe <- dataRead
+        load(file = outRdata)
+        for (resul in names(auxResult)){
+          listResults[[resul]] <- auxResult[[resul]]
+        }     
+        dataRead <- unique(rbind(dataRead, auxDataRe))
+        save(dataRead, listResults, file = outRdata)
      }
+     save(dataRead, listResults, file = outRdata)
 })
 
 # # Definición Metodos necesarios para definir una clase
@@ -501,12 +519,15 @@ setGeneric(name = "outHTML", def = function(object, ...){standardGeneric("outHTM
 # # Metodos para correr varias pruebas con varios analisis
 ################################################################################
 
-analyzeTests <- function(vecJson, anUpdate = NULL){
+analyzeTests <- function(vecJson, anUpdate = NULL, testUpdate = NULL, 
+                         getDatBlocks = FALSE){
   # # inicializa la clase Test para cada prueba en la entrada
   # #
   # # Arg:
   # #  fileJson: [character] la ruta del archivo de parametros
   # #  anUpdate: [vector] lista de analisis para correr
+  # #  testUpdate: [vector] lista de prubas-formas a correr
+  # #  getDatBlocks: [boolean] se quiere tener en memoria los datos de la prueba
   # # Ret:
   # #  listTests: [list-Test] lista con todas las pruebas analizadas
   
@@ -534,29 +555,96 @@ analyzeTests <- function(vecJson, anUpdate = NULL){
          paramLect <- list(conDirs = jsonLec$conDirs, 
                            valMUO = jsonLec$valMUO)            
        }
+       
+       # # Creando nueva prueba
+       isTestUpdate = (is.null(testUpdate) | test %in% testUpdate)
        auxTest <- new('Test', path = jsonLec$path, exam = jsonLec$exam, 
                       codMod = jsonLec$codMod, verInput = jsonLec$verInput, 
                       periodo = jsonLec$periodo,
-                      nomTest = jsonLec$nomTest, paramLect = paramLect)
+                      nomTest = jsonLec$nomTest, paramLect = paramLect, 
+                      isUpdate = TRUE)#isTestUpdate)       
+       
        if ("Filtros" %in% names(readJson[[test]])){
          auxFiltros <- Filtros(auxTest, readJson[[test]]$Filtros)  
          auxTest    <- codeAnalysis(auxFiltros)
-       }    
+       }
+       # # Parametro para correr una forma en particular
+       if (isTestUpdate){
+          anUpdateaux <- anUpdate
+       } else {        
+          anUpdateaux <- c("")
+       }
+
        auxTest <- runAnalysis(object   = auxTest,
                               jsonTest = readJson[[test]]$Analisis, 
-                              anUpdate = anUpdate)
+                              anUpdate = anUpdateaux)
+       
+       if (!getDatBlocks){
+         auxTest@datBlock <- list()
+         gc(reset = TRUE)
+       }
+
        if ("Filtros" %in% names(readJson[[test]])){
          auxTest@listAnal <- c('Filtros' = auxFiltros, 
-                               auxTest@listAnal)
+                               auxTest@listAnal) 
+         rm(auxFiltros)
        }
-       listTests[[test]] <- auxTest
-       rm(auxTest, auxFiltros)
+       listTests[[test]] <- auxTest 
+       rm(auxTest)
        gc(reset = TRUE)
      }
   }
   return(listTests)
 }
-  
+
+################################################################################
+# # Función para armarIdentifica (DIFF)
+################################################################################
+
+armaIdentifica <- function(listTests, patternExclu = "(-21|01JN|-06|-07|(pbaF\\d{3}(06|07).+))\\.con"){
+    # # inicializa la clase Test para cada prueba en la entrada
+    # #
+    # # Arg:
+    # #  fileJson: [character] la ruta del archivo de parametros
+    # #  anUpdate: [vector] lista de analisis para correr
+    # # Ret:
+    # #  listTests: [list-Test] lista con todas las pruebas analizadas
+    fileIdentifica <- file.path(outPath, "outIdentifica.Rdata")
+    baseIdenti     <- NULL
+    for (test in listTests) {
+        auxFormas  <- names(test@datBlock)
+        auxFormas  <- auxFormas[!grepl(patternExclu, auxFormas)]
+        if (length(auxFormas) > 0) {
+          getIDFORMA <- lapply(auxFormas, function(x) {
+                              auxTable <- test@datBlock[[x]][['oriBlock']]
+                              auxTable <- cbind(SNP = auxTable[, SNP], 'FORMA' = x)
+                              })
+          getIDFORMA <- data.frame(do.call(rbind, getIDFORMA))
+          baseIdenti <- rbind(baseIdenti, getIDFORMA)      
+        }
+    }
+    baseIdenti[, "FORMA_BASE"] <- gsub("(pba|PBA|pbaF|UOF)(\\d{3})(.+)?", "\\2",
+                                        baseIdenti[, "FORMA"])
+    baseIdenti[, "FORMA_BASE"] <- paste0("Test", baseIdenti[, "FORMA_BASE"])
+    if (any(duplicated(baseIdenti[, c("SNP", "FORMA_BASE")]))) {
+      stop("Hay mas de una forma base en listTests (Separe las pruebas en el json)")
+    }
+    
+    baseIdenti <- dcast(baseIdenti, SNP ~ FORMA_BASE, value.var = "FORMA")
+    baseIdenti[, "SNP"] <- as.character(baseIdenti[, "SNP"])
+    baseIdenti <- data.table(baseIdenti)
+    if (file.exists(fileIdentifica)) {
+      newBase <- data.table(baseIdenti)
+      load(fileIdentifica)
+      baseIdenti <- merge(baseIdenti, newBase, by = "SNP", all = TRUE)
+    }
+    
+    save(baseIdenti, file = fileIdentifica)
+    write.table(baseIdenti, sep = "\t", file = gsub("\\.Rdata", ".txt", fileIdentifica), row.names = FALSE, quote = FALSE)
+    return(cat("-----Archivo para DIFF generado!!-----\n"))
+}
+
+
 setGeneric(name = "runAnalysis", def = function(object, ...){standardGeneric("runAnalysis")})
 setMethod("runAnalysis", "Test",
 function(object, jsonTest, anUpdate = NULL){
@@ -583,7 +671,7 @@ function(object, jsonTest, anUpdate = NULL){
         isExecuted <- FALSE
      }
      if (analisis %in% anUpdate | (is.null(anUpdate) & !isExecuted)){
-         codeAnalysis(auxAnalysis)  
+         auxAnalysis <- codeAnalysis(auxAnalysis)  
          outXLSX(auxAnalysis, srcPath = ".")
      } else {
          cat("-----> Cargando los resultados de la clase '", analisis, "'\n")
@@ -593,6 +681,11 @@ function(object, jsonTest, anUpdate = NULL){
      if (class(auxAnalysis) != "try-error"){
        auxAnalysis@test@datBlock       <- list()
        auxAnalysis@test@dictionaryList <- list()
+       auxAnalysis@datAnalysis <- lapply(auxAnalysis@datAnalysis, 
+                                         function(x){
+                                          x$datos = x$datos[0, ]
+                                          return(x) })
+       
        object@listAnal  <- c(object@listAnal, auxAnalysis)
        names(object@listAnal)[length(object@listAnal)] <- analisis
      }
@@ -634,8 +727,8 @@ jointReports <- function(listTests, vecJson, pathJS = 'lib', flagView = FALSE){
     #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoom.jsp" type="text/javascript"></script>',
     #            paste0('  <script src="lib/FancyZoom_1.1/js-global/FancyZoomHTML.jsp" type="text/javascript"></script>',
                  paste0('  <link href="', pathJS,'/datatables-default-1.10.7/dataTables.extra.css" rel="stylesheet" />'),
-                 paste0('  <link href="', pathJS,'/datatables-default-1.10.7/jquery.dataTables.min.css" rel="stylesheet" />'))
-                 paste0('<link href="', pathJS,'/../css/linkDownload.css" rel="stylesheet" />')
+                 paste0('  <link href="', pathJS,'/datatables-default-1.10.7/jquery.dataTables.min.css" rel="stylesheet" />'),
+                 paste0('<link href="', pathJS,'/../css/linkDownload.css" rel="stylesheet" />'))
                  
     archHtml  <- readLines(salPathDoc)
     archCSS   <- grep("<!-- jQuery -->", archHtml)

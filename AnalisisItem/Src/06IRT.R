@@ -71,11 +71,9 @@ IRT <- function(test, paramExp = NULL){
   } else {
     auxVerSalida <- 1
   }
-
   if (!is.null(paramExp)) {
-    isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
-    isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
-    paramExp  <- c(paramExp[isNew], paramDefault[isDefault])
+    isDefault <- setdiff(names(paramDefault), names(paramExp))
+    paramExp  <- c(paramExp, paramDefault[isDefault])
   } else {
     paramExp <- paramDefault
   }
@@ -83,7 +81,7 @@ IRT <- function(test, paramExp = NULL){
   print(paramExp)
   object <- new("IRT", test = test, param = paramExp, 
                 verSalida = auxVerSalida)
-  object <- filterAnalysis(object)
+  object <- filterAnalysis(object) # Organizando filtros            
   return(object)
 }
 
@@ -115,6 +113,7 @@ funRescal <- function(datFrame, colName, meanHab = 0, sdHab = 1, meanFin = 0,
 
 setMethod("codeAnalysis", "IRT",
           analIRT <- function(object){
+  #object <- filterAnalysis(object) # Organizando filtros            
   binPath <- file.path("..", "Src", "bin")
   outPath <- file.path(outPath, "06IRT")
   dir.create(outPath, recursive = TRUE, showWarnings = FALSE)    
@@ -157,13 +156,52 @@ setMethod("codeAnalysis", "IRT",
   # # see ?psych::alpha
   isCheckKeys <- FALSE
 
-  # # Cargando archivo de anclas
-  if (!is.null(object@param$AnclaRdata)) {
+  # # Cargando archivo/s de anclas
+  if (!is.null(object@param$AnclaRdata)) {          
      fileAncla <- object@param$AnclaRdata
-     load(fileAncla)
-     listResultsAN <- listResults
-     rm(listResults)
-     #listResultsAN <- lapply(listResultsAN, function(x) x$tablaFin)
+     formAncla <- object@param$formAncla
+
+     # # Comprobacion de parametros
+     if (length(fileAncla) != length(formAncla)) {
+       stop("La longitud de 'AnclaRdata' y de 'formAncla' no es la misma")
+     } 
+
+     # # Armando data frame     
+     listResultsAN <- NULL
+     for (jj in seq(length(fileAncla), 1)) {
+        if (file.exists(fileAncla[jj])){
+          load(fileAncla[jj])  
+        } else {
+          stop("ERROR...... No encontre 'AnclaRdata': ", fileAncla[jj])
+        }
+ 
+        if (formAncla[jj] %in% names(listResults)) {
+          cat("...... Lecutura de la forma", formAncla[jj], 
+              "\n...... del archivo:", fileAncla[jj], "\n")
+          auxCalibra <- listResults[[formAncla[jj]]]$tablaFin
+          if (!is.null(listResultsAN)) {
+            isNewCal   <- !auxCalibra[, item] %in% listResultsAN[, item]
+            auxCalibra <- auxCalibra[isNewCal, ]
+            auxCalibra <- subset(auxCalibra, select = intersect(names(auxCalibra), 
+                                 names(listResultsAN)))
+            listResultsAN <- subset(listResultsAN, select = intersect(names(auxCalibra), 
+                                 names(listResultsAN)))
+          }
+          listResultsAN <- rbind(listResultsAN, auxCalibra)
+        } else {
+          stop("ERROR...... No se encontro la forma... ", formAncla[jj], 
+               "en el archivo 'AnclaRdata': ", fileAncla[jj])
+        }
+        # # Parametros de transformacion
+        posBuscar <- ifelse(!is.null(object@param$posMeSig), 
+                            object@param$posMeSig, length(fileAncla))
+        if (jj == posBuscar) {
+            cat("Transformacion con :", fileAncla[jj], "\n")
+            meanAbilParam <- listResults[[formAncla[jj]]]$meanAbil
+            sdAbilParam   <- listResults[[formAncla[jj]]]$sdAbil
+        }
+        rm(listResults)         
+     }
   } else {
      listResultsAN <- NULL
   }
@@ -203,7 +241,7 @@ setMethod("codeAnalysis", "IRT",
       indexItems    <- dictVarPrueba[, 'id']
       isIDStudent   <- names(object@datAnalysis[[kk]]$datos)
       isIDStudent   <- isIDStudent[!isIDStudent %in% indexItems]
-      personDataBlo <- object@datAnalysis[[kk]]$datos[ , isIDStudent, with = FALSE]
+      personDataBlo <- object@datAnalysis[[kk]]$datos[, isIDStudent, with = FALSE]
       dataCor       <- object@datAnalysis[[kk]]$datos[, indexItems, with = FALSE]
 
       if (object@test@exam == "ACC"){
@@ -253,11 +291,11 @@ setMethod("codeAnalysis", "IRT",
         # #     ##################
       }
       auxCodModel <- unique(codModels)
-      if (auxCodModel %in% c("05", "06", "07")){
+      if (auxCodModel %in% c("00", "05", "06", "07")){
         auxPath <- getwd()
         runPath <- file.path(outPath, 'corridas')
 
-        auxNPAR <- ifelse(auxCodModel == "05", 1, 
+        auxNPAR <- ifelse((auxCodModel == "05") | (auxCodModel == "00"), 1, 
                           ifelse(auxCodModel == "06", 2, 3))
         
         # # Create .blm and .dat file
@@ -270,7 +308,7 @@ setMethod("codeAnalysis", "IRT",
                  runPath = file.path(outPath, 'corridas'),
                  verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
                  commentFile = indexData, NPArm = auxNPAR, thrCorr = 0.05, 
-                 datAnclas = listResultsAN[[object@param$formAncla]]$tablaFin, 
+                 datAnclas = listResultsAN, 
                  flagSPrior = object@param$flagSPrior)
         
         # Reading results of chi square test 
@@ -314,22 +352,38 @@ setMethod("codeAnalysis", "IRT",
         } else {
            load(outFileAbili)
         }
+
+        # # habilidades por TCT
+        if (auxCodModel == "00") {
+          itemParameters <- merge(itemParameters, 
+                                  tctParam[, c("item", "TRIED", "RIGHT")], 
+                                  by = "item")
+          itemParameters[, 'dif']      <- (1 - itemParameters[, 'RIGHT'] / 
+                                          itemParameters[, 'TRIED']) * 100
+          itemParameters[, 'TRIED'] <- NULL
+          itemParameters[, 'RIGHT'] <- NULL
+          personAbilities[, 'ABILITY'] <- personAbilities[, 'RIGHT'] / 
+                                          personAbilities[, 'TRIED'] * 100
+        }
  
         # # Usando promedio de anclaje
-        if (!is.null(listResultsAN)) { # Indicadora de Anclas
-          meanAbil <- listResultsAN[[object@param$formAncla]]$meanAbil
-          sdAbil   <- listResultsAN[[object@param$formAncla]]$sdAbil
+        if (!is.null(object@param$AnclaRdata)) { # Indicadora de Anclas
+          meanAbil <- meanAbilParam
+          sdAbil   <- sdAbilParam
         } else {
           meanAbil <- mean(personAbilities$ABILITY)
           sdAbil   <- sd(personAbilities$ABILITY)         
         }
+
+        # cat(meanAbil)
+        # cat(sdAbil)
 
         # # Transformando dificultad y habilidad
         personAbilities[, "ABILITY_NEW"] <- personAbilities[, "ABILITY"]
         itemParameters[, "dif_NEW"]      <- itemParameters[, "dif"]
         itemParameters[, "eedif_NEW"]    <- itemParameters[, "eedif"]
 
-        if (all(c("espMean", "espSd") %in% names(object@param))){
+        if (all(c("espMean", "espSd") %in% names(object@param)) & auxCodModel != "00"){
           personAbilities <- funRescal(personAbilities, "ABILITY_NEW", meanHab = meanAbil, 
                                        sdHab = sdAbil, meanFin = object@param$espMean, 
                                        sdFin =  object@param$espSd, flagEE = FALSE)
@@ -378,6 +432,8 @@ setMethod("codeAnalysis", "IRT",
                                paste0("catFreq_V",
                                versionOutput, ".RData"))
         cat("...... Guardado informacion de opciones de respuesta .\n")
+        #save(resBlockOri, personAbilities, keyData, dirPlotOPpng, 
+        #     dirCatFre, indexItems, file = "auxiliar.Rdata")
         listOP <- responseCurve(resBlockOri, personAbilities,
                                 methodBreaks = "Sturges",
                                 keyData = keyData,
@@ -396,6 +452,9 @@ setMethod("codeAnalysis", "IRT",
 
         cat("......Guardado ICC. \n")  
         #source(file.path(funPath, "plotICCP.R"))
+        # save(itemParameters, resBlockFin, personAbilities, object@param, subComm, 
+        #      dirPlotICCpng, kk, outPath, indexItemsFin, meanAbil, sdAbil, 
+        #      file = "aux.Rdata")
         listICC <- plotICCB(itemParameters, resBlockFin, personAbilities,
                    scaleD = object@param$constDmodel, flagGrSep = TRUE,
                    methodBreaks = "Sturges", namesubCon = subComm,
@@ -429,22 +488,22 @@ setMethod("codeAnalysis", "IRT",
         listResults[[auxPru]][["plotInfo"]] <- infTest
 
         # # Information of block
-        if (object@test@exam == "SABER359") {
-           infoBloque <- data.table(dictVarPrueba)
-           infoBloque <- infoBloque[id %in% indexItems, ]
-           infoBloque <- infoBloque[match(indexItems, infoBloque$id),
-                                    list(codigo_prueba, COMPONENTE,
-                                         COMPETENCIA, keyItem, 'item_cod' = id,
-                                         'item' = paste0(SUBBLOQUE, sprintf("%.2d", 1:length(id)))),
-                                          by = "SUBBLOQUE"]
-        } else {
+        # if (object@test@exam == "SABER359") {
+        #    infoBloque <- data.table(dictVarPrueba)
+        #    infoBloque <- infoBloque[id %in% indexItems, ]
+        #    infoBloque <- infoBloque[match(indexItems, infoBloque$id),
+        #                             list(codigo_prueba, COMPONENTE,
+        #                                  COMPETENCIA, keyItem, 'item_cod' = id,
+        #                                  'item' = paste0(SUBBLOQUE, sprintf("%.2d", 1:length(id)))),
+        #                                   by = "SUBBLOQUE"]
+        # } else {
           infoBloque <- data.table(dictVarPrueba)
           infoBloque <- infoBloque[id %in% indexItems, ]
           infoBloque <- infoBloque[match(indexItems, infoBloque$id),
                                    list('item_cod' = paste0("ITEM", sprintf("%.4d", 1:length(id))),
                                         'item' = paste0("I", id), codigo_prueba, keyItem)]
 
-        }
+        # }
 
         # # Codigos de los subloques
         itemParameters <- merge(itemParameters, infoBloque, by = "item", all = TRUE)
@@ -458,8 +517,14 @@ setMethod("codeAnalysis", "IRT",
         tablaRep[, item := paste0("I", item)]
         tablaFlags  <- merge(data.table(itemParameters)[, list(item, keyItem)],
                              tablaRep, by = "item", all.y = TRUE)
+        # # Change key categoria
+        if (any(tablaFlags[, item] %like% "^IA.+")){
+          tablaFlags[!keyItem %in% LETTERS, keyItem := "Correcta"]
+        }
+        #save(tablaFlags, file = "aux.Rdata")
         tablaFlags[keyItem == categoria, keyAbility := mAbility]
-        tablaFlags[, keyAbility := na.omit(keyAbility)[1], by = "item"]
+        #print(str(tablaFlags))
+        tablaFlags[, keyAbility := na.omit(keyAbility)[1], by = "item"]        
         tablaFlags  <- tablaFlags[!categoria %in% object@param$idNoPKey,
                                   list('FLAGPROP' = ifelse(min(prop) < 0.1 | max(prop) >= 0.9, 1, 0),
                                        'FLAGKEY2'  = ifelse(sum(mAbility > keyAbility), 1, 0)), by = "item"]
@@ -475,7 +540,7 @@ setMethod("codeAnalysis", "IRT",
 
         # # Cruce con Anclas
         if (!is.null(listResultsAN)) { # Indicadora de Anclas
-          itemAnclas     <- subset(listResultsAN[[object@param$formAncla]]$tablaFin, select = c("item"))
+          itemAnclas     <- subset(listResultsAN, select = c("item"))
           itemAnclas     <- cbind(itemAnclas, 'Ancla' = 1)
           itemParameters <- merge(itemParameters, itemAnclas, by = "item", all.x = TRUE)
           isNOAncla      <- is.na(itemParameters[["Ancla"]])
@@ -509,13 +574,20 @@ setMethod("codeAnalysis", "IRT",
         # # Cambio en el se de la dificultad
         tablaFin[, eedif_NEW := eedif_NEW / abs(dif_NEW) * 100]
 
+        # # Apagando lo no necesario en el caso de reporte TCT
+        if (auxCodModel == "00") {
+          tablaFin[, c('p_val_chi2', 'chi2', 'gl_chi2',
+                       'maxINFO', 'disc', 'azar', 'eeazar', 'eedif_NEW', 
+                       'dir_ICC') := list(NA, NA, NA, NA, NA, NA, NA, NA, '')]
+        }
+
         # # Alertas
         tablaFin <- cbind(tablaFin, tablaFin[, list(
                           'codMOD' = unique(codModels),
                           'FLAGMEAN' = ifelse((PCT >90) | (PCT < 10), 1, 0),
                           'FLAGCORR' = ifelse(CORRELACION < 0.1, 1, 0),
                           'FLAGA'    = ifelse(disc < 0.5 , 1, 0),
-                          'FLAGB'    = ifelse(dif > 3 | dif < -3, 1, 0),
+                          'FLAGB'    = ifelse(auxCodModel != "00", ifelse(dif > 3 | dif < -3, 1, 0), 0),
                           'FLAGBISE' = ifelse(BISERIAL < 0.1, 1, 0), 
                           'FLAGINFIT' = 0,   #ifelse((INFIT < minOutms[indPos]) | (INFIT > maxOutms[indPos]), 1, 0),
                           'FLAGOUTFIT' = 0,  #ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
@@ -535,6 +607,7 @@ setMethod("codeAnalysis", "IRT",
       outPath <- auxOutPath
   }
   saveResult(object, listResults)
+  return(object)
 })
 
 ################################################################################
@@ -716,6 +789,7 @@ function(object, srcPath){
        "</table>",
        "</center>")
   nomSubPru <- names(object@datAnalysis)
+
   for(ii in nomSubPru){
     nomAux <- gsub("::|\\s", "_", ii) 
     nomSub <- gsub("^(.+)(::)(.+)", "\\3", ii)
@@ -729,7 +803,10 @@ function(object, srcPath){
       lay  <- rbind(c(1,1,1,1,1,2))
       pFin <- suppressWarnings(grid.arrange(grobs = list(listResults[[nomAux]][["itHaMap"]][[1]], 
                                listResults[[nomAux]][["itHaMap"]][[2]]), layout_matrix = lay))
+      # # Mapa items personas
       suppressWarnings(grid::grid.draw(pFin))
+      
+      # # Curva de informacion
       pathGraph  <- object@test@nomTest
       pathGraph  <- gsub("\\)", paste0(" - ", nomSub, ")"), pathGraph)      
       plotInfo <- ggplot(listResults[[nomAux]][["plotInfo"]], aes(x = x, y = y)) + geom_blank() + 
@@ -739,7 +816,9 @@ function(object, srcPath){
                             pathGraph), "")) +
                   ylab("Información") + xlab("Habilidad") +
                   theme_bw(base_size = 12) 
-      plot(plotInfo)
+      if (object@test@codMod != "00") {
+        plot(plotInfo)
+      }      
       cat('<h3 id="IRT_Header_tab">\n', nomSub, '</h3>\n\n')
       tabHtml <- reporteItem(listResults[[nomAux]]$tablaFin, idPrueba = nomAux)    
       cat(as.character(htmltools::tagList(tabHtml)))

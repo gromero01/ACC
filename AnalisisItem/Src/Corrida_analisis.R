@@ -15,7 +15,7 @@
 # #   
 # # ToDo:
 # #       
-################################################################################
+#################################################################################
 
 ################################################################################
 # # Global Definitions
@@ -43,28 +43,29 @@ dirPandoc <- file.path(Sys.getenv("APPDATA"), "..", "Local\\Pandoc")
 Sys.setenv(RSTUDIO_PANDOC = dirPandoc)
 #Sys.setenv(RSTUDIO_PANDOC = "C:\\Program Files (x86)\\Pandoc")
 
-vecJson  <- c("../Input/parameters.json")
-
-for (fileJson in vecJson){
-  listTests <- analyzeTests(fileJson, anUpdate = "IRT")
-  jointReports(listTests, fileJson, pathJS = "../../../../lib", 
-   	           flagView = FALSE)
+vecJson  <- list.files(inPath, "\\.json", full.names = TRUE)
+for (fileJson in vecJson[1]){
+  if ('listTests' %in% ls()) {
+  	rm(listTests)
+    gc(reset = TRUE)
+  }
+  try(listTests <- analyzeTests(fileJson, getDatBlocks = TRUE))
+  #armaIdentifica(listTests)
+  
+  if ("listTests" %in% ls()){
+    jointReports(listTests, fileJson, pathJS = "../../../../lib", 
+                 flagView = FALSE)
+  }
 }
 
-#publishRepo(vecJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 
-#            flagActualizar = FALSE)
+# publishRepo(vecJson, pathDest = "C:\\Users\\jcarrasco\\Desktop\\Version1", 
+#             flagActualizar = FALSE)
 
 ################################################################################
 # # Depuración metodo 
 ################################################################################
-prueba0 <- listTests[[1]]
-object  <- listTests[[1]]@listAnal[["IRT"]]
-#codeAnalysis(object)
-#outHTML(object)
-# prueba0 <- new('Test', path = "JUNTURAS/EK20161/exam717/PBAF000401JN", 
-# 	           exam = "SABERTYT", codMod = "07", verInput = 1, 
-#                periodo = "EK20161", nomTest = "SABER T&T(Lectura Crítica Conjunta)", 
-#                paramLect = list("conDirs" = "pbaF000401JN.con"))
-# object <- IRT(test = prueba0, paramExp = list("kOmissionThreshold" = 1))
-# codeAnalysis(object)
-# outHTML(object)
+# listTests <- analyzeTests(fileJson, getDatBlocks = TRUE)
+
+# prueba0 <- listTests[["Test1"]]
+# prueba0 <- readSupplies(prueba0)
+# object  <- prueba0@listAnal[["IRT"]]

@@ -24,17 +24,17 @@
 
 # # Crear variable de equiparacion basada en el func_puntaje en la prueba
 func_puntaje <- function(base, ...) {
-  omit <- c(...)
-  if (length(omit) > 0) {
-    apply(base[,-omit], 1, sum, na.rm=TRUE)
-  } else {
-    apply(base, 1, sum, na.rm=TRUE)
-  }
+omit <- c(...)
+if (length(omit) > 0) {
+apply(base[,-omit], 1, sum, na.rm=TRUE)
+} else {
+apply(base, 1, sum, na.rm=TRUE)
+}
 }
 
 # # Standardizing function
 func_z <- function(variable){
-  ( (variable - mean(variable, na.rm=TRUE)) / sd(variable, na.rm=TRUE) )
+( (variable - mean(variable, na.rm=TRUE)) / sd(variable, na.rm=TRUE) )
 }
 
  
@@ -43,9 +43,10 @@ func_z <- function(variable){
 ###############################################################################
 
 # # Modelos de regresion logistica
-func_RL_crit <- function(resp_var, crit, use.glm = TRUE, use.nnet = FALSE, ...){
+func_RL_crit <- function(resp_var, crit, use.glm = TRUE, 
+                         use.nnet = FALSE, ...) {
   if (use.glm == TRUE & use.nnet == FALSE) {
-    rl <- glm(resp_var ~ func_z(crit), binomial, ...)
+  rl <- glm(resp_var ~ func_z(crit), binomial, ...)
   } 
   if(use.glm == FALSE & use.nnet == FALSE) {
     require(rms)
@@ -57,16 +58,16 @@ func_RL_crit <- function(resp_var, crit, use.glm = TRUE, use.nnet = FALSE, ...){
     rl$df.residual   <- rl$stats[["d.f."]]
   }
   if(use.glm == FALSE & use.nnet == TRUE){
-    require(nnet)
-    rl <- multinom(resp_var ~ func_z(crit))
-    rl$df.residual <- rl$edf
-    nullrl <- multinom(resp_var ~ 1)
-    rl$null.deviance <- nullrl$deviance
+  require(nnet)
+  rl <- multinom(resp_var ~ func_z(crit))
+  rl$df.residual <- rl$edf
+  nullrl <- multinom(resp_var ~ 1)
+  rl$null.deviance <- nullrl$deviance
   }
   if(use.glm == TRUE & use.nnet == TRUE){
     stop("Stop procedure due to specify glm and multinom model at the same")
-  }  
-  rl
+    }  
+rl
 }
 
 func_RL_no_inter <- function(resp_var, crit, group, use.glm = TRUE, 
@@ -93,7 +94,7 @@ func_RL_no_inter <- function(resp_var, crit, group, use.glm = TRUE,
   if(use.glm == TRUE & use.nnet == TRUE){
     stop("Stop procedure due to specify glm and multinom model at the same")
     }  
-  rl
+rl
 }
 
 func_RL_inter <- function(resp_var, crit, group, use.glm = TRUE, 
@@ -121,7 +122,7 @@ func_RL_inter <- function(resp_var, crit, group, use.glm = TRUE,
   if(use.glm == TRUE & use.nnet == TRUE){
     stop("Stop procedure due to specify glm and multinom model at the same")
     }
-  rl
+rl
 }
 
 
@@ -131,8 +132,9 @@ func_RL_inter <- function(resp_var, crit, group, use.glm = TRUE,
 
 func_R_McFadden <- function(rl) {
   num <- rl$deviance
-  den <- rl$null.deviance 
-  1 - (num/den)
+  den <- rl$null.deviance
+ 
+1 - (num/den)
 }
 
 
@@ -140,9 +142,10 @@ func_R_McFadden <- function(rl) {
 # # Obtencion de los modelos
 ###############################################################################
 
-# # Calcular Regresiones-Logisticas sobre los items de la base
+# # Calcular R-L sobre los items de la base
 func_RL_DIF <- function(base, crit, group, tipo = "conjunto", 
                         use.glm = TRUE, use.nnet = FALSE, ...) {
+
   if (tipo == "conjunto") {
     cbind(lapply(base, func_RL_crit, crit, use.glm, use.nnet, ...),
           lapply(base, func_RL_inter, crit, group, use.glm, use.nnet, ...))
@@ -163,9 +166,9 @@ modeltest <- function(coupled_data, tipo = "conjunto") {
 # Input coupled data should be as a line resulting from
 # func_RL_DIF
   if (tipo == "conjunto") {
-    LL <- abs(coupled_data[[1]][["deviance"]] - coupled_data[[2]][["deviance"]])
-    df <- abs(coupled_data[[1]][["df.residual"]] - coupled_data[[2]][["df.residual"]])
-    c(G = LL, df = df, p.value = pchisq(LL, df, lower.tail = FALSE))
+  LL <- abs(coupled_data[[1]][["deviance"]] - coupled_data[[2]][["deviance"]])
+  df <- abs(coupled_data[[1]][["df.residual"]] - coupled_data[[2]][["df.residual"]])
+  c(G = LL, df = df, p.value = pchisq(LL, df, lower.tail = FALSE))
   } else {
     LL1 <- abs(coupled_data[[1]][["deviance"]] - coupled_data[[2]][["deviance"]])
     LL2 <- abs(coupled_data[[2]][["deviance"]] - coupled_data[[3]][["deviance"]])
@@ -174,7 +177,7 @@ modeltest <- function(coupled_data, tipo = "conjunto") {
     df2 <- abs(coupled_data[[2]][["df.residual"]] - coupled_data[[3]][["df.residual"]])
     
     c(G1 = LL1, df1 = df1, p.value1 = pchisq(LL1, df1, lower.tail = FALSE),
-      G2 = LL2, df2 = df2, p.value2 = pchisq(LL2, df2, lower.tail = FALSE))
+      G2=LL2, df2 = df2, p.value2 = pchisq(LL2, df2, lower.tail = FALSE))
   }
 }
 
@@ -208,13 +211,16 @@ func_R_Delta_McFadden <- function(coupled_data, tipo = "conjunto") {
 	  R3 <- func_R_McFadden(coupled_data[[2]])
 	  Rs <- list(R2crit = R1, R2inter = R3)
 	  Rdelta <- list(RdG = R3 - R1)
+
   } else {
 	  R1 <- func_R_McFadden(coupled_data[[1]])
 	  R2 <- func_R_McFadden(coupled_data[[2]])
 	  R3 <- func_R_McFadden(coupled_data[[3]])
 	  Rs     <- list(R2crit = R1, R2group = R2, R2inter = R3)
 	  Rdelta <- list(RdU = R2 - R1, RdN = R3 - R2)
+
   }
+
   return(list(Rs, Rdelta))
 }
 
@@ -230,40 +236,39 @@ func_R_Deltas_McFadden <- function(RL_DIF, tipo = "conjunto") {
 # # Funciones para ejecutar las dos fases en la identificacion
 # # basadas en el puntaje en la prueba
 # # detectados tanto al nivel de 0.05 como 0.01 de significancia
-# # empleando y sin emplear una medida del tamaño del efecto (R2delta)
+# # empleando y sin emplear una medida del tama\~no del efecto (R2delta)
 ###############################################################################
 
 # # Obtener los items detectados con DIF en la primera fase
 func_RL_fase_1 <- function(base, group, alfa, tipo = "conjunto", 
-                           use.glm = TRUE, use.nnet = FALSE, itSha) {
+                           use.glm = TRUE, use.nnet = FALSE) {
 
-  RL_DIF <- func_RL_DIF(base[, itSha], func_puntaje(base), group, tipo, use.glm, use.nnet)
-  tests  <- func_RL_test(RL_DIF, tipo)
-  sig    <- func_RL_sig(tests, alfa, tipo)
+RL_DIF  <- func_RL_DIF(base, func_puntaje(base), group, tipo, use.glm, use.nnet)
+tests   <- func_RL_test(RL_DIF, tipo)
+sig     <- func_RL_sig(tests, alfa, tipo)
 
-  nitems <- ncol(base)
-  if ( length(sig) >= (nitems - 2) ) {
-  	sig <- c()
-  }
+nitems <- ncol(base)
+if ( length(sig) >= (nitems - 2) ) {
+	sig <- c()
+}
 
-  salida  <- list(sig = sig)
+salida  <- list(sig = sig)
 
-  return(salida)
+return(salida)
 }
 
 # # Obtener los items detectados con DIF en la segunda fase
 # # junto con sus caracteristicas
 
 func_RL_fase_2 <- function(base, group, fase_1, tipo = "conjunto", 
-                           use.glm = TRUE, use.nnet = FALSE, pseudo.R = "McFadden", itSha) {
+                           use.glm = TRUE, use.nnet = FALSE, pseudo.R = "McFadden") {
 
+  
   items_fase_1 <- fase_1$sig
   Rdelta  <- switch(pseudo.R, McFadden = func_R_Deltas_McFadden, None = NULL)
 
-  nomIt_fase1 <- names(base[, itSha])[items_fase_1]
-  basePunt <- base[, !names(base) %in% nomIt_fase1]
-
-  RL_DIF_2nd  <- func_RL_DIF(base[, itSha], func_puntaje(basePunt),
+  
+  RL_DIF_2nd  <- func_RL_DIF(base, func_puntaje(base, items_fase_1),
                              group, tipo, use.glm, use.nnet)
   tests_2nd   <- func_RL_test(RL_DIF_2nd, tipo)
 
@@ -274,8 +279,8 @@ func_RL_fase_2 <- function(base, group, fase_1, tipo = "conjunto",
     R.sq   <- data.frame(lapply(Rdeltas_2nd, function(x) unlist(x[[1]])))
     Deltas <- data.frame(lapply(Rdeltas_2nd, function(x) unlist(x[[2]])))
       
-    colnames(R.sq) <- colnames(tests_2nd)
-    names(Deltas)  <- colnames(tests_2nd)
+    colnames(R.sq)   <- colnames(tests_2nd)
+    names(Deltas) <- colnames(tests_2nd)
   }
 
   if (tipo == "conjunto") {
@@ -285,60 +290,65 @@ func_RL_fase_2 <- function(base, group, fase_1, tipo = "conjunto",
   }
   
   coefExtract <- function(x, use.nnet) {
-                 if(!use.nnet) {
-                  return(x[["coefficients"]])
-                } else {
+                 if(!use.nnet) return(x[["coefficients"]]  ) 
+                 else {
                   z <- t(coef(x))
                   return(z)
-                }
+                 }
           }
 
   if(!use.nnet){
     coeff <- as.data.frame(lapply(RL_DIF_2nd[,ncol(RL_DIF_2nd)],
                          coefExtract, use.nnet = use.nnet))
-  } else {
-    oneP <- lapply(RL_DIF_2nd[,ncol(RL_DIF_2nd)], coefExtract, use.nnet = use.nnet)
-    for(ii in 1:length(oneP)){
-        colnames(oneP[[ii]]) <- paste(names(oneP[ii]), colnames(oneP[[ii]]), sep ="")
+  }
+  else {
+  oneP <- lapply(RL_DIF_2nd[,ncol(RL_DIF_2nd)], coefExtract, use.nnet = use.nnet)
+  for(ii in 1:length(oneP)){
+      colnames(oneP[[ii]]) <- paste(names(oneP[ii]), colnames(oneP[[ii]]), sep ="")
+      }
+  coeff <- data.frame(do.call("cbind", oneP))
+  
+  }
+
+if(!use.nnet){
+  colnames(coeff) <- colnames(tests_2nd)
+  
+  RLDIF <- rbind(tests_2nd[tests,], coeff)
+
+  if (pseudo.R != "None") {
+    RLDIF <- rbind(RLDIF, R.sq, Deltas)
+    if (length(tests) == 2) {
+      rownames(RLDIF)[7:9] <- c("R1", "R3", "DRC")
+    } else {
+      rownames(RLDIF)[9:13] <- c("R1", "R2", "R3", "DRU", "DRN")
+    }
+    }
+  }
+else {
+   RLDIF <- tests_2nd[tests,]
+
+   if (pseudo.R != "None") {
+    RLDIF <- rbind(RLDIF, R.sq, Deltas)
+    if (length(tests) == 2) {
+      rownames(RLDIF)[3:5] <- c("R1", "R3", "DRC")
+        } 
+    else {
+      rownames(RLDIF)[5:9] <- c("R1", "R2", "R3", "DRU", "DRN")
         }
-    coeff <- data.frame(do.call("cbind", oneP))
-  }
-
-  if(!use.nnet){
-    colnames(coeff) <- colnames(tests_2nd)  
-    RLDIF <- rbind(tests_2nd[tests,], coeff)
-
-    if (pseudo.R != "None") {
-      RLDIF <- rbind(RLDIF, R.sq, Deltas)
-      if (length(tests) == 2) {
-        rownames(RLDIF)[7:9] <- c("R1", "R3", "DRC")
-      } else {
-        rownames(RLDIF)[9:13] <- c("R1", "R2", "R3", "DRU", "DRN")
-      }
-    }
-  } else {
-    RLDIF <- tests_2nd[tests,]
-
-    if (pseudo.R != "None") {
-       RLDIF <- rbind(RLDIF, R.sq, Deltas)
-       if (length(tests) == 2) {
-        rownames(RLDIF)[3:5] <- c("R1", "R3", "DRC")
-      } else {
-        rownames(RLDIF)[5:9] <- c("R1", "R2", "R3", "DRU", "DRN")
-      }
-    }
-     
+          }
+    
     RLDIF <- list(coef = coeff, testDIF = RLDIF)
-  }
-  return(RLDIF)
+    }
+return(RLDIF)
 }
 
 
 func_RL_ambas_fases <- function(base, group, tipo = "conjunto", 
-                                use.glm = TRUE, use.nnet = FALSE, 
-                                pseudo.R = "None", itSha) {
+                                use.glm = TRUE, use.nnet = FALSE, pseudo.R = "None") {
 
-detected <- func_RL_fase_1(base, group, 0.01, "conjunto", use.glm, use.nnet, itSha)
-func_RL_fase_2(base, group, detected, tipo, use.glm, use.nnet, pseudo.R, itSha)
+detected <- func_RL_fase_1(base, group, 0.01, "conjunto", use.glm, use.nnet)
+func_RL_fase_2(base, group, detected, tipo, use.glm, use.nnet, pseudo.R)
+
+
 }
 
