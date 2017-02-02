@@ -154,7 +154,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
                 "Porcentaje.annotation", "Porcentaje.annotationText",
                 "Habilidad Promedio")
   varXtomar <- "categoria"
-  chartID   <- paste0("grafGPREP", idPrueba)
+  chartID   <- paste0("grafGPREP", gsub("-|\\s", "_", idPrueba))
   exaCombo <- gvisComboChart(itObs[[1]], xvar = varXtomar, chartid = chartID,
                           yvar = varYtomar,
                           options=list(width = 470, height = 310, 
@@ -206,25 +206,33 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
   x[, nAlertas := sum(FLAGA, FLAGB, FLAGBISE, FLAGCORR, FLAGCHI2,
                       FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN, FLAGDIFDIS,
                       FLAGCV, FLAGAZAR, na.rm = TRUE), by = "item"]
-  if (x[, unique(codMOD)] == "07") {
-    initCol <- 10
-  }
 
-  if (x[, unique(codMOD)] == "05") {
-    initCol <- 9
-  }
-  
   # # Redondeando 3 decimales
   cols <- c("dif_NEW", "eedif", "disc", "eedisc", "azar", "eeazar", "maxINFO")
   x[,  (cols) := round(.SD, 3), .SDcols = cols]
 
+  removeCol <- NULL
   
+  if (x[, unique(codMOD)] == "05") {
+    removeCol  <- 9
+    auxMensaje <- "'<td colspan=\"1\" align=\"center\"><font size=\"43\" color=\"red\"> ITEM SIN ESTIMACION IRT </font></td>'"
+  }
+  
+  if (x[, unique(codMOD)] == "07") {
+    auxMensaje <- "'<td colspan=\"1\" align=\"center\"><font size=\"43\" color=\"red\"> ITEM SIN ESTIMACION IRT </font></td>'"
+  }
+
+  if (x[, unique(codMOD)] == "00") {
+    removeCol  <- c(5, 7:9)
+    auxMensaje <- "'<td colspan=\"1\" align=\"center\"> </td>'"
+  }
+
   # # Ordenando columnas 
   x <- x[, list(item_blq, item, nAlertas, disc, dif_NEW, azar, maxINFO, Ancla, item_blq,                          # 2  - 10
                 item, SUBBLOQUE, COMPONENTE, COMPETENCIA, keyItem,                                     # 11  - 15
                 "", TRIED, RIGHT, PCT, "", BISERIAL,                                                   # 16 - 21
                 'disc' = ifelse(is.na(disc), "NA", paste0(disc, " (", eedisc, ") ")),                                             # 22
-                'dif'  = ifelse(is.na(dif_NEW), "NA", paste0(dif_NEW, " (", eedif_NEW, ") ")), dir_OP, dir_ICC,                   # 23 - 25
+                'dif'  = ifelse(is.na(dif_NEW), "NA", ifelse(eedif_NEW != "NA%", paste0(dif_NEW, " (", eedif_NEW, ") "), dif_NEW)), dir_OP, dir_ICC,                   # 23 - 25
                 'Mult' = paste0("M: ", round(M_prop * 100, 2), "% (",  round(M_mAbility, 3), ")"),     # 26
                 'Omis' = paste0("O: ", round(O_prop * 100, 2), "% (",  round(O_mAbility, 3), ")"),     # 27
                 'Chis' = ifelse(is.na(chi2), "NA", paste0(chi2, "(pval = ", p_val_chi2, ") - gl = ", gl_chi2)),                   # 28
@@ -233,21 +241,24 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
                 'azar' = ifelse(is.na(azar), "NA", paste0(azar, " (", eeazar, ") ")),                                             # 43
                 'posReporte' = match(x$item, names(itObs)) - 1, FLAGINFO, FLAGCV)]                                     # 44 - 46
                 #'diffRescal' = ifelse(is.na(diffRescal), "NA", paste0(diffRescal, " (", eediffRescal, ") ")))]  # 47
-
-
+  x[, canName := 8 - (is.na(TRIED) + is.na(RIGHT) + is.na(PCT) + is.na(BISERIAL) + 
+                 is.na(disc) + (dif == "NA") + is.na(azar) + (Chis == "NA"))]  # 47
   # # Renombrando primeras columnas
   x <- data.frame(x)
   names(x)[1:8] <- c("Nombre", "C&oacute;digo", "Alertas", 
                      "Discriminaci&oacute;n", "Dificultad", 
                      "Azar", "Informaci&oacute;n", "Ancla")
   x[is.na(x)] <- ""
-
+  
+  initCol   <- 10 # Defecto es 3PL (Disc, Azar, Diff)
+  removeCol <- c(removeCol, initCol:(ncol(x) + 1))
+  
   # # Tablas en Html de los items
   htmlTab1 <- datatable(#filter = 'bottom',
     cbind(' ' = '', x), escape = FALSE,
     options = list(
       columnDefs = list(
-        list(visible = FALSE, targets = c(0, initCol:(ncol(x) + 1))),
+        list(visible = FALSE, targets = c(0, removeCol)),
         list(orderable = FALSE, className = 'details-control', targets = 1)
       ),
     initComplete = JS(
@@ -262,7 +273,10 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
         return '<td colspan=\"3\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ imgOP.replace('..', '') +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"'+ imgOP +'\"></a></td>' +
                '<td colspan=\"4\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ imgICC.replace('..', '') +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"'+ imgICC +'\"></a></td>'
 
-      } {
+      } else if (imgOP != '' && imgOP != 'null') {
+        return '<td colspan=\"6\" align=\"center\"> <a href=\"javascript:void(0)\" onclick=\"popup(\\''+ imgOP.replace('..', '') +'\\')\"><img align=\"middle\" style=\"width:472px;height:300px;\" src=\"'+ imgOP +'\"></a></td>' +", 
+        auxMensaje,
+      "} else {
         return '<td colspan=\"7\" align=\"center\"><font size=\"43\" color=\"red\"> ITEM SIN ESTIMACION IRT </font></td>'
       }
     };
@@ -276,7 +290,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
 
     var imprimirDato = function(x, label, flag, flagB){
       
-      if ( x != '' && x != 'null') {
+      if ( x != '' && x != 'null' & x != 'NA') {
         if (flagB == 1){
           auxB  = '<b>';
           auxBF = '</b>';
@@ -348,8 +362,8 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
     return titulos  + 
     '<tr>'+
       '<td colspan=\"2\">  N </td>'+
-      '<td colspan=\"1\">'+ d[16] +'</td>'+
-      '<td colspan=\"4\" rowspan=\"7\"> <div id=\"", chartID, "\" style=\"margin-left: 200;\"> </div>' +
+      '<td colspan=\"1\">'+ d[17] +'</td>'+
+      '<td colspan=\"4\" rowspan=\"'+ d[47] +'\"> <div id=\"", chartID, "\" style=\"margin-left: 200;\"> </div>' +
       '</td>'+
     '</tr>'+
            imprimirDato(d[18], 'Correctas', 0) +
