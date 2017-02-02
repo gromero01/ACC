@@ -781,20 +781,20 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
        auxJson[value] <- unlist(outList)[value]
      }
    
-     # # Creación de carpetas
-     # foldIni <- unique(file.path(pathDest, outExam, outYear, outStage))  
-     # for (folder in foldIni){
-     #   dir.create(folder, recursive = TRUE, showWarnings = FALSE)
-     #   foldOut <- file.path(folder, c("Doc", "Output"))
-     #   for (out in foldOut){
-     #     dir.create(out, recursive = TRUE, showWarnings = FALSE)      
-     #   }
-     #   # # Verificando archivos
-     #   fileOut <- file.path(folder, "Output", list.files(outPath, recursive = TRUE))
-     #   fileDoc <- file.path(folder, "Doc", list.files(docPath, recursive = TRUE))
-     #   file.copy(docPath, folder, recursive = TRUE, overwrite = flagActualizar)
-     #   file.copy(outPath, folder, recursive = TRUE, overwrite = flagActualizar)        
-     # }
+     # Creación de carpetas
+     foldIni <- unique(file.path(pathDest, outExam, outYear, outStage))  
+     for (folder in foldIni){
+       dir.create(folder, recursive = TRUE, showWarnings = FALSE)
+       foldOut <- file.path(folder, c("Doc", "Output"))
+       for (out in foldOut){
+         dir.create(out, recursive = TRUE, showWarnings = FALSE)      
+       }
+       # # Verificando archivos
+       fileOut <- file.path(folder, "Output", list.files(outPath, recursive = TRUE))
+       fileDoc <- file.path(folder, "Doc", list.files(docPath, recursive = TRUE))
+       file.copy(docPath, folder, recursive = TRUE, overwrite = flagActualizar)
+       file.copy(outPath, folder, recursive = TRUE, overwrite = flagActualizar)        
+     }
       
      # # Creando Lista 
      consNode <- function(label, child = list()){
